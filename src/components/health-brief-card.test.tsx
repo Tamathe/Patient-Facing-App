@@ -25,7 +25,7 @@ describe("HealthBriefCard", () => {
     });
 
     render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
-    await user.click(screen.getByRole("button", { name: /share/i }));
+    await user.click(await screen.findByRole("button", { name: /share/i }));
 
     expect(window.navigator.share).toHaveBeenCalledWith({
       title: "My Health Brief",
@@ -53,7 +53,7 @@ describe("HealthBriefCard", () => {
     });
 
     render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
-    await user.click(screen.getByRole("button", { name: /share/i }));
+    await user.click(await screen.findByRole("button", { name: /share/i }));
 
     expect(window.navigator.share).toHaveBeenCalledWith({
       title: "My Health Brief",

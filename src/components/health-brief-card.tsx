@@ -1,11 +1,22 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { HealthBrief } from "@/domain/types";
 
 export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
-  const canShare = typeof navigator.share === "function";
+  const [canShare, setCanShare] = useState(false);
+  const generatedLabel = useMemo(() => {
+    const generatedAt = new Date(brief.generatedAt);
+    return Number.isNaN(generatedAt.getTime())
+      ? "Not available yet"
+      : generatedAt.toLocaleString();
+  }, [brief.generatedAt]);
+
+  useEffect(() => {
+    setCanShare(typeof navigator.share === "function");
+  }, []);
+
   const textContent = [
     `My Health Brief`,
-    `Generated ${new Date(brief.generatedAt).toLocaleString()}`,
+    `Generated ${generatedLabel}`,
     "",
     ...brief.sections.flatMap((section) => [
       section.title,
@@ -33,7 +44,9 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
   };
 
   const handleShare = async () => {
-    if (!canShare) {
+    const hasShareApi = canShare && typeof navigator.share === "function";
+
+    if (!hasShareApi) {
       downloadBrief();
       return;
     }
@@ -54,7 +67,7 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">My Health Brief</h2>
-          <p className="text-sm text-ink/65">Generated {new Date(brief.generatedAt).toLocaleString()}</p>
+          <p className="text-sm text-ink/65">Generated {generatedLabel}</p>
         </div>
         <div className="health-brief-card__actions flex gap-2">
           <button

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { HealthBriefCard } from "@/components/health-brief-card";
 import { buildHealthBrief } from "@/domain/health-brief";
@@ -7,7 +8,13 @@ import { useHealthState } from "@/state/store";
 
 export default function VisitsPage() {
   const { state } = useHealthState();
-  const brief = buildHealthBrief(state);
+  const [generatedAt, setGeneratedAt] = useState<string>("");
+
+  useEffect(() => {
+    setGeneratedAt(new Date().toISOString());
+  }, []);
+
+  const brief = useMemo(() => buildHealthBrief(state, { generatedAt }), [state, generatedAt]);
 
   return (
     <AppShell title="My Visits">

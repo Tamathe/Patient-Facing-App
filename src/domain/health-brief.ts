@@ -1,6 +1,11 @@
 import type { AppState, HealthBrief } from "./types";
 
-export function buildHealthBrief(state: AppState): HealthBrief {
+type HealthBriefBuildOptions = {
+  generatedAt?: string;
+};
+
+export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptions = {}): HealthBrief {
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
   const recentReadings = state.readings.slice(-7).map(
     (reading) =>
       `${reading.systolic}/${reading.diastolic}${reading.pulse ? ` pulse ${reading.pulse}` : ""}`
@@ -10,6 +15,10 @@ export function buildHealthBrief(state: AppState): HealthBrief {
       medication.activeBarriers.length > 0 ? ` Barriers: ${medication.activeBarriers.join(", ")}.` : " No barriers marked.";
     return `${medication.name} ${medication.dose} ${medication.schedule}.${barrierText}`;
   });
+  const hasMedicines = medicationItems.length > 0;
+  const medicineItems = hasMedicines
+    ? medicationItems
+    : ["No medicines are listed yet. Add them so your care team can review everything you take."];
   const confirmedInstructions = state.extractedFacts.filter((fact) => fact.status === "confirmed").map((fact) => fact.value);
   const { carePlan } = state;
   const callThresholdParts = [
@@ -48,7 +57,7 @@ export function buildHealthBrief(state: AppState): HealthBrief {
   return {
     id: "brief-current",
     patientId: state.patient.id,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     sections: [
       {
         title: "What I am working on",
@@ -67,8 +76,8 @@ export function buildHealthBrief(state: AppState): HealthBrief {
       },
       {
         title: "Medicines and barriers",
-        items: medicationItems,
-        status: "patient_reported"
+        items: medicineItems,
+        status: hasMedicines ? "patient_reported" : "needs_review"
       },
       {
         title: "Confirmed instructions",

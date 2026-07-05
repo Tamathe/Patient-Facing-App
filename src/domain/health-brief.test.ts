@@ -35,4 +35,18 @@ describe("buildHealthBrief", () => {
     expect(urgencySection?.status).toBe("inferred");
     expect(urgencySection?.items.join(" ")).toContain("Standard education guidance");
   });
+
+  it("uses provided generatedAt and marks missing medicines for review", () => {
+    const brief = buildHealthBrief(
+      { ...demoState, medications: [] },
+      { generatedAt: "2026-07-05T12:00:00.000Z" }
+    );
+    const medicationSection = brief.sections.find((section) => section.title === "Medicines and barriers");
+
+    expect(brief.generatedAt).toBe("2026-07-05T12:00:00.000Z");
+    expect(medicationSection?.status).toBe("needs_review");
+    expect(medicationSection?.items[0]).toBe(
+      "No medicines are listed yet. Add them so your care team can review everything you take."
+    );
+  });
 });
