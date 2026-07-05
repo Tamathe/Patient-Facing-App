@@ -70,6 +70,35 @@ describe("storage", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("falls back to demo state for tasks without status and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        tasks: [
+          {
+            id: "task-1",
+            title: "Missing status",
+            body: "Task created before validation update",
+            href: "/chat",
+            priority: 1,
+            kind: "reading"
+          }
+        ],
+        readings: [],
+        contextItems: [],
+        extractedFacts: [],
+        aiMessages: [],
+        auditEvents: []
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
   it("falls back to demo state for carePlan patient mismatch and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,

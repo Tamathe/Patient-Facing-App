@@ -139,6 +139,10 @@ function isEvidenceStatus(value: unknown): value is EvidenceStatus {
   return value === "confirmed" || value === "patient_reported" || value === "imported" || value === "inferred" || value === "needs_review";
 }
 
+function isTaskStatus(value: unknown): value is TaskItem["status"] {
+  return value === "confirmed" || value === "inferred" || value === "needs_review";
+}
+
 function isMedicationBarrier(value: unknown): value is MedicationBarrier {
   return (
     value === "forgot" ||
@@ -227,7 +231,8 @@ function isTask(value: unknown): value is TaskItem {
     hasString(value, "body") &&
     hasString(value, "href") &&
     (value.priority === 1 || value.priority === 2 || value.priority === 3) &&
-    (value.kind === "reading" || value.kind === "medicine" || value.kind === "visit" || value.kind === "intake" || value.kind === "privacy")
+    (value.kind === "reading" || value.kind === "medicine" || value.kind === "visit" || value.kind === "intake" || value.kind === "privacy") &&
+    isTaskStatus(value.status)
   );
 }
 

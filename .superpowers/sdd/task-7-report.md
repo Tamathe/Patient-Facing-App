@@ -97,3 +97,19 @@
 - `src/domain/tasks.test.ts`
 - `src/components/action-card.tsx`
 - `src/components/action-card.test.tsx`
+
+## Follow-up Fix: Task 7 storage validator review
+
+### Files changed
+- `src/state/storage.ts`
+- `src/state/storage.test.ts`
+
+### Fix
+- Added `isTaskStatus` to require `TaskItem.status` to be exactly `"confirmed" | "inferred" | "needs_review"` and wired it into `isTask` validation.
+- Added `storage.test.ts` regression test: persists a task without `status`, expects fallback to `demoState`, and expects localStorage entry to be removed.
+
+### Verification
+- `npm run test -- src/state/storage.test.ts src/domain/tasks.test.ts src/components/action-card.test.tsx`
+  - PASS: 3 files, 21 tests.
+- `npm run build`
+  - PASS: production build completes (`Next.js 15.5.20`, all static routes generated).
