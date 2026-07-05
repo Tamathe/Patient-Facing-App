@@ -299,8 +299,8 @@ function isCarePlan(value: unknown): value is CarePlan {
     hasString(value, "plainLanguageSummary") &&
     isArrayOfObjects(value.goals, isCareGoal) &&
     isArrayOfStrings(value.dailyActions) &&
-    (value.callThresholdSystolic === null || typeof value.callThresholdSystolic === "number") &&
-    (value.callThresholdDiastolic === null || typeof value.callThresholdDiastolic === "number") &&
+    (value.callThresholdSystolic === null || Number.isFinite(value.callThresholdSystolic)) &&
+    (value.callThresholdDiastolic === null || Number.isFinite(value.callThresholdDiastolic)) &&
     isThresholdSource(value.thresholdSource) &&
     isArrayOfStrings(value.warningSymptoms) &&
     hasString(value, "nextVisitReason")

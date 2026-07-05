@@ -141,6 +141,20 @@ describe("storage", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("falls back to demo state for non-finite care plan thresholds and clears storage", () => {
+    const rawPayload = JSON.stringify(demoState).replace(
+      "\"callThresholdSystolic\":160",
+      "\"callThresholdSystolic\":1e309"
+    );
+
+    window.localStorage.setItem(STORAGE_KEY, rawPayload);
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
   it("does not throw when saveStoredState cannot write", () => {
     const originalState = { ...demoState, readings: [...demoState.readings] };
     const setItemSpy = vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
