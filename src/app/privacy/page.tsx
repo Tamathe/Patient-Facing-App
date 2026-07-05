@@ -1,9 +1,22 @@
+ "use client";
+
+import { PrivacyPanel } from "@/components/privacy-panel";
 import { AppShell } from "@/components/app-shell";
+import { clearStoredState } from "@/state/storage";
+import { useHealthState } from "@/state/store";
 
 export default function PrivacyPage() {
+  const { state, dispatch } = useHealthState();
+
   return (
     <AppShell title="Privacy">
-      <p>Your privacy details will show here, explaining how your home health information is kept safe and who can see it.</p>
+      <PrivacyPanel
+        state={state}
+        onReset={() => {
+          clearStoredState();
+          dispatch({ type: "resetDemo" });
+        }}
+      />
     </AppShell>
   );
 }
