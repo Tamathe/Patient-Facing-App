@@ -17,4 +17,22 @@ describe("MedicationCard", () => {
 
     expect(onBarriersChange).toHaveBeenCalledWith(["cost"]);
   });
+
+  it("shows how this explanation was sourced for unconfirmed medicine details", () => {
+    render(
+      <MedicationCard
+        medication={{
+          ...demoState.medications[0],
+          source: "needs_review"
+        }}
+        onBarriersChange={() => {
+          // no-op
+        }}
+      />
+    );
+
+    expect(
+      screen.getByText("How we know this:")
+    ).toBeInTheDocument();
+  });
 });
