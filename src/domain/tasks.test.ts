@@ -156,6 +156,55 @@ describe("buildTodayTasks", () => {
     });
   });
 
+  it("does not let an outdated high reading influence Today interpretation of a normal recent reading", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      medications: [],
+      carePlan: {
+        ...demoState.carePlan,
+        nextVisitReason: ""
+      },
+      readings: [
+        {
+          ...routineReading,
+          measuredAt: "2026-07-05T11:00:00.000Z"
+        },
+        {
+          ...dangerousReading,
+          measuredAt: "2026-07-01T10:00:00.000Z",
+          id: "dangerous-older-reading"
+        }
+      ]
+    });
+
+    expect(tasks.map((task) => task.id)).not.toContain("task-bp-clinical");
+    expect(tasks[0]).toMatchObject({
+      id: "task-today-safe-state",
+      title: "No urgent items to review today"
+    });
+  });
+
+  it("keeps blocked-note Today task behavior when stale out-of-window highs are present", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [
+        medicationChangeReading,
+        {
+          ...dangerousReading,
+          measuredAt: "2026-07-01T10:00:00.000Z"
+        }
+      ]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      id: "task-bp-clinical",
+      title: "Review this note with your care team",
+      status: "needs_review",
+      href: "/chat"
+    });
+    expect(tasks[0].body).toContain("medication change");
+  });
+
   it("creates an urgent-help task when a recent earlier reading reports chest pain", () => {
     const tasks = buildTodayTasks({
       ...demoState,

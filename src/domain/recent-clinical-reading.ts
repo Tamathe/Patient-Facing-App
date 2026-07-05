@@ -29,6 +29,10 @@ export function findRecentClinicalReading(
   }
 
   const recentWindowStart = new Date(sortedReadings[0].measuredAt).valueOf() - RECENT_READING_WINDOW_MS;
+  const recentReadingsWindow = sortedReadings
+    .filter((reading) => new Date(reading.measuredAt).valueOf() >= recentWindowStart)
+    .slice()
+    .reverse();
   let bestCandidate: (ClinicalReadingCandidate & { severity: ClinicalReadingSeverity }) | undefined;
 
   for (const reading of sortedReadings) {
@@ -36,7 +40,7 @@ export function findRecentClinicalReading(
       continue;
     }
 
-    const bloodPressureInsight = interpretBloodPressure(reading, sortedReadings, carePlan);
+    const bloodPressureInsight = interpretBloodPressure(reading, recentReadingsWindow, carePlan);
     const numericSafety = classifySafety(`${reading.systolic}/${reading.diastolic}`);
     const noteSafety = classifySafety(reading.note);
     const severity = getClinicalReadingSeverity({

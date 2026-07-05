@@ -209,3 +209,20 @@
   - PASS: 4 files, 30 tests.
 - `npm run build`
   - PASS: Next.js production build completed (`Next.js 15.5.20`) with all routes generated.
+
+## Fix: Task 7 stale-reading interpretation fix
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/domain/tasks.test.ts`
+
+### Fix notes
+- Passed only recent-window readings to `interpretBloodPressure`, in ascending (chronological) order, from `findRecentClinicalReading`.
+- Kept severity-first selection behavior intact (`urgent` stays above `blocked`).
+- Added regression coverage for outdated high readings not changing Today handling of normal readings and for blocked-note behavior with stale highs present.
+
+### Verification (exact)
+- `npm run test -- src/domain/tasks.test.ts src/domain/blood-pressure.test.ts src/ai/safety-gate.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 28 tests.
+- `npm run build`
+  - PASS: production build succeeds (`Next.js 15.5.20`) with all routes generated.
