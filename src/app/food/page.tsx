@@ -1,0 +1,193 @@
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AppShell } from "@/components/app-shell";
+import { FoodAskBar } from "@/components/food-ask-bar";
+import { FoodConversation } from "@/components/food-conversation";
+import { FoodFactsCard } from "@/components/food-facts-card";
+import { FoodViewfinder } from "@/components/food-viewfinder";
+import { MealLogList } from "@/components/meal-log-list";
+import { selectLens } from "@/domain/condition-lens";
+import { computeFoodFlags, type FoodFlag } from "@/domain/food-flags";
+import { buildMealLogEntry } from "@/domain/meal-log";
+import { foodLookupResponseSchema, mealLogEntrySchema } from "@/domain/schemas";
+import { t } from "@/i18n/strings";
+import { useFoodCamera } from "@/hooks/use-food-camera";
+import { useBarcodeScan } from "@/hooks/use-barcode-scan";
+import { useFoodVoiceSession } from "@/hooks/use-food-voice-session";
+import { useHealthState } from "@/state/store";
+import type { AiMessage, IdentifiedFood } from "@/domain/types";
+import type { LiveSessionContext } from "@/ai/types";
+
+export default function FoodPage() {
+  const { state, dispatch } = useHealthState();
+  const language = state.patient.language;
+  const lens = useMemo(() => selectLens(state.carePlan.condition), [state.carePlan.condition]);
+
+  const camera = useFoodCamera();
+  const [identifiedFood, setIdentifiedFood] = useState<IdentifiedFood | null>(null);
+  const [logged, setLogged] = useState(false);
+
+  const { activeBarcode } = useBarcodeScan({
+    videoRef: camera.videoRef,
+    enabled: camera.status === "active",
+    onBarcode: () => setLogged(false)
+  });
+
+  const flags = useMemo<FoodFlag[]>(
+    () => computeFoodFlags(identifiedFood, lens, { medications: state.medications, readings: state.readings }, language),
+    [identifiedFood, lens, state.medications, state.readings, language]
+  );
+
+  const foodRef = useRef<IdentifiedFood | null>(null);
+  foodRef.current = identifiedFood;
+  const flagsRef = useRef<FoodFlag[]>([]);
+  flagsRef.current = flags;
+  const lastAssistantRef = useRef<string | null>(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const getContext = useCallback((): LiveSessionContext => {
+    return {
+      frameDataUrl: camera.grabFrame(),
+      identifiedFood: foodRef.current,
+      flagTexts: flagsRef.current.map((flag) => flag.text)
+    };
+  }, [camera]);
+
+  const appendMessage = useCallback(
+    (role: "patient" | "assistant", content: string) => {
+      if (role === "assistant") {
+        lastAssistantRef.current = content;
+      }
+      const message: AiMessage = {
+        id: crypto.randomUUID(),
+        mode: "food",
+        role,
+        content,
+        createdAt: new Date().toISOString(),
+        safety: "allowed",
+        sources: role === "assistant" ? [stateRef.current.carePlan.id] : []
+      };
+      dispatch({ type: "addAiMessage", message });
+    },
+    [dispatch]
+  );
+
+  const voice = useFoodVoiceSession({
+    language,
+    getState: () => stateRef.current,
+    getContext,
+    onFinalTranscript: appendMessage
+  });
+
+  useEffect(() => {
+    void camera.start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.hidden) {
+        camera.stop();
+        voice.stop();
+      }
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("pagehide", onHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      window.removeEventListener("pagehide", onHidden);
+    };
+  }, [camera, voice]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeBarcode) {
+      setIdentifiedFood(null);
+      return;
+    }
+    void fetch(`/api/food/lookup?barcode=${activeBarcode}`)
+      .then((response) => response.json())
+      .then((json) => {
+        if (cancelled) {
+          return;
+        }
+        const parsed = foodLookupResponseSchema.safeParse(json);
+        setIdentifiedFood(parsed.success && parsed.data.found ? parsed.data.food : null);
+        setLogged(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIdentifiedFood(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBarcode]);
+
+  const canLog = identifiedFood !== null || lastAssistantRef.current !== null;
+
+  const onLog = useCallback(() => {
+    const entry = buildMealLogEntry({
+      patientId: stateRef.current.patient.id,
+      food: foodRef.current,
+      flags: flagsRef.current,
+      lastAssistantText: lastAssistantRef.current,
+      language
+    });
+    const parsed = mealLogEntrySchema.safeParse(entry);
+    if (!parsed.success) {
+      return;
+    }
+    dispatch({ type: "addMealLogEntry", entry });
+    setLogged(true);
+  }, [dispatch, language]);
+
+  const foodMessages = state.aiMessages.filter((message) => message.mode === "food");
+  const recentMeals = state.mealLog.slice(-5).reverse();
+  const scanChip = identifiedFood ? (identifiedFood.brand ? `${identifiedFood.brand} ${identifiedFood.name}` : identifiedFood.name) : activeBarcode;
+
+  return (
+    <AppShell title={t(language, "pageTitle")}>
+      <div className="grid gap-4">
+        <FoodViewfinder
+          videoRef={camera.videoRef}
+          cameraStatus={camera.status}
+          sessionStatus={voice.status}
+          scanChip={scanChip}
+          language={language}
+        />
+
+        {voice.error ? (
+          <div className="grid gap-2 rounded-control border border-pulse/30 bg-pulse/5 p-3">
+            <p className="text-sm text-pulse">{voice.error}</p>
+            <div className="flex gap-2">
+              <button className="rounded-control border border-care px-3 py-2 text-sm font-semibold text-care" onClick={() => void voice.start()} type="button">
+                {t(language, "retry")}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <FoodAskBar
+          mode={voice.mode}
+          status={voice.status}
+          onStart={() => void voice.start()}
+          onStop={voice.stop}
+          onSendText={voice.sendUserText}
+          language={language}
+        />
+
+        {identifiedFood || flags.length > 0 ? (
+          <FoodFactsCard food={identifiedFood} flags={flags} logged={logged} canLog={canLog} onLog={onLog} language={language} />
+        ) : null}
+
+        <FoodConversation messages={foodMessages} partialAssistantText={voice.partialAssistantText} />
+
+        <MealLogList entries={recentMeals} language={language} />
+      </div>
+    </AppShell>
+  );
+}

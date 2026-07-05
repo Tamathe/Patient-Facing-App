@@ -311,4 +311,73 @@ describe("storage", () => {
     expect(loaded).toEqual(demoState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
+
+  it("migrates a legacy state without mealLog to an empty meal log without resetting", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Legacy Patient", preferredName: "Legacy" }
+    };
+    delete legacy.mealLog;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Legacy Patient");
+    expect(loaded.mealLog).toEqual([]);
+    expect(loaded.readings).toHaveLength(demoState.readings.length);
+  });
+
+  it("drops malformed meal log entries while keeping the rest of the state", () => {
+    const validEntry = {
+      id: "meal-1",
+      patientId: "patient-1",
+      loggedAt: "2026-07-05T12:00:00.000Z",
+      food: { id: "1", barcode: "1", name: "Soup", brand: null, category: null, nutrition: null, source: "barcode_seed" },
+      flags: ["890 mg sodium"],
+      assistantSummary: "High in sodium."
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, mealLog: [validEntry, {}] }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.mealLog).toHaveLength(1);
+    expect(loaded.mealLog[0].id).toBe("meal-1");
+    expect(loaded.patient.id).toBe("patient-1");
+  });
+
+  it("accepts food-mode ai messages", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        aiMessages: [
+          {
+            id: "message-1",
+            mode: "food",
+            role: "assistant",
+            content: "That soup is high in sodium.",
+            createdAt: "2026-07-05T12:00:00.000Z",
+            safety: "allowed",
+            sources: [demoState.carePlan.id]
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.aiMessages).toHaveLength(1);
+    expect(loaded.aiMessages[0].mode).toBe("food");
+  });
+
+  it("accepts a diabetes care plan condition", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...demoState, carePlan: { ...demoState.carePlan, condition: "diabetes" } })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.carePlan.condition).toBe("diabetes");
+  });
 });

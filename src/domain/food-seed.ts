@@ -1,0 +1,64 @@
+import type { IdentifiedFood } from "./types";
+
+export const demoFoodSeed: Record<string, IdentifiedFood> = {
+  "051000012616": {
+    id: "051000012616",
+    barcode: "051000012616",
+    name: "Condensed Chicken Noodle Soup",
+    brand: "Campbell's",
+    category: "Canned soups",
+    nutrition: {
+      servingSize: "1/2 cup condensed (126 g)",
+      calories: 60,
+      sodiumMg: 890,
+      potassiumMg: 100,
+      totalSugarsG: 1,
+      addedSugarsG: 0,
+      saturatedFatG: 0.5,
+      fiberG: 1,
+      proteinG: 3,
+      carbsG: 8
+    },
+    source: "barcode_seed"
+  },
+  "024600017008": {
+    id: "024600017008",
+    barcode: "024600017008",
+    name: "Lite Salt",
+    brand: "Morton",
+    category: "Salt substitute",
+    nutrition: {
+      servingSize: "1/4 tsp (1.4 g)",
+      calories: 0,
+      sodiumMg: 290,
+      potassiumMg: 350,
+      totalSugarsG: 0,
+      addedSugarsG: 0,
+      saturatedFatG: 0,
+      fiberG: 0,
+      proteinG: 0,
+      carbsG: 0
+    },
+    source: "barcode_seed"
+  },
+  "030000010204": {
+    id: "030000010204",
+    barcode: "030000010204",
+    name: "Old Fashioned Oats",
+    brand: "Quaker",
+    category: "Breakfast cereals",
+    nutrition: {
+      servingSize: "1/2 cup dry (40 g)",
+      calories: 150,
+      sodiumMg: 0,
+      potassiumMg: 150,
+      totalSugarsG: 1,
+      addedSugarsG: 0,
+      saturatedFatG: 0.5,
+      fiberG: 4,
+      proteinG: 5,
+      carbsG: 27
+    },
+    source: "barcode_seed"
+  }
+};

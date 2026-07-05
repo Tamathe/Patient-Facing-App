@@ -5,7 +5,7 @@ import { healthReducer } from "./store";
 
 describe("healthReducer", () => {
   it("adds a blood pressure reading and audit event", () => {
-    const next = healthReducer(demoState, {
+    const next = healthReducer({ ...demoState, readings: [] }, {
       type: "addReading",
       reading: {
         id: "reading-1",
@@ -32,6 +32,24 @@ describe("healthReducer", () => {
 
     expect(next.medications[0].name).toBe("Lisinopril");
     expect(next.medications[0].activeBarriers).toEqual(["cost", "side_effects"]);
+  });
+
+  it("appends a meal log entry and records an audit event", () => {
+    const next = healthReducer(demoState, {
+      type: "addMealLogEntry",
+      entry: {
+        id: "meal-1",
+        patientId: "patient-1",
+        loggedAt: "2026-07-05T12:00:00.000Z",
+        food: { id: "1", barcode: "1", name: "Soup", brand: null, category: null, nutrition: null, source: "barcode_seed" },
+        flags: ["890 mg sodium"],
+        assistantSummary: "High in sodium."
+      }
+    });
+
+    expect(next.mealLog).toHaveLength(1);
+    expect(next.mealLog[0].id).toBe("meal-1");
+    expect(next.auditEvents.at(-1)?.label).toBe("Meal logged from Food Lens");
   });
 
   it("returns seeded demo state for an explicit resetDemo action", () => {

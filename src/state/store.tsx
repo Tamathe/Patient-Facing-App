@@ -16,8 +16,10 @@ import type {
   AppState,
   AuditEvent,
   CareContextItem,
+  DoseEvent,
   ExtractedFact,
   HomeReading,
+  MealLogEntry,
   MedicationBarrier
 } from "@/domain/types";
 import { loadStoredState, saveStoredState } from "./storage";
@@ -29,6 +31,9 @@ export type HealthAction =
   | { type: "confirmFact"; factId: string }
   | { type: "addAiMessage"; message: AiMessage }
   | { type: "addAuditEvent"; event: AuditEvent }
+  | { type: "addMealLogEntry"; entry: MealLogEntry }
+  | { type: "logDose"; event: DoseEvent }
+  | { type: "undoDose"; medicationId: string; date: string }
   | { type: "resetDemo" }
   | { type: "deleteDemoData" };
 
@@ -78,6 +83,53 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       return {
         ...state,
         auditEvents: [...state.auditEvents, action.event]
+      };
+    }
+    case "addMealLogEntry": {
+      return {
+        ...state,
+        mealLog: [...state.mealLog, action.entry],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Meal logged from Food Lens")]
+      };
+    }
+    case "logDose": {
+      const { event } = action;
+      const doseEvents = [
+        ...state.doseEvents.filter(
+          (existing) => !(existing.medicationId === event.medicationId && existing.date === event.date)
+        ),
+        event
+      ];
+      const barrier = event.barrier;
+      const medications =
+        barrier === null
+          ? state.medications
+          : state.medications.map((medication) =>
+              medication.id === event.medicationId && !medication.activeBarriers.includes(barrier)
+                ? { ...medication, activeBarriers: [...medication.activeBarriers, barrier] }
+                : medication
+            );
+      return {
+        ...state,
+        doseEvents,
+        medications,
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(
+            state.patient.id,
+            "updated",
+            event.status === "taken" ? "Medication marked taken" : "Medication marked skipped"
+          )
+        ]
+      };
+    }
+    case "undoDose": {
+      return {
+        ...state,
+        doseEvents: state.doseEvents.filter(
+          (event) => !(event.medicationId === action.medicationId && event.date === action.date)
+        ),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Medication dose entry removed")]
       };
     }
     case "resetDemo":

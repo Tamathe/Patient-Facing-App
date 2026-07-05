@@ -99,4 +99,64 @@ describe("MockHealthAiProvider", () => {
     expect(response.content).not.toContain("Lisinopril");
     expect(response.content).not.toContain("Medip");
   });
+
+  it("answers a food question with the food name and sodium", async () => {
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({
+      mode: "food",
+      patientInput: "Can I have this for lunch?",
+      state: demoState,
+      identifiedFood: {
+        id: "051000012616",
+        barcode: "051000012616",
+        name: "Chicken Noodle Soup",
+        brand: "Campbell's",
+        category: "Soups",
+        nutrition: {
+          servingSize: "1/2 cup",
+          calories: 60,
+          sodiumMg: 890,
+          potassiumMg: 100,
+          totalSugarsG: 1,
+          addedSugarsG: 0,
+          saturatedFatG: 0.5,
+          fiberG: 1,
+          proteinG: 3,
+          carbsG: 8
+        },
+        source: "barcode_seed"
+      }
+    });
+
+    expect(response.content).toContain("Chicken Noodle Soup");
+    expect(response.content).toContain("890");
+    expect(response.sources).toContain("plan-1");
+  });
+
+  it("streams mock live session events in order", async () => {
+    const provider = new MockHealthAiProvider();
+    const events: string[] = [];
+    const handle = await provider.openLiveSession({
+      language: "en",
+      getState: () => demoState,
+      getContext: () => ({ frameDataUrl: null, identifiedFood: null, flagTexts: [] }),
+      onEvent: (event) => {
+        if (event.type === "status") {
+          events.push(`status:${event.status}`);
+        } else {
+          events.push(event.type);
+        }
+      }
+    });
+
+    handle.sendUserText("Is this healthy?");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(events[0]).toBe("status:listening");
+    expect(events).toContain("userTranscript");
+    expect(events).toContain("assistantTranscript");
+    expect(events.indexOf("status:thinking")).toBeLessThan(events.indexOf("assistantTranscript"));
+    expect(events.at(-1)).toBe("status:listening");
+    handle.close();
+  });
 });

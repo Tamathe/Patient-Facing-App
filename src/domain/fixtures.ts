@@ -47,12 +47,64 @@ export const demoState: AppState = {
       activeBarriers: []
     }
   ],
-  readings: [],
+  readings: [
+    {
+      id: "reading-1",
+      patientId: "patient-1",
+      systolic: 132,
+      diastolic: 84,
+      pulse: 72,
+      measuredAt: "2026-07-02T07:15:00.000Z",
+      contexts: ["morning"],
+      note: ""
+    },
+    {
+      id: "reading-2",
+      patientId: "patient-1",
+      systolic: 141,
+      diastolic: 88,
+      pulse: 75,
+      measuredAt: "2026-07-03T07:05:00.000Z",
+      contexts: ["morning"],
+      note: ""
+    },
+    {
+      id: "reading-3",
+      patientId: "patient-1",
+      systolic: 149,
+      diastolic: 94,
+      pulse: 78,
+      measuredAt: "2026-07-04T07:20:00.000Z",
+      contexts: ["morning"],
+      note: ""
+    }
+  ],
   tasks: [],
   contextItems: [],
   extractedFacts: [],
   aiMessages: [],
-  auditEvents: []
+  auditEvents: [],
+  mealLog: [],
+  doseEvents: [
+    {
+      id: "dose-1",
+      patientId: "patient-1",
+      medicationId: "med-1",
+      date: "2026-07-03",
+      status: "taken",
+      barrier: null,
+      recordedAt: "2026-07-03T08:00:00.000Z"
+    },
+    {
+      id: "dose-2",
+      patientId: "patient-1",
+      medicationId: "med-1",
+      date: "2026-07-04",
+      status: "taken",
+      barrier: null,
+      recordedAt: "2026-07-04T08:05:00.000Z"
+    }
+  ]
 };
 
 export const deletedDemoState: AppState = {
@@ -83,5 +135,7 @@ export const deletedDemoState: AppState = {
   contextItems: [],
   extractedFacts: [],
   aiMessages: [],
-  auditEvents: []
+  auditEvents: [],
+  mealLog: [],
+  doseEvents: []
 };

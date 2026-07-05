@@ -11,7 +11,8 @@ const modes: Array<{ mode: AiMode; label: string }> = [
   { mode: "ask", label: "What should I ask?" },
   { mode: "trouble", label: "I am having trouble" },
   { mode: "visit", label: "Prepare for my visit" },
-  { mode: "summarize", label: "Summarize for someone" }
+  { mode: "summarize", label: "Summarize for someone" },
+  { mode: "food", label: "Food question" }
 ];
 
 const safetyGuidanceText: Record<AiMessage["safety"], string> = {

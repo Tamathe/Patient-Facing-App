@@ -16,10 +16,12 @@ export type CareGoal = {
   reason: string;
 };
 
+export type Condition = "hypertension" | "diabetes" | "obesity";
+
 export type CarePlan = {
   id: string;
   patientId: string;
-  condition: "hypertension";
+  condition: Condition;
   plainLanguageSummary: string;
   goals: CareGoal[];
   dailyActions: string[];
@@ -95,7 +97,7 @@ export type ExtractedFact = {
   sourceSnippet: string;
 };
 
-export type AiMode = "explain" | "today" | "why" | "ask" | "trouble" | "visit" | "summarize";
+export type AiMode = "explain" | "today" | "why" | "ask" | "trouble" | "visit" | "summarize" | "food";
 
 export type AiMessage = {
   id: string;
@@ -126,6 +128,52 @@ export type AuditEvent = {
   createdAt: string;
 };
 
+export type NutritionFacts = {
+  servingSize: string;
+  calories: number | null;
+  sodiumMg: number | null;
+  potassiumMg: number | null;
+  totalSugarsG: number | null;
+  addedSugarsG: number | null;
+  saturatedFatG: number | null;
+  fiberG: number | null;
+  proteinG: number | null;
+  carbsG: number | null;
+};
+
+export type FoodSource = "barcode_off" | "barcode_fdc" | "barcode_seed" | "vision_estimate";
+
+export type IdentifiedFood = {
+  id: string;
+  barcode: string | null;
+  name: string;
+  brand: string | null;
+  category: string | null;
+  nutrition: NutritionFacts | null;
+  source: FoodSource;
+};
+
+export type MealLogEntry = {
+  id: string;
+  patientId: string;
+  loggedAt: string;
+  food: IdentifiedFood;
+  flags: string[];
+  assistantSummary: string;
+};
+
+export type DoseStatus = "taken" | "skipped";
+
+export type DoseEvent = {
+  id: string;
+  patientId: string;
+  medicationId: string;
+  date: string;
+  status: DoseStatus;
+  barrier: MedicationBarrier | null;
+  recordedAt: string;
+};
+
 export type AppState = {
   patient: PatientProfile;
   carePlan: CarePlan;
@@ -136,4 +184,6 @@ export type AppState = {
   extractedFacts: ExtractedFact[];
   aiMessages: AiMessage[];
   auditEvents: AuditEvent[];
+  mealLog: MealLogEntry[];
+  doseEvents: DoseEvent[];
 };

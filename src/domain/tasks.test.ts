@@ -77,7 +77,7 @@ describe("buildTodayTasks", () => {
   });
 
   it("prioritizes blood pressure logging when no readings exist", () => {
-    const tasks = buildTodayTasks(demoState);
+    const tasks = buildTodayTasks({ ...demoState, readings: [] });
 
     expect(tasks[0]).toMatchObject({
       title: "Check blood pressure",
