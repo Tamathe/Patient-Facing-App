@@ -6,6 +6,28 @@ import type { HealthAiProvider } from "./types";
 
 const NOW = new Date("2026-07-05T12:00:00.000Z");
 
+const chestPainReading = {
+  id: "reading-chest-pain-older",
+  patientId: "patient-1",
+  systolic: 128,
+  diastolic: 82,
+  pulse: 72,
+  measuredAt: "2026-07-05T10:30:00.000Z",
+  contexts: ["morning"],
+  note: "I had chest pain for 5 minutes."
+};
+
+const thresholdReading = {
+  id: "reading-threshold-later",
+  patientId: "patient-1",
+  systolic: 165,
+  diastolic: 102,
+  pulse: 70,
+  measuredAt: "2026-07-05T11:00:00.000Z",
+  contexts: ["morning"],
+  note: ""
+};
+
 describe("createSafeAiResponse", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -275,6 +297,36 @@ describe("createSafeAiResponse", () => {
     expect(response.content).toContain("call threshold");
     expect(response.sources).toContain("reading-earlier-danger");
     expect(response.sources).toContain("plan-1");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("escalates on an older chest-pain reading when a newer threshold reading exists", async () => {
+    const stateWithOlderSymptomAndNewerThreshold = {
+      ...demoState,
+      readings: [thresholdReading, chestPainReading]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What should I do today?",
+        state: stateWithOlderSymptomAndNewerThreshold
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("Some signs need urgent medical attention");
+    expect(response.sources).toContain("reading-chest-pain-older");
+    expect(response.sources).not.toContain("reading-threshold-later");
+    expect(response.sources).not.toContain("plan-1");
     expect(provider.respond).not.toHaveBeenCalled();
   });
 

@@ -11,7 +11,7 @@ export type ClinicalReadingCandidate = {
   numericSafety: SafetyClassification;
 };
 
-type ClinicalReadingSeverity = "urgent" | "blocked";
+type ClinicalReadingSeverity = "urgent_symptom" | "clinic_threshold" | "blocked";
 
 export type FindRecentClinicalReadingOptions = {
   includeBlockedNotes?: boolean;
@@ -96,12 +96,14 @@ function getClinicalReadingSeverity(params: {
   includeBlockedNotes: boolean;
 }): ClinicalReadingSeverity | undefined {
   const isUrgent =
-    params.numericSafety.level === "escalate" ||
-    params.noteSafety.level === "escalate" ||
-    params.bloodPressureInsight.escalation === "clinic";
+    params.noteSafety.level === "escalate";
 
   if (isUrgent) {
-    return "urgent";
+    return "urgent_symptom";
+  }
+
+  if (params.numericSafety.level === "escalate" || params.bloodPressureInsight.escalation === "clinic") {
+    return "clinic_threshold";
   }
 
   if (params.includeBlockedNotes && params.noteSafety.level === "blocked") {
@@ -112,7 +114,15 @@ function getClinicalReadingSeverity(params: {
 }
 
 function severityPriority(severity: ClinicalReadingSeverity): number {
-  return severity === "urgent" ? 2 : 1;
+  if (severity === "urgent_symptom") {
+    return 3;
+  }
+
+  if (severity === "clinic_threshold") {
+    return 2;
+  }
+
+  return 1;
 }
 
 function shouldReplaceCandidate(

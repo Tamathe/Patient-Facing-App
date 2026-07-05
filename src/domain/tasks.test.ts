@@ -273,6 +273,28 @@ describe("buildTodayTasks", () => {
     });
   });
 
+  it("uses urgent symptom escalations over newer threshold follow-ups", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [
+        {
+          ...thresholdReading,
+          id: "threshold-reading-newer",
+          measuredAt: "2026-07-05T11:00:00.000Z"
+        },
+        chestPainReading
+      ]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      id: "task-bp-clinical",
+      title: "Seek urgent help now",
+      status: "needs_review",
+      href: "/chat"
+    });
+    expect(tasks[0].body).toContain("If this may be an emergency");
+  });
+
   it("adds a blocked-note review task with needs_review when that is the highest-severity issue", () => {
     const tasks = buildTodayTasks({
       ...demoState,

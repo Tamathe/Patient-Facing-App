@@ -246,3 +246,24 @@
   - PASS: 4 files, 30 tests.
 - `npm run build`
   - PASS: production build succeeds (`Next.js 15.5.20`) with all routes generated.
+
+## Fix: Task 7 severity split review
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/domain/tasks.test.ts`
+- `src/ai/safety-gate.test.ts`
+
+### Findings addressed
+- Split clinical reading severity so the ranking is now:
+  - urgent symptom note (highest)
+  - clinic-threshold/numeric escalation
+  - blocked-note-only
+- Preserved the 24-hour reference-time window behavior and existing recent-readings context handling.
+- Added regression tests proving an older chest-pain/chest-related symptom note wins over a newer threshold follow-up in both Today task selection and AI safety preflight.
+
+### Verification (exact)
+- `npm run test -- src/domain/tasks.test.ts src/ai/safety-gate.test.ts src/domain/safety.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 36 tests.
+- `npm run build`
+  - PASS: production build succeeds (`Next.js 15.5.20`) with all routes generated.
