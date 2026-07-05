@@ -18,6 +18,103 @@ import type {
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
 
+function safeGetItem(key: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+  }
+}
+
+function safeRemoveItem(key: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+  }
+}
+
+function getKnownSourceIds(state: AppState): Set<string> {
+  const sourceIds = new Set<string>();
+
+  sourceIds.add(state.carePlan.id);
+  state.carePlan.goals.forEach((goal) => {
+    sourceIds.add(goal.id);
+  });
+  state.medications.forEach((medication) => {
+    sourceIds.add(medication.id);
+  });
+  state.readings.forEach((reading) => {
+    sourceIds.add(reading.id);
+  });
+  state.contextItems.forEach((contextItem) => {
+    sourceIds.add(contextItem.id);
+  });
+  state.extractedFacts.forEach((fact) => {
+    sourceIds.add(fact.id);
+  });
+
+  return sourceIds;
+}
+
+function hasValidRelationships(state: AppState): boolean {
+  const patientId = state.patient.id;
+
+  if (state.carePlan.patientId !== patientId) {
+    return false;
+  }
+
+  if (state.medications.some((medication) => medication.patientId !== patientId)) {
+    return false;
+  }
+
+  if (state.readings.some((reading) => reading.patientId !== patientId)) {
+    return false;
+  }
+
+  if (state.contextItems.some((item) => item.patientId !== patientId)) {
+    return false;
+  }
+
+  if (state.auditEvents.some((event) => event.patientId !== patientId)) {
+    return false;
+  }
+
+  const contextItemIds = new Set(state.contextItems.map((item) => item.id));
+  if (state.extractedFacts.some((fact) => !contextItemIds.has(fact.contextItemId))) {
+    return false;
+  }
+
+  const sourceIds = getKnownSourceIds(state);
+  if (
+    state.aiMessages.some((message) =>
+      message.sources.some((sourceId) => sourceId.length > 0 && !sourceIds.has(sourceId))
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -247,7 +344,7 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return true;
+  return hasValidRelationships(value);
 }
 
 export function loadStoredState(): AppState {
@@ -255,7 +352,7 @@ export function loadStoredState(): AppState {
     return demoState;
   }
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = safeGetItem(STORAGE_KEY);
   if (!raw) {
     return demoState;
   }
@@ -266,10 +363,10 @@ export function loadStoredState(): AppState {
       return parsed;
     }
 
-    window.localStorage.removeItem(STORAGE_KEY);
+    safeRemoveItem(STORAGE_KEY);
     return demoState;
   } catch {
-    window.localStorage.removeItem(STORAGE_KEY);
+    safeRemoveItem(STORAGE_KEY);
     return demoState;
   }
 }
@@ -279,10 +376,7 @@ export function saveStoredState(state: AppState): void {
     return;
   }
 
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-  }
+  safeSetItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 export function clearStoredState(): void {
@@ -290,5 +384,5 @@ export function clearStoredState(): void {
     return;
   }
 
-  window.localStorage.removeItem(STORAGE_KEY);
+  safeRemoveItem(STORAGE_KEY);
 }

@@ -30,6 +30,17 @@ describe("storage", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("falls back to demo state when localStorage.getItem throws", () => {
+    const getItemSpy = vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
+      throw new Error("Storage unavailable");
+    });
+
+    expect(() => loadStoredState()).not.toThrow();
+    expect(loadStoredState()).toEqual(demoState);
+
+    getItemSpy.mockRestore();
+  });
+
   it("falls back to demo state for malformed localStorage payloads and removes the entry", () => {
     window.localStorage.setItem(STORAGE_KEY, "{malformed json");
 
@@ -50,6 +61,56 @@ describe("storage", () => {
         extractedFacts: [],
         aiMessages: [],
         auditEvents: []
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to demo state for carePlan patient mismatch and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        carePlan: {
+          ...demoState.carePlan,
+          patientId: "another-patient"
+        }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to demo state for medication/readings patient mismatch and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        medications: [
+          {
+            ...demoState.medications[0],
+            patientId: "another-patient"
+          }
+        ],
+        readings: [
+          {
+            id: "reading-1",
+            patientId: "patient-1",
+            systolic: 126,
+            diastolic: 81,
+            pulse: null,
+            measuredAt: "2026-07-05T09:00:00.000Z",
+            contexts: ["morning"],
+            note: "good"
+          }
+        ]
       })
     );
 
@@ -92,6 +153,17 @@ describe("storage", () => {
     setItemSpy.mockRestore();
   });
 
+  it("does not throw when clearStoredState cannot remove", () => {
+    const removeItemSpy = vi.spyOn(window.localStorage, "removeItem").mockImplementation(() => {
+      throw new Error("Cannot remove");
+    });
+
+    expect(() => clearStoredState()).not.toThrow();
+    expect(loadStoredState()).toEqual(demoState);
+
+    removeItemSpy.mockRestore();
+  });
+
   it("falls back to demo state for invalid reading pulse or contexts and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -107,6 +179,41 @@ describe("storage", () => {
             measuredAt: "2026-07-05T09:00:00.000Z",
             contexts: ["foo"],
             note: "invalid"
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to demo state for extracted facts with unknown contextItemId", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        contextItems: [
+          {
+            id: "context-1",
+            patientId: "patient-1",
+            title: "Lab update",
+            rawText: "Sodium 140",
+            sourceLabel: "Clinic portal",
+            createdAt: "2026-07-04T00:00:00.000Z"
+          }
+        ],
+        extractedFacts: [
+          {
+            id: "fact-1",
+            contextItemId: "missing-context",
+            label: "Sodium",
+            value: "normal",
+            confidence: "high",
+            status: "inferred",
+            sourceSnippet: "Sodium 140"
           }
         ]
       })
