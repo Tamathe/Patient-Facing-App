@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import { HealthStateProvider } from "@/state/store";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <HealthStateProvider>{children}</HealthStateProvider>
+      </body>
     </html>
   );
 }
