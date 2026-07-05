@@ -11,6 +11,39 @@ export function buildHealthBrief(state: AppState): HealthBrief {
     return `${medication.name} ${medication.dose} ${medication.schedule}.${barrierText}`;
   });
   const confirmedInstructions = state.extractedFacts.filter((fact) => fact.status === "confirmed").map((fact) => fact.value);
+  const { carePlan } = state;
+  const callThresholdParts = [
+    carePlan.callThresholdSystolic !== null ? `${carePlan.callThresholdSystolic} systolic` : null,
+    carePlan.callThresholdDiastolic !== null ? `${carePlan.callThresholdDiastolic} diastolic` : null
+  ].filter(Boolean) as string[];
+  const hasCarePlanThresholds = callThresholdParts.length > 0;
+  const hasWarningSymptoms = carePlan.warningSymptoms.length > 0;
+  const hasUrgentGuidance = hasCarePlanThresholds || hasWarningSymptoms;
+  const urgencySectionStatus = hasUrgentGuidance
+    ? carePlan.thresholdSource === "clinician_authored"
+      ? "confirmed"
+      : "inferred"
+    : "needs_review";
+  const urgencySourceText =
+    carePlan.thresholdSource === "clinician_authored"
+      ? "Clinician-confirmed care-plan guidance."
+      : "Standard education guidance for urgent threshold planning.";
+  const urgencyItems = hasUrgentGuidance
+    ? [
+        urgencySourceText,
+        ...(
+          hasCarePlanThresholds
+            ? [`Call the team if your blood pressure reaches ${callThresholdParts.join(" or ")} mmHg.`]
+            : []
+        ),
+        ...(
+          hasWarningSymptoms ? [`Seek urgent care right away for: ${carePlan.warningSymptoms.join(", ")}.`] : []
+        )
+      ]
+    : [
+        "No clinician call thresholds or warning symptoms are currently listed yet.",
+        "Please review these urgent thresholds with your care team."
+      ];
 
   return {
     id: "brief-current",
@@ -26,6 +59,11 @@ export function buildHealthBrief(state: AppState): HealthBrief {
         title: "Recent home readings",
         items: recentReadings.length > 0 ? recentReadings : ["No home readings logged yet."],
         status: recentReadings.length > 0 ? "patient_reported" : "needs_review"
+      },
+      {
+        title: "When to call my care team",
+        items: urgencyItems,
+        status: urgencySectionStatus
       },
       {
         title: "Medicines and barriers",
