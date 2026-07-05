@@ -19,6 +19,44 @@ describe("createSafeAiResponse", () => {
     expect(response.content).toContain("I cannot tell you to stop");
   });
 
+  it("escalates for dangerous state reading even when patient input is blocked", async () => {
+    const stateWithDangerousReading = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-1",
+          patientId: "patient-1",
+          systolic: 170,
+          diastolic: 104,
+          pulse: 76,
+          measuredAt: "2026-07-05T12:00:00.000Z",
+          contexts: ["morning"],
+          note: "Morning check."
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "trouble",
+        patientInput: "Should I stop taking lisinopril?",
+        state: stateWithDangerousReading
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("call threshold");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("allows education requests through the provider", async () => {
     const response = await createSafeAiResponse(
       {

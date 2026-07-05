@@ -22,21 +22,23 @@ export async function createSafeAiResponse(
   provider: HealthAiProvider
 ): Promise<HealthAiResponse> {
   const inputSafety = classifySafety(request.patientInput);
-
-  if (inputSafety.level !== "allowed") {
-    return {
-      content: inputSafety.response,
-      safety: inputSafety.level,
-      sources: []
-    };
-  }
-
+  let stateBlockingReadingSafety: HealthAiResponse | undefined;
   const latestReading = getLatestReading(request.state.readings);
+  const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
+
   if (latestReading) {
     const noteSafety = classifySafety(latestReading.note);
 
-    if (noteSafety.level !== "allowed") {
+    if (noteSafety.level === "escalate") {
       return {
+        content: noteSafety.response,
+        safety: "escalate",
+        sources: [latestReading.id]
+      };
+    }
+
+    if (noteSafety.level === "blocked") {
+      stateBlockingReadingSafety = {
         content: noteSafety.response,
         safety: noteSafety.level,
         sources: [latestReading.id]
@@ -53,13 +55,32 @@ export async function createSafeAiResponse(
     }
   }
 
-  const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
   if (medicationWithSideEffects) {
     return {
       content:
         `${medicationWithSideEffects.name} is marked with active side effects. I cannot diagnose the cause, but I can help you contact your care team and share this symptom pattern with the latest readings.`,
       safety: "escalate",
       sources: [medicationWithSideEffects.id]
+    };
+  }
+
+  if (inputSafety.level === "escalate") {
+    return {
+      content: inputSafety.response,
+      safety: inputSafety.level,
+      sources: []
+    };
+  }
+
+  if (stateBlockingReadingSafety) {
+    return stateBlockingReadingSafety;
+  }
+
+  if (inputSafety.level === "blocked") {
+    return {
+      content: inputSafety.response,
+      safety: inputSafety.level,
+      sources: []
     };
   }
 
