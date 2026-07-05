@@ -14,6 +14,17 @@ const dangerousReading: HomeReading = {
   note: ""
 };
 
+const thresholdReading: HomeReading = {
+  id: "threshold-reading",
+  patientId: "patient-1",
+  systolic: 165,
+  diastolic: 102,
+  pulse: 70,
+  measuredAt: "2026-07-05T10:00:00.000Z",
+  contexts: ["morning"],
+  note: ""
+};
+
 describe("buildTodayTasks", () => {
   it("limits Today to three priority items", () => {
     const tasks = buildTodayTasks(demoState);
@@ -41,6 +52,38 @@ describe("buildTodayTasks", () => {
       kind: "reading"
     });
     expect(tasks[0]).toMatchObject({ href: "/chat" });
+  });
+
+  it("labels urgent threshold follow-up as clinician-authored when care-plan thresholds are clinician-authored", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [thresholdReading]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      title: "Share this reading with your care team",
+      href: "/chat",
+      status: "confirmed"
+    });
+    expect(tasks[0].body).toContain("clinician-authored care plan");
+  });
+
+  it("labels urgent threshold follow-up as educational when threshold source is standard education", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      carePlan: {
+        ...demoState.carePlan,
+        thresholdSource: "standard_education"
+      },
+      readings: [thresholdReading]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      title: "Share this reading with your care team",
+      href: "/chat",
+      status: "inferred"
+    });
+    expect(tasks[0].body).toContain("standard-home blood pressure threshold");
   });
 
   it("does not add a medicine task when medications are empty", () => {

@@ -59,3 +59,27 @@
 - The escalation path is deterministic and gives the clinic follow-up task priority over routine tasks when the latest reading is risky.
 - Medicine and visit task generation now fail safe for empty data shapes without introducing app-shell or navigation changes.
 - Non-diagnostic wording stays patient-directed in all newly added task copy.
+
+## Follow-up Fix: Re-review actions
+
+### Findings addressed
+- Added a required `TaskItem.status` field with typed values `"confirmed" | "inferred" | "needs_review"` so every Today task exposes a patient-facing evidence status.
+- Updated `ActionCard` to render that status in plain language under each card body.
+- Updated urgent blood pressure tasks to surface different copy when thresholds are clinician-authored (`clinician_authored`) versus standard-education (`standard_education`) guidance:
+  - Clinician-authored: "clinician-authored care plan" messaging + `status: "confirmed"`.
+  - Standard education: standard education threshold wording + `status: "inferred"`.
+
+### Verification
+- `npm run test -- src/domain/tasks.test.ts src/components/action-card.test.tsx src/domain/blood-pressure.test.ts`
+  - PASS: 3 files, 11 tests.
+- `npm run test`
+  - PASS: 11 files, 50 tests.
+- `npm run build`
+  - PASS: production build completes with static page generation.
+
+### Files updated
+- `src/domain/types.ts`
+- `src/domain/tasks.ts`
+- `src/domain/tasks.test.ts`
+- `src/components/action-card.tsx`
+- `src/components/action-card.test.tsx`

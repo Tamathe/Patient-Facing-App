@@ -5,19 +5,34 @@ import { interpretBloodPressure } from "./blood-pressure";
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
   const latestReading = getLatestReading(state.readings);
+  const bloodPressureInsight = latestReading
+    ? interpretBloodPressure(latestReading, state.readings, state.carePlan)
+    : undefined;
   const readingRequiresClinicalFollowUp =
     latestReading !== undefined &&
-    (latestReadingNeedsClinicCheck(latestReading, state) ||
-      interpretBloodPressure(latestReading, state.readings, state.carePlan).escalation === "clinic");
+    (latestReadingNeedsClinicCheck(latestReading) || bloodPressureInsight?.escalation === "clinic");
 
   if (readingRequiresClinicalFollowUp) {
+    const isCarePlanThreshold = bloodPressureInsight?.source === "care_plan";
+    const isClinicianThreshold =
+      isCarePlanThreshold && state.carePlan.thresholdSource === "clinician_authored";
+
     tasks.push({
       id: "task-bp-clinical",
       title: "Share this reading with your care team",
-      body: "Your latest reading is in the range to review today. If you feel worse, call your care team now.",
+      body: isCarePlanThreshold
+        ? isClinicianThreshold
+          ? "This met a threshold in your clinician-authored care plan. Share this reading today."
+          : "This met a standard-home blood pressure threshold. Share this reading and check with your care team."
+        : "This reading suggests a same-day review with your care team.",
       href: "/chat",
       priority: 1,
-      kind: "reading"
+      kind: "reading",
+      status: isCarePlanThreshold
+        ? isClinicianThreshold
+          ? "confirmed"
+          : "inferred"
+        : "needs_review"
     });
   } else if (state.readings.length === 0) {
     tasks.push({
@@ -26,7 +41,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       body: "Log your first home reading so your plan can start building a pattern.",
       href: "/numbers",
       priority: 1,
-      kind: "reading"
+      kind: "reading",
+      status: "needs_review"
     });
   }
 
@@ -37,7 +53,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       body: "Your medicine list has a barrier marked. Turn it into a clear question for your care team.",
       href: "/chat",
       priority: 2,
-      kind: "medicine"
+      kind: "medicine",
+      status: "confirmed"
     });
   } else if (state.medications.length > 0) {
     tasks.push({
@@ -46,7 +63,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       body: "A quick explanation can make daily medicine feel less random.",
       href: "/medicines",
       priority: 2,
-      kind: "medicine"
+      kind: "medicine",
+      status: "inferred"
     });
   }
 
@@ -58,7 +76,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       body: visitReason,
       href: "/visits",
       priority: 3,
-      kind: "visit"
+      kind: "visit",
+      status: "confirmed"
     });
   }
 
@@ -75,7 +94,7 @@ function getLatestReading(readings: HomeReading[]): HomeReading | undefined {
   )[0];
 }
 
-function latestReadingNeedsClinicCheck(reading: HomeReading, state: AppState): boolean {
+function latestReadingNeedsClinicCheck(reading: HomeReading): boolean {
   const numericSafety = `${reading.systolic}/${reading.diastolic}`;
   const safetyAssessment = classifySafety(numericSafety);
 

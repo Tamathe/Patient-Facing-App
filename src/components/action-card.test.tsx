@@ -13,11 +13,13 @@ describe("ActionCard", () => {
           body: "Log a reading.",
           href: "/numbers",
           priority: 1,
-          kind: "reading"
+          kind: "reading",
+          status: "inferred"
         }}
       />
     );
 
     expect(screen.getByRole("link", { name: /check blood pressure/i })).toHaveAttribute("href", "/numbers");
+    expect(screen.getByText("Helpful guidance from your recent readings.")).toBeInTheDocument();
   });
 });

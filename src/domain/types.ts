@@ -73,6 +73,7 @@ export type TaskItem = {
   href: string;
   priority: 1 | 2 | 3;
   kind: "reading" | "medicine" | "visit" | "intake" | "privacy";
+  status: "confirmed" | "inferred" | "needs_review";
 };
 
 export type CareContextItem = {
