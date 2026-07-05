@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ConversationPanel } from "./conversation-panel";
+import type { AiMessage } from "@/domain/types";
 import React from "react";
 
 describe("ConversationPanel", () => {
@@ -16,5 +17,43 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(onSubmit).toHaveBeenCalledWith("why", "Why am I taking lisinopril?");
+  });
+
+  it("renders safety guidance labels on messages", () => {
+    const messages: AiMessage[] = [
+      {
+        id: "1",
+        mode: "explain",
+        role: "assistant",
+        content: "You're taking this medication for blood pressure.",
+        createdAt: "2026-07-05T12:00:00.000Z",
+        safety: "allowed",
+        sources: []
+      },
+      {
+        id: "2",
+        mode: "trouble",
+        role: "assistant",
+        content: "Please contact your care team right away.",
+        createdAt: "2026-07-05T12:00:01.000Z",
+        safety: "escalate",
+        sources: []
+      },
+      {
+        id: "3",
+        mode: "why",
+        role: "assistant",
+        content: "I can't help with that request.",
+        createdAt: "2026-07-05T12:00:02.000Z",
+        safety: "blocked",
+        sources: []
+      }
+    ];
+
+    render(<ConversationPanel onSubmit={vi.fn()} messages={messages} />);
+
+    expect(screen.getByText("Safety guidance: Safe to continue")).toBeInTheDocument();
+    expect(screen.getByText("Safety guidance: Escalate to care now")).toBeInTheDocument();
+    expect(screen.getByText("Safety guidance: Blocked for safety")).toBeInTheDocument();
   });
 });

@@ -1,9 +1,8 @@
 "use client";
 
 import { Send } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import type { AiMessage, AiMode } from "@/domain/types";
-import React from "react";
 
 const modes: Array<{ mode: AiMode; label: string }> = [
   { mode: "explain", label: "Explain this" },
@@ -14,6 +13,18 @@ const modes: Array<{ mode: AiMode; label: string }> = [
   { mode: "visit", label: "Prepare for my visit" },
   { mode: "summarize", label: "Summarize for someone" }
 ];
+
+const safetyGuidanceText: Record<AiMessage["safety"], string> = {
+  allowed: "Safe to continue",
+  escalate: "Escalate to care now",
+  blocked: "Blocked for safety"
+};
+
+const safetyGuidanceClass: Record<AiMessage["safety"], string> = {
+  allowed: "text-emerald-700",
+  escalate: "text-amber-700",
+  blocked: "text-rose-700"
+};
 
 type ConversationPanelProps = {
   messages: AiMessage[];
@@ -45,6 +56,9 @@ export function ConversationPanel({ messages, onSubmit }: ConversationPanelProps
             key={message.id}
           >
             <p>{message.content}</p>
+            <p className={`mt-2 text-xs font-semibold ${safetyGuidanceClass[message.safety]}`}>
+              Safety guidance: {safetyGuidanceText[message.safety]}
+            </p>
             {message.sources.length > 0 ? <p className="mt-2 text-xs text-ink/60">Sources: {message.sources.join(", ")}</p> : null}
           </article>
         ))}
