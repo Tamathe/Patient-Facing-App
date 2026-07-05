@@ -54,3 +54,34 @@ export const demoState: AppState = {
   aiMessages: [],
   auditEvents: []
 };
+
+export const deletedDemoState: AppState = {
+  patient: {
+    id: "patient-deleted",
+    name: "Deleted demo data",
+    preferredName: "Demo",
+    language: "en",
+    primaryClinicName: "Care team",
+    primaryClinicPhone: ""
+  },
+  carePlan: {
+    id: "plan-deleted",
+    patientId: "patient-deleted",
+    condition: "hypertension",
+    plainLanguageSummary: "Demo data has been deleted. Add new instructions or readings to start again.",
+    goals: [],
+    dailyActions: [],
+    callThresholdSystolic: null,
+    callThresholdDiastolic: null,
+    thresholdSource: "standard_education",
+    warningSymptoms: [],
+    nextVisitReason: "Add care context to prepare for a future visit."
+  },
+  medications: [],
+  readings: [],
+  tasks: [],
+  contextItems: [],
+  extractedFacts: [],
+  aiMessages: [],
+  auditEvents: []
+};

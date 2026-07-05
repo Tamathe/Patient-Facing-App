@@ -28,6 +28,16 @@ const urgentSymptomPatterns = [
   /fainting/i
 ];
 
+function hasDangerousBloodPressure(systolic: number, diastolic: number): boolean {
+  const plausibleReading = systolic >= 50 && systolic <= 260 && diastolic >= 20 && diastolic <= 160;
+
+  if (!plausibleReading) {
+    return false;
+  }
+
+  return systolic >= 180 || diastolic >= 120 || systolic < 90 || diastolic < 60;
+}
+
 function hasDangerousReading(input: string): boolean {
   const slashMatch = dangerousReadingWithSlashPattern.exec(input);
 
@@ -35,7 +45,7 @@ function hasDangerousReading(input: string): boolean {
     const systolic = Number.parseInt(slashMatch[1], 10);
     const diastolic = Number.parseInt(slashMatch[2], 10);
 
-    return systolic >= 180 || diastolic >= 120;
+    return hasDangerousBloodPressure(systolic, diastolic);
   }
 
   const wordMatch = dangerousSystolicDiastolicPattern.exec(input);
@@ -47,7 +57,7 @@ function hasDangerousReading(input: string): boolean {
   const systolic = Number.parseInt(wordMatch[1], 10);
   const diastolic = Number.parseInt(wordMatch[2], 10);
 
-  return systolic >= 180 || diastolic >= 120;
+  return hasDangerousBloodPressure(systolic, diastolic);
 }
 
 export function classifySafety(input: string): SafetyClassification {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { demoState } from "@/domain/fixtures";
+import { deletedDemoState, demoState } from "@/domain/fixtures";
 import { clearStoredState, loadStoredState, saveStoredState } from "./storage";
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
@@ -237,6 +237,18 @@ describe("storage", () => {
     expect(loadStoredState()).toEqual(demoState);
 
     removeItemSpy.mockRestore();
+  });
+
+  it("keeps a valid deleted demo state without rehydrating seeded demo data", () => {
+    saveStoredState(deletedDemoState);
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.id).toBe("patient-deleted");
+    expect(loaded.patient.name).not.toBe(demoState.patient.name);
+    expect(loaded.medications).toHaveLength(0);
+    expect(loaded.readings).toHaveLength(0);
+    expect(loaded.aiMessages).toHaveLength(0);
   });
 
   it("falls back to demo state for invalid reading pulse or contexts and clears storage", () => {

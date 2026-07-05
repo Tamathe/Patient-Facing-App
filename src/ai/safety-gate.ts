@@ -17,6 +17,10 @@ function findMedicationWithSideEffects(medications: Medication[]): Medication | 
   return medications.find((medication) => medication.activeBarriers.includes("side_effects"));
 }
 
+function mentionsSideEffectConcern(input: string): boolean {
+  return /side effect|dizz|lightheaded|faint|swelling|rash|nausea|cough|made me feel|felt worse/i.test(input);
+}
+
 export async function createSafeAiResponse(
   request: HealthAiRequest,
   provider: HealthAiProvider
@@ -30,7 +34,7 @@ export async function createSafeAiResponse(
   });
 
   if (recentClinicalReading) {
-    const { reading, bloodPressureInsight, noteSafety } = recentClinicalReading;
+    const { reading, bloodPressureInsight, noteSafety, numericSafety } = recentClinicalReading;
 
     if (noteSafety.level === "escalate") {
       return {
@@ -45,6 +49,14 @@ export async function createSafeAiResponse(
         content: `${bloodPressureInsight.message} If you are feeling worse, seek urgent care now.`,
         safety: "escalate",
         sources: [reading.id, request.state.carePlan.id]
+      };
+    }
+
+    if (numericSafety.level === "escalate") {
+      return {
+        content: numericSafety.response,
+        safety: "escalate",
+        sources: [reading.id]
       };
     }
 
@@ -85,7 +97,7 @@ export async function createSafeAiResponse(
     };
   }
 
-  if (medicationWithSideEffects) {
+  if (medicationWithSideEffects && mentionsSideEffectConcern(request.patientInput)) {
     return {
       content:
         `${medicationWithSideEffects.name} is marked with active side effects. I cannot diagnose the cause, but I can help you contact your care team and share this symptom pattern with the latest readings.`,

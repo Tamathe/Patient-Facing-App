@@ -23,6 +23,11 @@ describe("classifySafety", () => {
     expect(result.response).toContain("seek urgent help now");
   });
 
+  it("escalates very low blood-pressure readings", () => {
+    expect(classifySafety("My BP is 82/50").level).toBe("escalate");
+    expect(classifySafety("systolic 85 diastolic 55").level).toBe("escalate");
+  });
+
   it("escalates unlabeled dangerous readings like bare numbers", () => {
     expect(classifySafety("200/120").level).toBe("escalate");
     expect(classifySafety("My reading is 200/120").level).toBe("escalate");

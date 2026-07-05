@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { HealthBriefCard } from "@/components/health-brief-card";
+import { recordAuditEvent } from "@/domain/audit";
 import { buildHealthBrief } from "@/domain/health-brief";
 import { useHealthState } from "@/state/store";
 
 export default function VisitsPage() {
-  const { state } = useHealthState();
+  const { state, dispatch } = useHealthState();
   const [generatedAt, setGeneratedAt] = useState<string>("");
 
   useEffect(() => {
@@ -15,6 +16,12 @@ export default function VisitsPage() {
   }, []);
 
   const brief = useMemo(() => buildHealthBrief(state, { generatedAt }), [state, generatedAt]);
+  const recordBriefShare = (label: string) => {
+    dispatch({
+      type: "addAuditEvent",
+      event: recordAuditEvent(state.patient.id, "shared", label)
+    });
+  };
 
   return (
     <AppShell title="My Visits">
@@ -25,7 +32,12 @@ export default function VisitsPage() {
             Review this before your appointment, show it on your phone, or print it.
           </p>
         </section>
-        <HealthBriefCard brief={brief} />
+        <HealthBriefCard
+          brief={brief}
+          onDownload={() => recordBriefShare("Health Brief downloaded")}
+          onPrint={() => recordBriefShare("Health Brief printed")}
+          onShare={() => recordBriefShare("Health Brief shared")}
+        />
       </div>
     </AppShell>
   );

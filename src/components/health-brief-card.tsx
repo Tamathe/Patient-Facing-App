@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { HealthBrief } from "@/domain/types";
 
-export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
+type HealthBriefCardProps = {
+  brief: HealthBrief;
+  onDownload?: () => void;
+  onPrint?: () => void;
+  onShare?: () => void;
+};
+
+export function HealthBriefCard({ brief, onDownload, onPrint, onShare }: HealthBriefCardProps) {
   const [canShare, setCanShare] = useState(false);
   const generatedLabel = useMemo(() => {
     const generatedAt = new Date(brief.generatedAt);
@@ -61,6 +68,7 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
 
     if (!hasShareApi) {
       downloadBrief(shareText);
+      onDownload?.();
       return;
     }
 
@@ -69,6 +77,7 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
         title: "My Health Brief",
         text: shareText
       });
+      onShare?.();
       return;
     } catch {
       return;
@@ -85,7 +94,10 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
         <div className="health-brief-card__actions flex gap-2">
           <button
             className="rounded-control border border-care px-3 py-2 text-sm font-semibold text-care"
-            onClick={() => window.print()}
+            onClick={() => {
+              onPrint?.();
+              window.print();
+            }}
             type="button"
           >
             Print

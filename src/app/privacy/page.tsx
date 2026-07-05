@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         onExport={handleExport}
         onReset={() => {
           clearStoredState();
-          dispatch({ type: "resetDemo" });
+          dispatch({ type: "deleteDemoData" });
         }}
       />
     </AppShell>

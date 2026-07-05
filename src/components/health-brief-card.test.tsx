@@ -17,6 +17,7 @@ describe("HealthBriefCard", () => {
   it("uses Web Share API when available", async () => {
     const user = userEvent.setup();
     const previousShare = (window.navigator as { share?: () => Promise<void> }).share;
+    const onShare = vi.fn();
 
     Object.defineProperty(window.navigator, "share", {
       configurable: true,
@@ -24,13 +25,14 @@ describe("HealthBriefCard", () => {
       value: vi.fn().mockResolvedValue(undefined)
     });
 
-    render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
+    render(<HealthBriefCard brief={buildHealthBrief(demoState)} onShare={onShare} />);
     await user.click(await screen.findByRole("button", { name: /share/i }));
 
     expect(window.navigator.share).toHaveBeenCalledWith({
       title: "My Health Brief",
       text: expect.stringContaining("When to call my care team")
     });
+    expect(onShare).toHaveBeenCalledTimes(1);
 
     Object.defineProperty(window.navigator, "share", {
       configurable: true,
@@ -74,13 +76,14 @@ describe("HealthBriefCard", () => {
       ? vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:health-brief")
       : undefined;
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const onDownload = vi.fn();
     Object.defineProperty(window.navigator, "share", {
       configurable: true,
       writable: true,
       value: vi.fn().mockRejectedValue(new DOMException("Share was cancelled", "AbortError"))
     });
 
-    render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
+    render(<HealthBriefCard brief={buildHealthBrief(demoState)} onDownload={onDownload} />);
     await user.click(await screen.findByRole("button", { name: /share/i }));
 
     expect(window.navigator.share).toHaveBeenCalledWith({
@@ -88,6 +91,7 @@ describe("HealthBriefCard", () => {
       text: expect.stringContaining("When to call my care team")
     });
     expect(anchorClick).not.toHaveBeenCalled();
+    expect(onDownload).not.toHaveBeenCalled();
     if (createObjectURL) {
       expect(createObjectURL).not.toHaveBeenCalled();
     }
@@ -112,6 +116,7 @@ describe("HealthBriefCard", () => {
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const append = vi.spyOn(document.body, "appendChild");
     const remove = vi.spyOn(document.body, "removeChild");
+    const onDownload = vi.fn();
 
     Object.defineProperty(window.navigator, "share", {
       configurable: true,
@@ -119,13 +124,14 @@ describe("HealthBriefCard", () => {
       value: undefined
     });
 
-    render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
+    render(<HealthBriefCard brief={buildHealthBrief(demoState)} onDownload={onDownload} />);
     fireEvent.click(screen.getByRole("button", { name: /download/i }));
 
     if (createObjectURL) {
       expect(createObjectURL).toHaveBeenCalled();
     }
     expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(onDownload).toHaveBeenCalledTimes(1);
     expect(append).toHaveBeenCalled();
     expect(remove).toHaveBeenCalled();
 
@@ -139,5 +145,17 @@ describe("HealthBriefCard", () => {
     anchorClick.mockRestore();
     append.mockRestore();
     remove.mockRestore();
+  });
+
+  it("records print when the print action is used", () => {
+    const onPrint = vi.fn();
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+
+    render(<HealthBriefCard brief={buildHealthBrief(demoState)} onPrint={onPrint} />);
+    fireEvent.click(screen.getByRole("button", { name: "Print" }));
+
+    expect(onPrint).toHaveBeenCalledTimes(1);
+    expect(print).toHaveBeenCalledTimes(1);
+    print.mockRestore();
   });
 });

@@ -9,7 +9,7 @@ import {
   type Dispatch,
   type ReactNode
 } from "react";
-import { demoState } from "@/domain/fixtures";
+import { deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import type {
   AiMessage,
@@ -29,7 +29,8 @@ export type HealthAction =
   | { type: "confirmFact"; factId: string }
   | { type: "addAiMessage"; message: AiMessage }
   | { type: "addAuditEvent"; event: AuditEvent }
-  | { type: "resetDemo" };
+  | { type: "resetDemo" }
+  | { type: "deleteDemoData" };
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
   switch (action.type) {
@@ -80,9 +81,11 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       };
     }
     case "resetDemo":
+      return demoState;
+    case "deleteDemoData":
       return {
-        ...demoState,
-        auditEvents: [recordAuditEvent(state.patient.id, "deleted", "Demo data deleted")]
+        ...deletedDemoState,
+        auditEvents: [recordAuditEvent(deletedDemoState.patient.id, "deleted", "Demo data deleted")]
       };
     default:
       return state;

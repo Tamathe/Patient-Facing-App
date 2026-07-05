@@ -34,7 +34,7 @@ describe("healthReducer", () => {
     expect(next.medications[0].activeBarriers).toEqual(["cost", "side_effects"]);
   });
 
-  it("returns demo state for an explicit resetDemo action", () => {
+  it("returns seeded demo state for an explicit resetDemo action", () => {
     const modifiedState = {
       ...demoState,
       readings: [
@@ -59,14 +59,46 @@ describe("healthReducer", () => {
 
     const next = healthReducer(modifiedState, { type: "resetDemo" });
 
+    expect(next).toEqual(demoState);
+  });
+
+  it("deletes demo data without reseeding personal demo content", () => {
+    const modifiedState = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-1",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T09:00:00.000Z",
+          contexts: ["morning"],
+          note: "Before coffee"
+        }
+      ],
+      medications: [
+        {
+          ...demoState.medications[0],
+          activeBarriers: ["cost"]
+        }
+      ]
+    };
+
+    const next = healthReducer(modifiedState, { type: "deleteDemoData" });
+
+    expect(next.patient.id).toBe("patient-deleted");
+    expect(next.patient.name).not.toBe(demoState.patient.name);
+    expect(next.medications).toHaveLength(0);
+    expect(next.readings).toHaveLength(0);
+    expect(next.contextItems).toHaveLength(0);
+    expect(next.aiMessages).toHaveLength(0);
     expect(next.auditEvents).toHaveLength(1);
     expect(next.auditEvents[0]).toMatchObject({
       action: "deleted",
       label: "Demo data deleted",
-      patientId: demoState.patient.id
+      patientId: "patient-deleted"
     });
-    expect(next.readings).toHaveLength(0);
-    expect(next.medications).toHaveLength(1);
     expect(next.auditEvents[0]?.createdAt).toBeTypeOf("string");
   });
 

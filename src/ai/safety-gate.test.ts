@@ -143,6 +143,46 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it("escalates on very low recent reading before provider call", async () => {
+    const stateWithLowReading = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-low",
+          patientId: "patient-1",
+          systolic: 82,
+          diastolic: 50,
+          pulse: 62,
+          measuredAt: "2026-07-05T12:00:00.000Z",
+          contexts: ["morning"],
+          note: "Feeling weak."
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What should I do today?",
+        state: stateWithLowReading
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("seek urgent help now");
+    expect(response.sources).toContain("reading-low");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+
   it("escalates on earlier dangerous reading when a later normal reading exists", async () => {
     const stateWithEarlierDangerousReading = {
       ...demoState,
@@ -379,7 +419,7 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
-  it("escalates when an active side effects medication barrier exists before provider call", async () => {
+  it("allows education when a side effects barrier exists but the current question is safe", async () => {
     const stateWithSideEffects = {
       ...demoState,
       medications: [
@@ -401,6 +441,38 @@ describe("createSafeAiResponse", () => {
       {
         mode: "why",
         patientInput: "Can you explain why I'm taking lisinopril?",
+        state: stateWithSideEffects
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("allowed");
+    expect(response.content).toBe("This should not be called.");
+    expect(provider.respond).toHaveBeenCalledTimes(1);
+  });
+
+  it("escalates when an active side effects barrier and current symptom concern are present", async () => {
+    const stateWithSideEffects = {
+      ...demoState,
+      medications: [
+        {
+          ...demoState.medications[0],
+          activeBarriers: ["side_effects"]
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "trouble",
+        patientInput: "This medicine made me feel dizzy.",
         state: stateWithSideEffects
       },
       provider
