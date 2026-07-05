@@ -2,7 +2,11 @@ import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./type
 
 export class MockHealthAiProvider implements HealthAiProvider {
   async respond(request: HealthAiRequest): Promise<HealthAiResponse> {
-    const medication = request.state.medications[0];
+    const lowercasedInput = request.patientInput.toLowerCase();
+    const requestedMedication = request.state.medications.find((medication) =>
+      lowercasedInput.includes(medication.name.toLowerCase())
+    );
+    const medication = requestedMedication ?? request.state.medications[0];
 
     if (request.mode === "why" && medication) {
       return {
