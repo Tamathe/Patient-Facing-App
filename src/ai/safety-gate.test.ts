@@ -1,10 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "@/domain/fixtures";
 import { MockHealthAiProvider } from "./mock-provider";
 import { createSafeAiResponse } from "./safety-gate";
 import type { HealthAiProvider } from "./types";
 
+const NOW = new Date("2026-07-05T12:00:00.000Z");
+
 describe("createSafeAiResponse", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("blocks unsafe medication change requests before provider call", async () => {
     const response = await createSafeAiResponse(
       {
@@ -157,6 +168,64 @@ describe("createSafeAiResponse", () => {
     expect(response.content).toContain("call threshold");
     expect(response.content).toContain("If you are feeling worse");
     expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("does not escalate from stale urgent or blocked readings outside the 24-hour real-time window", async () => {
+    const stateWithStaleReadings = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-stale-blocked",
+          patientId: "patient-1",
+          systolic: 120,
+          diastolic: 80,
+          pulse: 74,
+          measuredAt: "2026-07-03T09:00:00.000Z",
+          contexts: ["morning"],
+          note: "Should I increase my dose?"
+        },
+        {
+          id: "reading-stale-danger",
+          patientId: "patient-1",
+          systolic: 170,
+          diastolic: 104,
+          pulse: 76,
+          measuredAt: "2026-07-03T10:00:00.000Z",
+          contexts: ["morning"],
+          note: "Morning check."
+        },
+        {
+          id: "reading-current-safe",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T10:00:00.000Z",
+          contexts: ["morning"],
+          note: "Feeling okay now."
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "I can help you plan your next check-in.",
+        safety: "allowed" as const,
+        sources: []
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What should I do today?",
+        state: stateWithStaleReadings
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("allowed");
+    expect(response.content).toContain("next check-in");
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("escalates when an older dangerous reading exists and a newer blocked note is newer", async () => {

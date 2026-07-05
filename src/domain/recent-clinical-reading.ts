@@ -15,6 +15,7 @@ type ClinicalReadingSeverity = "urgent" | "blocked";
 
 export type FindRecentClinicalReadingOptions = {
   includeBlockedNotes?: boolean;
+  referenceTime?: Date | string | number;
 };
 
 export function findRecentClinicalReading(
@@ -22,13 +23,16 @@ export function findRecentClinicalReading(
   carePlan: CarePlan,
   options: FindRecentClinicalReadingOptions = {}
 ): ClinicalReadingCandidate | undefined {
-  const { includeBlockedNotes = false } = options;
+  const {
+    includeBlockedNotes = false,
+    referenceTime = new Date()
+  } = options;
   const sortedReadings = sortReadingsByTime(readings);
   if (sortedReadings.length === 0) {
     return undefined;
   }
 
-  const recentWindowStart = new Date(sortedReadings[0].measuredAt).valueOf() - RECENT_READING_WINDOW_MS;
+  const recentWindowStart = new Date(referenceTime).valueOf() - RECENT_READING_WINDOW_MS;
   const recentReadingsWindow = sortedReadings
     .filter((reading) => new Date(reading.measuredAt).valueOf() >= recentWindowStart)
     .slice()

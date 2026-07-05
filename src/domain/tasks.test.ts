@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "./fixtures";
 import { buildTodayTasks } from "./tasks";
 import type { HomeReading } from "./types";
+
+const NOW = new Date("2026-07-05T12:00:00.000Z");
 
 const dangerousReading: HomeReading = {
   id: "danger-reading",
@@ -59,6 +61,15 @@ const medicationChangeReading: HomeReading = {
 };
 
 describe("buildTodayTasks", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("limits Today to three priority items", () => {
     const tasks = buildTodayTasks(demoState);
 
@@ -150,6 +161,35 @@ describe("buildTodayTasks", () => {
       ]
     });
 
+    expect(tasks[0]).toMatchObject({
+      id: "task-today-safe-state",
+      title: "No urgent items to review today"
+    });
+  });
+
+  it("does not surface stale urgent or blocked readings outside the real-time 24-hour window", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      medications: [],
+      carePlan: {
+        ...demoState.carePlan,
+        nextVisitReason: ""
+      },
+      readings: [
+        {
+          ...dangerousReading,
+          measuredAt: "2026-07-03T10:00:00.000Z",
+          id: "dangerous-older-reading"
+        },
+        {
+          ...medicationChangeReading,
+          measuredAt: "2026-07-03T09:00:00.000Z",
+          id: "blocked-older-reading"
+        }
+      ]
+    });
+
+    expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
       id: "task-today-safe-state",
       title: "No urgent items to review today"

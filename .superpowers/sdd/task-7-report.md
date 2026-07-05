@@ -226,3 +226,23 @@
   - PASS: 4 files, 28 tests.
 - `npm run build`
   - PASS: production build succeeds (`Next.js 15.5.20`) with all routes generated.
+
+## Fix: Task 7 real-clock recency review
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/domain/tasks.test.ts`
+- `src/ai/safety-gate.test.ts`
+
+### Fix notes
+- Updated `findRecentClinicalReading` to anchor the 24-hour window to `referenceTime` and default `referenceTime` to `new Date()` (real current time in production).
+- Added optional `referenceTime` to `FindRecentClinicalReadingOptions` so callers can inject deterministic reference times when needed.
+- Added deterministic timer setup/teardown in affected tests with `vi.useFakeTimers` + `vi.setSystemTime` to avoid date fragility.
+- Added regression coverage that stale urgent/blocked readings outside the 24-hour real-time window do not surface a Today clinical action.
+- Added safety-gate regression coverage for stale urgent/blocked readings that should no longer trigger pre-provider escalation/blocked responses.
+
+### Verification (exact)
+- `npm run test -- src/domain/tasks.test.ts src/ai/safety-gate.test.ts src/domain/blood-pressure.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 30 tests.
+- `npm run build`
+  - PASS: production build succeeds (`Next.js 15.5.20`) with all routes generated.
