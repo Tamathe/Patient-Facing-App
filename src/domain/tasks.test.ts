@@ -47,6 +47,17 @@ const chestPainReading: HomeReading = {
   note: "I had chest pain for 5 minutes."
 };
 
+const medicationChangeReading: HomeReading = {
+  id: "medication-change-reading",
+  patientId: "patient-1",
+  systolic: 126,
+  diastolic: 80,
+  pulse: 74,
+  measuredAt: "2026-07-05T10:45:00.000Z",
+  contexts: ["morning"],
+  note: "Should I increase my dose?"
+};
+
 describe("buildTodayTasks", () => {
   it("limits Today to three priority items", () => {
     const tasks = buildTodayTasks(demoState);
@@ -157,6 +168,35 @@ describe("buildTodayTasks", () => {
       status: "needs_review"
     });
     expect(tasks[0].body).toContain("If this may be an emergency");
+  });
+
+  it("uses urgent symptom/clinic follow-up even when a newer blocked note exists", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [medicationChangeReading, chestPainReading]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      id: "task-bp-clinical",
+      title: "Seek urgent help now",
+      status: "needs_review",
+      href: "/chat"
+    });
+  });
+
+  it("adds a blocked-note review task with needs_review when that is the highest-severity issue", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [routineReading, medicationChangeReading]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      id: "task-bp-clinical",
+      title: "Review this note with your care team",
+      status: "needs_review",
+      href: "/chat"
+    });
+    expect(tasks[0].body).toContain("medication change");
   });
 
   it("adds a safe fallback when no immediate tasks exist", () => {

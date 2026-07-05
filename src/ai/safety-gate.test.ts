@@ -159,6 +159,56 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it("escalates when an older dangerous reading exists and a newer blocked note is newer", async () => {
+    const stateWithBlockedLatestAndEarlierDanger = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-latest",
+          patientId: "patient-1",
+          systolic: 120,
+          diastolic: 80,
+          pulse: 74,
+          measuredAt: "2026-07-05T11:00:00.000Z",
+          contexts: ["morning"],
+          note: "Should I increase my dose?"
+        },
+        {
+          id: "reading-earlier-danger",
+          patientId: "patient-1",
+          systolic: 170,
+          diastolic: 104,
+          pulse: 76,
+          measuredAt: "2026-07-05T10:00:00.000Z",
+          contexts: ["morning"],
+          note: "Morning check."
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What should I do today?",
+        state: stateWithBlockedLatestAndEarlierDanger
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("call threshold");
+    expect(response.sources).toContain("reading-earlier-danger");
+    expect(response.sources).toContain("plan-1");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("blocks earlier blocked reading classification when later reading is normal", async () => {
     const stateWithBlockedEarlierReading = {
       ...demoState,

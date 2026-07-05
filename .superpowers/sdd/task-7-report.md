@@ -190,3 +190,22 @@
   - PASS: 4 files, 27 tests.
 - `npm run build`
   - PASS: production build completes (`Next.js 15.5.20`) with all routes generated.
+
+## Fix: Task 7 severity-first recent-reading selection and blocked-note Today task
+
+### Findings addressed
+- Updated `findRecentClinicalReading` in `src/domain/recent-clinical-reading.ts` to rank candidates by severity before recency (`urgent` / clinic escalation beats `blocked` notes; recency only breaks ties within the same severity).
+- Updated `buildTodayTasks` in `src/domain/tasks.ts` to include blocked-note readings via `findRecentClinicalReading(..., { includeBlockedNotes: true })`, while preserving urgent-symptom copy and clinician-authored versus standard-threshold distinctions.
+- Added a dedicated blocked-note Today task (`status: "needs_review"`, `/chat`) when blocked-note-only is the highest-severity in-window reading.
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/domain/tasks.ts`
+- `src/domain/tasks.test.ts`
+- `src/ai/safety-gate.test.ts`
+
+### Verification
+- `npm run test -- src/domain/tasks.test.ts src/ai/safety-gate.test.ts src/domain/safety.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 30 tests.
+- `npm run build`
+  - PASS: Next.js production build completed (`Next.js 15.5.20`) with all routes generated.

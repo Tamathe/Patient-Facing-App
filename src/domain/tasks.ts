@@ -11,12 +11,19 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
     const isCarePlanThreshold = recentClinicalReading.bloodPressureInsight.source === "care_plan";
     const isClinicianThreshold = isCarePlanThreshold && state.carePlan.thresholdSource === "clinician_authored";
     const isUrgentSymptom = recentClinicalReading.noteSafety.level === "escalate";
+    const isBlockedNote = recentClinicalReading.noteSafety.level === "blocked";
 
     tasks.push({
       id: "task-bp-clinical",
-      title: isUrgentSymptom ? "Seek urgent help now" : "Share this reading with your care team",
+      title: isUrgentSymptom
+        ? "Seek urgent help now"
+        : isBlockedNote
+          ? "Review this note with your care team"
+          : "Share this reading with your care team",
       body: isUrgentSymptom
         ? recentClinicalReading.noteSafety.response
+        : isBlockedNote
+          ? "You mentioned a medication change in this reading. Message your care team before making any medication adjustments."
         : isCarePlanThreshold
           ? isClinicianThreshold
             ? "This met a threshold in your clinician-authored care plan. Share this reading today."
@@ -27,9 +34,11 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       kind: "reading",
       status: isUrgentSymptom
         ? "needs_review"
-        : isCarePlanThreshold
-          ? (isClinicianThreshold ? "confirmed" : "inferred")
-          : "needs_review"
+        : isBlockedNote
+          ? "needs_review"
+          : isCarePlanThreshold
+            ? (isClinicianThreshold ? "confirmed" : "inferred")
+            : "needs_review"
     });
   } else if (state.readings.length === 0) {
     tasks.push({
@@ -94,5 +103,5 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
 }
 
 function getRecentClinicalReading(readings: HomeReading[], carePlan: AppState["carePlan"]): ClinicalReadingCandidate | undefined {
-  return findRecentClinicalReading(readings, carePlan);
+  return findRecentClinicalReading(readings, carePlan, { includeBlockedNotes: true });
 }

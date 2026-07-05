@@ -11,6 +11,8 @@ export type ClinicalReadingCandidate = {
   numericSafety: SafetyClassification;
 };
 
+type ClinicalReadingSeverity = "urgent" | "blocked";
+
 export type FindRecentClinicalReadingOptions = {
   includeBlockedNotes?: boolean;
 };
@@ -27,6 +29,7 @@ export function findRecentClinicalReading(
   }
 
   const recentWindowStart = new Date(sortedReadings[0].measuredAt).valueOf() - RECENT_READING_WINDOW_MS;
+  let bestCandidate: (ClinicalReadingCandidate & { severity: ClinicalReadingSeverity }) | undefined;
 
   for (const reading of sortedReadings) {
     if (new Date(reading.measuredAt).valueOf() < recentWindowStart) {
@@ -36,30 +39,81 @@ export function findRecentClinicalReading(
     const bloodPressureInsight = interpretBloodPressure(reading, sortedReadings, carePlan);
     const numericSafety = classifySafety(`${reading.systolic}/${reading.diastolic}`);
     const noteSafety = classifySafety(reading.note);
+    const severity = getClinicalReadingSeverity({
+      bloodPressureInsight,
+      numericSafety,
+      noteSafety,
+      includeBlockedNotes
+    });
 
-    const requiresClinicalFollowUp =
-      numericSafety.level === "escalate" ||
-      noteSafety.level === "escalate" ||
-      noteSafety.level === "blocked" && includeBlockedNotes ||
-      bloodPressureInsight.escalation === "clinic";
-
-    if (!requiresClinicalFollowUp) {
+    if (severity === undefined) {
       continue;
     }
 
-    return {
+    const candidate = {
       reading,
       bloodPressureInsight,
       noteSafety,
-      numericSafety
+      numericSafety,
+      severity
     };
+
+    if (shouldReplaceCandidate(bestCandidate, candidate)) {
+      bestCandidate = candidate;
+    }
   }
 
-  return undefined;
+  if (bestCandidate === undefined) {
+    return undefined;
+  }
+
+  return {
+    reading: bestCandidate.reading,
+    bloodPressureInsight: bestCandidate.bloodPressureInsight,
+    noteSafety: bestCandidate.noteSafety,
+    numericSafety: bestCandidate.numericSafety
+  };
 }
 
 function sortReadingsByTime(readings: HomeReading[]): HomeReading[] {
   return [...readings].sort(
     (left, right) => new Date(right.measuredAt).valueOf() - new Date(left.measuredAt).valueOf()
   );
+}
+
+function getClinicalReadingSeverity(params: {
+  bloodPressureInsight: BloodPressureInsight;
+  numericSafety: SafetyClassification;
+  noteSafety: SafetyClassification;
+  includeBlockedNotes: boolean;
+}): ClinicalReadingSeverity | undefined {
+  const isUrgent =
+    params.numericSafety.level === "escalate" ||
+    params.noteSafety.level === "escalate" ||
+    params.bloodPressureInsight.escalation === "clinic";
+
+  if (isUrgent) {
+    return "urgent";
+  }
+
+  if (params.includeBlockedNotes && params.noteSafety.level === "blocked") {
+    return "blocked";
+  }
+
+  return undefined;
+}
+
+function severityPriority(severity: ClinicalReadingSeverity): number {
+  return severity === "urgent" ? 2 : 1;
+}
+
+function shouldReplaceCandidate(
+  currentBest: (ClinicalReadingCandidate & { severity: ClinicalReadingSeverity }) | undefined,
+  candidate: ClinicalReadingCandidate & { severity: ClinicalReadingSeverity }
+): boolean {
+  if (currentBest === undefined) {
+    return true;
+  }
+
+  return severityPriority(candidate.severity) > severityPriority(currentBest.severity);
 }
