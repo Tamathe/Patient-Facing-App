@@ -25,7 +25,9 @@ export async function createSafeAiResponse(
   let stateBlockingReadingSafety: HealthAiResponse | undefined;
   const latestReading = getLatestReading(request.state.readings);
   const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
-  const recentClinicalReading = findRecentClinicalReading(request.state.readings, request.state.carePlan);
+  const recentClinicalReading = findRecentClinicalReading(request.state.readings, request.state.carePlan, {
+    includeBlockedNotes: true
+  });
 
   if (recentClinicalReading) {
     const { reading, bloodPressureInsight, noteSafety } = recentClinicalReading;
@@ -43,6 +45,14 @@ export async function createSafeAiResponse(
         content: `${bloodPressureInsight.message} If you are feeling worse, seek urgent care now.`,
         safety: "escalate",
         sources: [reading.id, request.state.carePlan.id]
+      };
+    }
+
+    if (noteSafety.level === "blocked") {
+      stateBlockingReadingSafety = {
+        content: noteSafety.response,
+        safety: noteSafety.level,
+        sources: [reading.id]
       };
     }
   }

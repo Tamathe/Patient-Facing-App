@@ -11,10 +11,16 @@ export type ClinicalReadingCandidate = {
   numericSafety: SafetyClassification;
 };
 
+export type FindRecentClinicalReadingOptions = {
+  includeBlockedNotes?: boolean;
+};
+
 export function findRecentClinicalReading(
   readings: HomeReading[],
-  carePlan: CarePlan
+  carePlan: CarePlan,
+  options: FindRecentClinicalReadingOptions = {}
 ): ClinicalReadingCandidate | undefined {
+  const { includeBlockedNotes = false } = options;
   const sortedReadings = sortReadingsByTime(readings);
   if (sortedReadings.length === 0) {
     return undefined;
@@ -34,6 +40,7 @@ export function findRecentClinicalReading(
     const requiresClinicalFollowUp =
       numericSafety.level === "escalate" ||
       noteSafety.level === "escalate" ||
+      noteSafety.level === "blocked" && includeBlockedNotes ||
       bloodPressureInsight.escalation === "clinic";
 
     if (!requiresClinicalFollowUp) {
@@ -56,4 +63,3 @@ function sortReadingsByTime(readings: HomeReading[]): HomeReading[] {
     (left, right) => new Date(right.measuredAt).valueOf() - new Date(left.measuredAt).valueOf()
   );
 }
-

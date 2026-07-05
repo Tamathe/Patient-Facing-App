@@ -159,6 +159,55 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it("blocks earlier blocked reading classification when later reading is normal", async () => {
+    const stateWithBlockedEarlierReading = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-latest",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T11:00:00.000Z",
+          contexts: ["morning"],
+          note: "Feeling okay now."
+        },
+        {
+          id: "reading-blocked-previous",
+          patientId: "patient-1",
+          systolic: 120,
+          diastolic: 80,
+          pulse: 74,
+          measuredAt: "2026-07-05T10:00:00.000Z",
+          contexts: ["morning"],
+          note: "Should I increase my dose?"
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What is my blood pressure target?",
+        state: stateWithBlockedEarlierReading
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("blocked");
+    expect(response.content).toContain("I cannot tell you to stop");
+    expect(response.sources).toContain("reading-blocked-previous");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("escalates when an active side effects medication barrier exists before provider call", async () => {
     const stateWithSideEffects = {
       ...demoState,

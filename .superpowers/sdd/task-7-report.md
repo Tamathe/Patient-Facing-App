@@ -171,3 +171,22 @@
 
 ### Notes
 - Changes are limited to Task 7 safety/tasking code paths and existing behavior for blocked/provider-call sequencing remains intact.
+
+## Fix: Task 7 blocked note windowed safety regression
+
+### Fix notes
+- Updated `src/domain/recent-clinical-reading.ts` to support optionally including `noteSafety.level === "blocked"` in recent-reading candidate selection.
+- Added optional `includeBlockedNotes` flag to `findRecentClinicalReading` and defaulted it to `false` so existing Today-task callers keep prior behavior.
+- Updated `src/ai/safety-gate.ts` to include blocked recent-reading candidates and return `blocked` before provider execution when those appear.
+- Added a regression test in `src/ai/safety-gate.test.ts` for a blocked in-window note followed by a normal later reading where provider calls should be blocked.
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/ai/safety-gate.ts`
+- `src/ai/safety-gate.test.ts`
+
+### Verification
+- `npm run test -- src/ai/safety-gate.test.ts src/domain/tasks.test.ts src/domain/safety.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 27 tests.
+- `npm run build`
+  - PASS: production build completes (`Next.js 15.5.20`) with all routes generated.
