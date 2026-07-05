@@ -14,7 +14,7 @@ export function interpretBloodPressure(reading: HomeReading, recentReadings: Hom
   if (thresholdMet) {
     return {
       level: "call_clinic",
-      message: `This reading meets the call threshold in your plan. Contact ${carePlan.patientId === "patient-1" ? "your clinic" : "your care team"} and share this reading.`,
+      message: "This reading meets the call threshold in your plan. Contact your care team and share this reading.",
       escalation: "clinic"
     };
   }
@@ -34,7 +34,7 @@ export function interpretBloodPressure(reading: HomeReading, recentReadings: Hom
     level: "track",
     message: hasRecentHigh
       ? "This reading is lower than a recent high reading. Log another reading at your next planned time so your care team can see the pattern."
-      : "This reading is within the current tracked pattern. Keep logging readings so your care team can review the trend.",
+      : "This reading is within the current tracked pattern. Log another reading at your next planned time so your care team can review the trend.",
     escalation: "none"
   };
 }

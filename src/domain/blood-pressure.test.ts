@@ -42,6 +42,6 @@ describe("interpretBloodPressure", () => {
     );
 
     expect(result.level).toBe("track");
-    expect(result.message).toContain("within the current tracked pattern");
+    expect(result.message).toContain("Log another reading");
   });
 });

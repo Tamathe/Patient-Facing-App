@@ -13,7 +13,20 @@ describe("classifySafety", () => {
     const result = classifySafety("I have chest pain and my blood pressure is high.");
 
     expect(result.level).toBe("escalate");
-    expect(result.response).toContain("seek urgent medical help");
+    expect(result.response).toContain("seek urgent help now");
+  });
+
+  it("escalates dangerous blood-pressure-only readings", () => {
+    const result = classifySafety("My BP is 200/120");
+
+    expect(result.level).toBe("escalate");
+    expect(result.response).toContain("seek urgent help now");
+  });
+
+  it("escalates breathing-related distress language", () => {
+    expect(classifySafety("I can't breathe").level).toBe("escalate");
+    expect(classifySafety("I cannot breathe").level).toBe("escalate");
+    expect(classifySafety("I'm having trouble breathing").level).toBe("escalate");
   });
 
   it("allows education questions", () => {
