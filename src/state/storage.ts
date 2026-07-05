@@ -119,11 +119,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function hasString(value: unknown, key: string): value is string {
+function hasString<K extends string>(value: unknown, key: K): value is Record<K, string> & Record<string, unknown> {
   return isObject(value) && typeof value[key] === "string";
 }
 
-function hasNumber(value: unknown, key: string): value is number {
+function hasNumber<K extends string>(value: unknown, key: K): value is Record<K, number> & Record<string, unknown> {
   return isObject(value) && typeof value[key] === "number" && Number.isFinite(value[key]);
 }
 
@@ -344,7 +344,7 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return hasValidRelationships(value);
+  return hasValidRelationships(value as AppState);
 }
 
 export function loadStoredState(): AppState {
