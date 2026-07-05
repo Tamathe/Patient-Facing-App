@@ -23,10 +23,22 @@ describe("classifySafety", () => {
     expect(result.response).toContain("seek urgent help now");
   });
 
+  it("escalates unlabeled dangerous readings like bare numbers", () => {
+    expect(classifySafety("200/120").level).toBe("escalate");
+    expect(classifySafety("My reading is 200/120").level).toBe("escalate");
+    expect(classifySafety("systolic 200 diastolic 120").level).toBe("escalate");
+  });
+
   it("escalates breathing-related distress language", () => {
     expect(classifySafety("I can't breathe").level).toBe("escalate");
     expect(classifySafety("I cannot breathe").level).toBe("escalate");
     expect(classifySafety("I'm having trouble breathing").level).toBe("escalate");
+  });
+
+  it("blocks common medication-adjustment phrasing", () => {
+    expect(classifySafety("should I increase my dose").level).toBe("blocked");
+    expect(classifySafety("can I take two").level).toBe("blocked");
+    expect(classifySafety("Can I stop for a day").level).toBe("blocked");
   });
 
   it("allows education questions", () => {

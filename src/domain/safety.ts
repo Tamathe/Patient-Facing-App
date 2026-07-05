@@ -3,8 +3,19 @@ export type SafetyClassification = {
   response: string;
 };
 
-const medicationChangePatterns = [/stop taking/i, /change my dose/i, /double my dose/i, /skip my medicine/i, /take extra/i];
-const dangerousReadingPattern = /\b(?:bp|blood pressure)\b[^\d]{0,30}(\d{2,3})\s*[\/\-]\s*(\d{2,3})/i;
+const medicationChangePatterns = [
+  /stop taking/i,
+  /change my dose/i,
+  /double my dose/i,
+  /skip my medicine/i,
+  /take extra/i,
+  /should i increase my dose/i,
+  /increase my dose/i,
+  /can i take two/i,
+  /stop for a day/i
+];
+const dangerousReadingWithSlashPattern = /(\d{2,3})\s*[\/\-]\s*(\d{2,3})/i;
+const dangerousSystolicDiastolicPattern = /systolic\s*(?:is\s*)?(\d{2,3})\D{1,20}?diastolic\s*(?:is\s*)?(\d{2,3})/i;
 const urgentSymptomPatterns = [
   /chest pain/i,
   /i can't breathe/i,
@@ -18,14 +29,23 @@ const urgentSymptomPatterns = [
 ];
 
 function hasDangerousReading(input: string): boolean {
-  const match = dangerousReadingPattern.exec(input);
+  const slashMatch = dangerousReadingWithSlashPattern.exec(input);
 
-  if (!match) {
+  if (slashMatch) {
+    const systolic = Number.parseInt(slashMatch[1], 10);
+    const diastolic = Number.parseInt(slashMatch[2], 10);
+
+    return systolic >= 180 || diastolic >= 120;
+  }
+
+  const wordMatch = dangerousSystolicDiastolicPattern.exec(input);
+
+  if (!wordMatch) {
     return false;
   }
 
-  const systolic = Number.parseInt(match[1], 10);
-  const diastolic = Number.parseInt(match[2], 10);
+  const systolic = Number.parseInt(wordMatch[1], 10);
+  const diastolic = Number.parseInt(wordMatch[2], 10);
 
   return systolic >= 180 || diastolic >= 120;
 }
