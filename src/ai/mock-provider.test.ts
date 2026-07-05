@@ -61,4 +61,42 @@ describe("MockHealthAiProvider", () => {
     expect(response.content).toContain("Bring your recent home readings");
     expect(response.sources).toContain("plan-1");
   });
+
+  it("asks for medication clarification in a multi-medication state when no name matches", async () => {
+    const provider = new MockHealthAiProvider();
+    const multiMedicationState = {
+      ...demoState,
+      medications: [
+        {
+          ...demoState.medications[0],
+          id: "med-1",
+          name: "Lisinopril"
+        },
+        {
+          id: "med-2",
+          patientId: "patient-1",
+          name: "Metformin",
+          dose: "500 mg",
+          schedule: "With meals",
+          purpose: "Helps lower blood sugar.",
+          preventionBenefit: "Improved glucose control helps prevent complications.",
+          safetyNote: "Take with food.",
+          source: "patient_reported",
+          activeBarriers: []
+        }
+      ]
+    };
+
+    const response = await provider.respond({
+      mode: "why",
+      patientInput: "Why am I taking the medication for this visit?",
+      state: multiMedicationState
+    });
+
+    expect(response.content.toLowerCase()).toContain("multiple medications");
+    expect(response.content.toLowerCase()).toContain("which one");
+    expect(response.sources).toHaveLength(0);
+    expect(response.content).not.toContain("Lisinopril");
+    expect(response.content).not.toContain("Medip");
+  });
 });

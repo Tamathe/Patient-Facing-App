@@ -6,14 +6,26 @@ export class MockHealthAiProvider implements HealthAiProvider {
     const requestedMedication = request.state.medications.find((medication) =>
       lowercasedInput.includes(medication.name.toLowerCase())
     );
-    const medication = requestedMedication ?? request.state.medications[0];
+    const hasSingleMedication = request.state.medications.length === 1;
+    const medication = requestedMedication ?? (hasSingleMedication ? request.state.medications[0] : null);
 
-    if (request.mode === "why" && medication) {
-      return {
-        content: `${medication.name} is listed in your medicines as: ${medication.purpose} ${medication.preventionBenefit} ${medication.safetyNote}`,
-        safety: "allowed",
-        sources: [medication.id]
-      };
+    if (request.mode === "why") {
+      if (!medication && !hasSingleMedication) {
+        return {
+          content:
+            "I see multiple medications in your plan. Please tell me which one you mean, for example by name, and I can explain that one.",
+          safety: "allowed",
+          sources: []
+        };
+      }
+
+      if (medication) {
+        return {
+          content: `${medication.name} is listed in your medicines as: ${medication.purpose} ${medication.preventionBenefit} ${medication.safetyNote}`,
+          safety: "allowed",
+          sources: [medication.id]
+        };
+      }
     }
 
     if (request.mode === "visit") {
