@@ -39,6 +39,34 @@ describe("HealthBriefCard", () => {
     });
   });
 
+  it("uses a current timestamp for shared text when generatedAt is invalid", async () => {
+    const user = userEvent.setup();
+    const previousShare = (window.navigator as { share?: () => Promise<void> }).share;
+    const share = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(window.navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: share
+    });
+
+    try {
+      render(<HealthBriefCard brief={buildHealthBrief(demoState, { generatedAt: "" })} />);
+      await user.click(await screen.findByRole("button", { name: /share/i }));
+      const sharedText = share.mock.calls[0]?.[0]?.text as string | undefined;
+
+      expect(sharedText).toContain("Generated ");
+      expect(sharedText).toContain("When to call my care team");
+      expect(sharedText).not.toContain("Generated Not available yet");
+    } finally {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        writable: true,
+        value: previousShare
+      });
+    }
+  });
+
   it("does not download when share is unavailable after cancellation", async () => {
     const user = userEvent.setup();
     const previousShare = (window.navigator as { share?: () => Promise<void> }).share;

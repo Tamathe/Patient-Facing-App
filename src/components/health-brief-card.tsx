@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { HealthBrief } from "@/domain/types";
 
 export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
@@ -10,13 +10,18 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
       : generatedAt.toLocaleString();
   }, [brief.generatedAt]);
 
-  useEffect(() => {
-    setCanShare(typeof navigator.share === "function");
-  }, []);
+  const getGeneratedLabel = (fallbackToNow = false) => {
+    const generatedAt = new Date(brief.generatedAt);
+    if (!Number.isNaN(generatedAt.getTime())) {
+      return generatedAt.toLocaleString();
+    }
 
-  const textContent = [
-    `My Health Brief`,
-    `Generated ${generatedLabel}`,
+    return fallbackToNow ? new Date().toLocaleString() : "Not available yet";
+  };
+
+  const buildTextContent = useCallback((generatedAtLabel: string) => [
+    "My Health Brief",
+    `Generated ${generatedAtLabel}`,
     "",
     ...brief.sections.flatMap((section) => [
       section.title,
@@ -24,12 +29,19 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
       ...section.items.map((item) => `- ${item}`),
       ""
     ])
-  ].join("\n");
+  ].join("\n"), [brief.sections]);
 
-  const downloadBrief = () => {
-    const file = new Blob([textContent], { type: "text/plain;charset=utf-8" });
+  useEffect(() => {
+    setCanShare(typeof navigator.share === "function");
+  }, []);
+
+  const textContent = useMemo(() => buildTextContent(generatedLabel), [buildTextContent, generatedLabel]);
+  const exportTextContent = () => buildTextContent(getGeneratedLabel(true));
+
+  const downloadBrief = (content = textContent) => {
+    const file = new Blob([content], { type: "text/plain;charset=utf-8" });
     const useObjectURL = typeof URL.createObjectURL === "function";
-    const href = useObjectURL ? URL.createObjectURL(file) : `data:text/plain;charset=utf-8,${encodeURIComponent(textContent)}`;
+    const href = useObjectURL ? URL.createObjectURL(file) : `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`;
     const anchor = document.createElement("a");
 
     anchor.href = href;
@@ -45,16 +57,17 @@ export function HealthBriefCard({ brief }: { brief: HealthBrief }) {
 
   const handleShare = async () => {
     const hasShareApi = canShare && typeof navigator.share === "function";
+    const shareText = exportTextContent();
 
     if (!hasShareApi) {
-      downloadBrief();
+      downloadBrief(shareText);
       return;
     }
 
     try {
       await navigator.share({
         title: "My Health Brief",
-        text: textContent
+        text: shareText
       });
       return;
     } catch {
