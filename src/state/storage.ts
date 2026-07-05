@@ -11,6 +11,7 @@ import type {
   Medication,
   MedicationBarrier,
   PatientProfile,
+  MeasurementContext,
   TaskItem,
   AiMode
 } from "@/domain/types";
@@ -52,6 +53,22 @@ function isMedicationBarrier(value: unknown): value is MedicationBarrier {
     value === "pharmacy_issue" ||
     value === "does_not_feel_necessary"
   );
+}
+
+function isMeasurementContext(value: unknown): value is MeasurementContext {
+  return (
+    value === "morning" ||
+    value === "evening" ||
+    value === "before_medicine" ||
+    value === "after_medicine" ||
+    value === "after_coffee" ||
+    value === "after_resting" ||
+    value === "during_symptoms"
+  );
+}
+
+function isMeasurementContextArray(value: unknown): value is MeasurementContext[] {
+  return Array.isArray(value) && value.every((item) => isMeasurementContext(item));
 }
 
 function isLanguage(value: unknown): value is PatientProfile["language"] {
@@ -98,9 +115,10 @@ function isReading(value: unknown): value is HomeReading {
     hasString(value, "patientId") &&
     hasNumber(value, "systolic") &&
     hasNumber(value, "diastolic") &&
+    (value.pulse === null || hasNumber(value, "pulse")) &&
     hasString(value, "measuredAt") &&
     hasString(value, "note") &&
-    isArrayOfStrings(value.contexts)
+    isMeasurementContextArray(value.contexts)
   );
 }
 

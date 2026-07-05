@@ -91,4 +91,30 @@ describe("storage", () => {
 
     setItemSpy.mockRestore();
   });
+
+  it("falls back to demo state for invalid reading pulse or contexts and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        readings: [
+          {
+            id: "bad-reading",
+            patientId: demoState.patient.id,
+            systolic: 120,
+            diastolic: 80,
+            pulse: "72",
+            measuredAt: "2026-07-05T09:00:00.000Z",
+            contexts: ["foo"],
+            note: "invalid"
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
 });
