@@ -56,9 +56,11 @@ export function ConversationPanel({ messages, onSubmit }: ConversationPanelProps
             key={message.id}
           >
             <p>{message.content}</p>
-            <p className={`mt-2 text-xs font-semibold ${safetyGuidanceClass[message.safety]}`}>
-              Safety guidance: {safetyGuidanceText[message.safety]}
-            </p>
+            {message.role === "assistant" ? (
+              <p className={`mt-2 text-xs font-semibold ${safetyGuidanceClass[message.safety]}`}>
+                Safety guidance: {safetyGuidanceText[message.safety]}
+              </p>
+            ) : null}
             {message.sources.length > 0 ? <p className="mt-2 text-xs text-ink/60">Sources: {message.sources.join(", ")}</p> : null}
           </article>
         ))}

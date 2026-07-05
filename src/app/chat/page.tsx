@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ConversationPanel } from "@/components/conversation-panel";
 import { MockHealthAiProvider } from "@/ai/mock-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { AiMessage, AiMode } from "@/domain/types";
 import { useHealthState } from "@/state/store";
 
@@ -13,10 +13,6 @@ const provider = new MockHealthAiProvider();
 export default function ChatPage() {
   const { state, dispatch } = useHealthState();
   const latestStateRef = useRef(state);
-
-  useEffect(() => {
-    latestStateRef.current = state;
-  }, [state]);
 
   async function handleSubmit(mode: AiMode, patientInput: string) {
     const patientMessage: AiMessage = {
@@ -33,24 +29,34 @@ export default function ChatPage() {
       type: "addAiMessage",
       message: patientMessage
     });
-
-    const requestState = {
+    const stateAfterPatientMessage = {
       ...latestStateRef.current,
       aiMessages: [...latestStateRef.current.aiMessages, patientMessage]
     };
-    const response = await createSafeAiResponse({ mode, patientInput, state: requestState }, provider);
+    latestStateRef.current = stateAfterPatientMessage;
+
+    const response = await createSafeAiResponse(
+      { mode, patientInput, state: stateAfterPatientMessage },
+      provider
+    );
+    const assistantMessage: AiMessage = {
+      id: crypto.randomUUID(),
+      mode,
+      role: "assistant",
+      content: response.content,
+      createdAt: new Date().toISOString(),
+      safety: response.safety,
+      sources: response.sources
+    };
+
+    latestStateRef.current = {
+      ...latestStateRef.current,
+      aiMessages: [...latestStateRef.current.aiMessages, assistantMessage]
+    };
 
     dispatch({
       type: "addAiMessage",
-      message: {
-        id: crypto.randomUUID(),
-        mode,
-        role: "assistant",
-        content: response.content,
-        createdAt: new Date().toISOString(),
-        safety: response.safety,
-        sources: response.sources
-      }
+      message: assistantMessage
     });
   }
 

@@ -22,6 +22,15 @@ describe("ConversationPanel", () => {
   it("renders safety guidance labels on messages", () => {
     const messages: AiMessage[] = [
       {
+        id: "0",
+        mode: "explain",
+        role: "patient",
+        content: "Could you explain why blood pressure matters?",
+        createdAt: "2026-07-05T11:59:59.000Z",
+        safety: "allowed",
+        sources: []
+      },
+      {
         id: "1",
         mode: "explain",
         role: "assistant",
@@ -52,6 +61,7 @@ describe("ConversationPanel", () => {
 
     render(<ConversationPanel onSubmit={vi.fn()} messages={messages} />);
 
+    expect(screen.getAllByText("Safety guidance: Safe to continue")).toHaveLength(1);
     expect(screen.getByText("Safety guidance: Safe to continue")).toBeInTheDocument();
     expect(screen.getByText("Safety guidance: Escalate to care now")).toBeInTheDocument();
     expect(screen.getByText("Safety guidance: Blocked for safety")).toBeInTheDocument();
