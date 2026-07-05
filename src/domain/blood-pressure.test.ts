@@ -20,6 +20,8 @@ describe("interpretBloodPressure", () => {
 
     expect(result.level).toBe("recheck");
     expect(result.message).toContain("Rest quietly for 5 minutes");
+    expect(result.message).toContain("general home blood pressure education");
+    expect(result.source).toBe("standard_education");
     expect(result.escalation).toBe("none");
   });
 
@@ -31,6 +33,7 @@ describe("interpretBloodPressure", () => {
     );
 
     expect(result.level).toBe("call_clinic");
+    expect(result.source).toBe("care_plan");
     expect(result.escalation).toBe("clinic");
   });
 

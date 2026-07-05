@@ -4,6 +4,7 @@ export type BloodPressureInsight = {
   level: "track" | "recheck" | "call_clinic";
   message: string;
   escalation: "none" | "clinic";
+  source: "care_plan" | "standard_education";
 };
 
 export function interpretBloodPressure(reading: HomeReading, recentReadings: HomeReading[], carePlan: CarePlan): BloodPressureInsight {
@@ -15,7 +16,8 @@ export function interpretBloodPressure(reading: HomeReading, recentReadings: Hom
     return {
       level: "call_clinic",
       message: "This reading meets the call threshold in your plan. Contact your care team and share this reading.",
-      escalation: "clinic"
+      escalation: "clinic",
+      source: "care_plan"
     };
   }
 
@@ -23,8 +25,9 @@ export function interpretBloodPressure(reading: HomeReading, recentReadings: Hom
     return {
       level: "recheck",
       message:
-        "This reading is higher than the usual home goal range. Rest quietly for 5 minutes with both feet on the floor, then recheck and log the next reading.",
-      escalation: "none"
+        "This is general home blood pressure education: a reading above 140/90 is above the common home target. Rest quietly for 5 minutes with both feet on the floor, then recheck and log the next reading.",
+      escalation: "none",
+      source: "standard_education"
     };
   }
 
@@ -35,6 +38,7 @@ export function interpretBloodPressure(reading: HomeReading, recentReadings: Hom
     message: hasRecentHigh
       ? "This reading is lower than a recent high reading. Log another reading at your next planned time so your care team can see the pattern."
       : "This reading is within the current tracked pattern. Log another reading at your next planned time so your care team can review the trend.",
-    escalation: "none"
+    escalation: "none",
+    source: "standard_education"
   };
 }
