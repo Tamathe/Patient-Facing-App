@@ -1,7 +1,7 @@
 # Home Health Ownership AI App - Design Spec
 
 Date: 2026-07-05
-Status: approved for implementation planning
+Status: product design record
 
 ## 1. Product Thesis
 
