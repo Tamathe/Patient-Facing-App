@@ -464,9 +464,9 @@ Safety and trust:
 
 Do not optimize for daily active users. Silence is appropriate when nothing needs attention.
 
-## 15. Open Founder Decisions Before Build
+## 15. Founder Decisions
 
-The spec recommends these defaults, but the founder should explicitly approve them:
+The current product direction uses these defaults:
 
 1. First wedge: hypertension ownership.
 2. First AI posture: care-plan interpreter first, guided conversational coach second.
@@ -475,13 +475,3 @@ The spec recommends these defaults, but the founder should explicitly approve th
 5. Risk boundary: no diagnosis, no medication changes, no autonomous treatment recommendations in v0.1.
 6. Platform: mobile web first.
 7. Distribution: direct patient pilot, primary-care partner pilot, or caregiver-led pilot.
-
-## 16. Review Checklist
-
-This spec is ready for implementation planning when:
-
-- The first wedge is approved.
-- The AI safety boundary is approved.
-- The MVP scope is approved.
-- The privacy promise is approved.
-- The first pilot population is chosen.
