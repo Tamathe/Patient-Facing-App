@@ -55,20 +55,20 @@ export async function createSafeAiResponse(
     }
   }
 
+  if (inputSafety.level === "escalate") {
+    return {
+      content: inputSafety.response,
+      safety: inputSafety.level,
+      sources: []
+    };
+  }
+
   if (medicationWithSideEffects) {
     return {
       content:
         `${medicationWithSideEffects.name} is marked with active side effects. I cannot diagnose the cause, but I can help you contact your care team and share this symptom pattern with the latest readings.`,
       safety: "escalate",
       sources: [medicationWithSideEffects.id]
-    };
-  }
-
-  if (inputSafety.level === "escalate") {
-    return {
-      content: inputSafety.response,
-      safety: inputSafety.level,
-      sources: []
     };
   }
 

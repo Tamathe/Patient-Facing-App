@@ -142,4 +142,37 @@ describe("createSafeAiResponse", () => {
     expect(response.content).toContain("contact your care team");
     expect(provider.respond).not.toHaveBeenCalled();
   });
+
+  it("lets urgent symptom escalation win over side-effect medication barriers", async () => {
+    const stateWithSideEffects = {
+      ...demoState,
+      medications: [
+        {
+          ...demoState.medications[0],
+          activeBarriers: ["side_effects"]
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "trouble",
+        patientInput: "I have chest pain",
+        state: stateWithSideEffects
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("Some signs need urgent medical attention");
+    expect(response.content).not.toContain("active side effects");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
 });
