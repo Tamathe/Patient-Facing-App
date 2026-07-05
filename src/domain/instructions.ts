@@ -2,9 +2,9 @@ import type { CareContextItem, ExtractedFact } from "./types";
 
 export function extractInstructionFacts(item: CareContextItem): ExtractedFact[] {
   const facts: ExtractedFact[] = [];
-  const text = item.rawText.toLowerCase();
+  const normalizedText = item.rawText.toLowerCase();
 
-  if (text.includes("monitor bp") || text.includes("blood pressure") || text.includes("bp daily")) {
+  if (isHomeMonitoringInstruction(normalizedText)) {
     facts.push({
       id: crypto.randomUUID(),
       contextItemId: item.id,
@@ -16,19 +16,20 @@ export function extractInstructionFacts(item: CareContextItem): ExtractedFact[] 
     });
   }
 
-  if (text.includes("continue") && text.includes("lisinopril")) {
+  const medicationValue = extractMedicationInstructionValue(item.rawText);
+  if (medicationValue) {
     facts.push({
       id: crypto.randomUUID(),
       contextItemId: item.id,
       label: "Medication instruction",
-      value: "Continue lisinopril as prescribed",
+      value: medicationValue,
       confidence: "medium",
       status: "needs_review",
-      sourceSnippet: findSnippet(item.rawText, ["Continue lisinopril", "lisinopril"])
+      sourceSnippet: findSnippet(item.rawText, ["take", "continue"])
     });
   }
 
-  if (text.includes("follow up") || text.includes("follow-up")) {
+  if (isFollowUpInstruction(normalizedText)) {
     facts.push({
       id: crypto.randomUUID(),
       contextItemId: item.id,
@@ -65,4 +66,29 @@ function findSnippet(text: string, needles: string[]): string {
 
   const start = Math.max(0, lower.indexOf(found.toLowerCase()) - 40);
   return text.slice(start, start + 180);
+}
+
+function isHomeMonitoringInstruction(text: string): boolean {
+  return (
+    /\b(?:monitor|check|measure|track)\b[^\n\r.;]*\b(?:blood pressure|bp)\b/.test(text) ||
+    /\b(?:blood pressure|bp)\b[^\n\r.;]*\b(?:every|daily|morning|evening)\b/.test(text)
+  );
+}
+
+function extractMedicationInstructionValue(text: string): string | null {
+  const asPrescribedMatch = text.match(/\b(?:take|continue|resume|start)\s+([a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,2})\s+as\s+prescribed\b/i);
+  if (asPrescribedMatch) {
+    return `Take ${asPrescribedMatch[1]} as prescribed`;
+  }
+
+  const continueOnlyMatch = text.match(/\b(?:continue)\s+([a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,2})\b/i);
+  if (continueOnlyMatch && /medication|lisinopril|amlodipine/.test(continueOnlyMatch[1])) {
+    return `Continue ${continueOnlyMatch[1].trim()} as prescribed`;
+  }
+
+  return null;
+}
+
+function isFollowUpInstruction(text: string): boolean {
+  return /\bfollow[-\s]?up\b/.test(text);
 }

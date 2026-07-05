@@ -6,6 +6,7 @@ import { useHealthState } from "@/state/store";
 export default function PlanPage() {
   const { state } = useHealthState();
   const confirmedFacts = state.extractedFacts.filter((fact) => fact.status === "confirmed");
+  const needsReviewFacts = state.extractedFacts.filter((fact) => fact.status === "needs_review");
 
   return (
     <AppShell title="My Plan">
@@ -30,6 +31,18 @@ export default function PlanPage() {
               <li key={fact.id}>- {fact.value}</li>
             ))}
           </ul>
+        </section>
+        <section className="rounded-control border border-ink/10 bg-white p-4">
+          <h2 className="text-lg font-semibold">Instructions to confirm</h2>
+          {needsReviewFacts.length === 0 ? (
+            <p className="mt-2 text-sm text-ink/70">All extracted instructions are reviewed or there are no pending instructions.</p>
+          ) : (
+            <ul className="mt-3 grid gap-2 text-sm leading-6">
+              {needsReviewFacts.map((fact) => (
+                <li key={fact.id}>- {fact.value}</li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </AppShell>

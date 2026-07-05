@@ -27,4 +27,44 @@ describe("IntakeReviewCard", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledOnce();
   });
+
+  it("displays confidence and status", () => {
+    render(
+      <IntakeReviewCard
+        fact={{
+          id: "fact-1",
+          contextItemId: "ctx-1",
+          label: "Home monitoring",
+          value: "Check blood pressure at home",
+          confidence: "high",
+          status: "needs_review",
+          sourceSnippet: "Monitor BP daily"
+        }}
+        onConfirm={() => {}}
+      />
+    );
+
+    expect(screen.getByText("Confidence: high")).toBeInTheDocument();
+    expect(screen.getByText("Status: Needs Review")).toBeInTheDocument();
+  });
+
+  it("shows confirmed state", () => {
+    render(
+      <IntakeReviewCard
+        fact={{
+          id: "fact-1",
+          contextItemId: "ctx-1",
+          label: "Follow-up timing",
+          value: "Follow up with care team",
+          confidence: "low",
+          status: "confirmed",
+          sourceSnippet: "Follow up next month"
+        }}
+        onConfirm={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Confirmed" })).toBeDisabled();
+    expect(screen.getByText("Status: Confirmed")).toBeInTheDocument();
+  });
 });
