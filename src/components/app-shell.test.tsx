@@ -18,4 +18,14 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "My Numbers" })).toHaveAttribute("href", "/numbers");
     expect(screen.getByRole("link", { name: "My Medicines" })).toHaveAttribute("href", "/medicines");
   });
+
+  it("renders the page body content in the main region", () => {
+    render(
+      <AppShell title="Today">
+        <p>My temporary page copy</p>
+      </AppShell>
+    );
+
+    expect(screen.getByText("My temporary page copy")).toBeInTheDocument();
+  });
 });
