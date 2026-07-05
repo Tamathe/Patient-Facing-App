@@ -13,7 +13,12 @@ export function loadStoredState(): AppState {
     return demoState;
   }
 
-  return JSON.parse(raw) as AppState;
+  try {
+    return JSON.parse(raw) as AppState;
+  } catch {
+    window.localStorage.removeItem(STORAGE_KEY);
+    return demoState;
+  }
 }
 
 export function saveStoredState(state: AppState): void {

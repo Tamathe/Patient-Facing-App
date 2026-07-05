@@ -32,4 +32,32 @@ describe("healthReducer", () => {
     expect(next.medications[0].name).toBe("Lisinopril");
     expect(next.medications[0].activeBarriers).toEqual(["cost", "side_effects"]);
   });
+
+  it("returns demo state for an explicit resetDemo action", () => {
+    const modifiedState = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-1",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T09:00:00.000Z",
+          contexts: ["morning"],
+          note: "Before coffee"
+        }
+      ],
+      medications: [
+        {
+          ...demoState.medications[0],
+          activeBarriers: ["cost"]
+        }
+      ]
+    };
+
+    const next = healthReducer(modifiedState, { type: "resetDemo" });
+
+    expect(next).toEqual(demoState);
+  });
 });

@@ -32,59 +32,58 @@ export type HealthAction =
   | { type: "resetDemo" };
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
-  if (action.type === "addReading") {
-    return {
-      ...state,
-      readings: [...state.readings, action.reading],
-      auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Blood pressure reading added")]
-    };
+  switch (action.type) {
+    case "addReading": {
+      return {
+        ...state,
+        readings: [...state.readings, action.reading],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Blood pressure reading added")]
+      };
+    }
+    case "setMedicationBarriers": {
+      return {
+        ...state,
+        medications: state.medications.map((medication) =>
+          medication.id === action.medicationId ? { ...medication, activeBarriers: action.barriers } : medication
+        ),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Medication barrier updated")]
+      };
+    }
+    case "addContextItem": {
+      return {
+        ...state,
+        contextItems: [...state.contextItems, action.item],
+        extractedFacts: [...state.extractedFacts, ...action.facts],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Care instructions added")]
+      };
+    }
+    case "confirmFact": {
+      return {
+        ...state,
+        extractedFacts: state.extractedFacts.map((fact) =>
+          fact.id === action.factId ? { ...fact, status: "confirmed" } : fact
+        ),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Extracted fact confirmed")]
+      };
+    }
+    case "addAiMessage": {
+      return {
+        ...state,
+        aiMessages: [...state.aiMessages, action.message],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "ai_generated", "AI response generated")]
+      };
+    }
+    case "addAuditEvent": {
+      return {
+        ...state,
+        auditEvents: [...state.auditEvents, action.event]
+      };
+    }
+    case "resetDemo":
+      return demoState;
+    default:
+      return state;
   }
-
-  if (action.type === "setMedicationBarriers") {
-    return {
-      ...state,
-      medications: state.medications.map((medication) =>
-        medication.id === action.medicationId ? { ...medication, activeBarriers: action.barriers } : medication
-      ),
-      auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Medication barrier updated")]
-    };
-  }
-
-  if (action.type === "addContextItem") {
-    return {
-      ...state,
-      contextItems: [...state.contextItems, action.item],
-      extractedFacts: [...state.extractedFacts, ...action.facts],
-      auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Care instructions added")]
-    };
-  }
-
-  if (action.type === "confirmFact") {
-    return {
-      ...state,
-      extractedFacts: state.extractedFacts.map((fact) =>
-        fact.id === action.factId ? { ...fact, status: "confirmed" } : fact
-      ),
-      auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Extracted fact confirmed")]
-    };
-  }
-
-  if (action.type === "addAiMessage") {
-    return {
-      ...state,
-      aiMessages: [...state.aiMessages, action.message],
-      auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "ai_generated", "AI response generated")]
-    };
-  }
-
-  if (action.type === "addAuditEvent") {
-    return {
-      ...state,
-      auditEvents: [...state.auditEvents, action.event]
-    };
-  }
-
-  return demoState;
 }
 
 type HealthStateContextValue = {
