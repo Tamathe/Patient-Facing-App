@@ -11,6 +11,8 @@ describe("AppShell", () => {
       </AppShell>
     );
 
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("pb-40", "sm:pb-28");
     expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/today");
     expect(screen.getByRole("link", { name: "My Plan" })).toHaveAttribute("href", "/plan");
     expect(screen.getByRole("link", { name: "My Numbers" })).toHaveAttribute("href", "/numbers");

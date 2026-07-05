@@ -27,7 +27,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-5 pb-28">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-5 pb-40 sm:pb-28">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 border-t border-ink/10 bg-white">
         <div className="mx-auto grid max-w-5xl grid-cols-4 gap-1 px-2 py-2 sm:grid-cols-8">
           {navItems.map((item) => {
