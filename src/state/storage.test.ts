@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "@/domain/fixtures";
-import { loadStoredState } from "./storage";
+import { clearStoredState, loadStoredState, saveStoredState } from "./storage";
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
 
@@ -30,11 +30,65 @@ describe("storage", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state and removes malformed localStorage payload", () => {
+  it("falls back to demo state for malformed localStorage payloads and removes the entry", () => {
     window.localStorage.setItem(STORAGE_KEY, "{malformed json");
 
     expect(() => loadStoredState()).not.toThrow();
     expect(loadStoredState()).toEqual(demoState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to demo state for malformed medication entries and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        medications: [{}],
+        readings: [],
+        tasks: [],
+        contextItems: [],
+        extractedFacts: [],
+        aiMessages: [],
+        auditEvents: []
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to demo state for malformed audit events and clears storage", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        medications: [],
+        readings: [],
+        tasks: [],
+        contextItems: [],
+        extractedFacts: [],
+        aiMessages: [],
+        auditEvents: ["oops"]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(demoState);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("does not throw when saveStoredState cannot write", () => {
+    const originalState = { ...demoState, readings: [...demoState.readings] };
+    const setItemSpy = vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
+      throw new Error("Storage is full");
+    });
+
+    expect(() => saveStoredState(originalState)).not.toThrow();
+    expect(clearStoredState()).toBeUndefined();
+
+    setItemSpy.mockRestore();
   });
 });
