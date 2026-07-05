@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { demoState } from "./fixtures";
 import { buildTodayTasks } from "./tasks";
 import type { HomeReading } from "./types";
@@ -36,11 +36,18 @@ const routineReading: HomeReading = {
   note: ""
 };
 
-describe("buildTodayTasks", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+const chestPainReading: HomeReading = {
+  id: "chest-pain-reading",
+  patientId: "patient-1",
+  systolic: 128,
+  diastolic: 82,
+  pulse: 78,
+  measuredAt: "2026-07-05T10:30:00.000Z",
+  contexts: ["morning"],
+  note: "I had chest pain for 5 minutes."
+};
 
+describe("buildTodayTasks", () => {
   it("limits Today to three priority items", () => {
     const tasks = buildTodayTasks(demoState);
 
@@ -102,9 +109,6 @@ describe("buildTodayTasks", () => {
   });
 
   it("keeps a recent dangerous reading visible when a later routine reading exists", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-05T12:00:00.000Z"));
-
     const tasks = buildTodayTasks({
       ...demoState,
       readings: [routineReading, dangerousReading]
@@ -119,9 +123,6 @@ describe("buildTodayTasks", () => {
   });
 
   it("does not surface outdated readings outside the recent-reading window", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-05T12:00:00.000Z"));
-
     const tasks = buildTodayTasks({
       ...demoState,
       medications: [],
@@ -130,9 +131,10 @@ describe("buildTodayTasks", () => {
         nextVisitReason: ""
       },
       readings: [
+        routineReading,
         {
           ...dangerousReading,
-          measuredAt: "2026-07-03T10:00:00.000Z"
+          measuredAt: "2026-07-01T10:00:00.000Z"
         }
       ]
     });
@@ -141,6 +143,20 @@ describe("buildTodayTasks", () => {
       id: "task-today-safe-state",
       title: "No urgent items to review today"
     });
+  });
+
+  it("creates an urgent-help task when a recent earlier reading reports chest pain", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [routineReading, chestPainReading]
+    });
+
+    expect(tasks[0]).toMatchObject({
+      title: "Seek urgent help now",
+      href: "/chat",
+      status: "needs_review"
+    });
+    expect(tasks[0].body).toContain("If this may be an emergency");
   });
 
   it("adds a safe fallback when no immediate tasks exist", () => {

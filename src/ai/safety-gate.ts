@@ -1,5 +1,5 @@
 import { classifySafety } from "@/domain/safety";
-import { interpretBloodPressure } from "@/domain/blood-pressure";
+import { findRecentClinicalReading } from "@/domain/recent-clinical-reading";
 import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./types";
 import type { HomeReading, Medication } from "@/domain/types";
 
@@ -25,6 +25,27 @@ export async function createSafeAiResponse(
   let stateBlockingReadingSafety: HealthAiResponse | undefined;
   const latestReading = getLatestReading(request.state.readings);
   const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
+  const recentClinicalReading = findRecentClinicalReading(request.state.readings, request.state.carePlan);
+
+  if (recentClinicalReading) {
+    const { reading, bloodPressureInsight, noteSafety } = recentClinicalReading;
+
+    if (noteSafety.level === "escalate") {
+      return {
+        content: noteSafety.response,
+        safety: "escalate",
+        sources: [reading.id]
+      };
+    }
+
+    if (bloodPressureInsight.escalation === "clinic") {
+      return {
+        content: `${bloodPressureInsight.message} If you are feeling worse, seek urgent care now.`,
+        safety: "escalate",
+        sources: [reading.id, request.state.carePlan.id]
+      };
+    }
+  }
 
   if (latestReading) {
     const noteSafety = classifySafety(latestReading.note);
@@ -42,15 +63,6 @@ export async function createSafeAiResponse(
         content: noteSafety.response,
         safety: noteSafety.level,
         sources: [latestReading.id]
-      };
-    }
-
-    const readingInsight = interpretBloodPressure(latestReading, request.state.readings, request.state.carePlan);
-    if (readingInsight.escalation === "clinic") {
-      return {
-        content: `${readingInsight.message} If you are feeling worse, seek urgent care now.`,
-        safety: "escalate",
-        sources: [latestReading.id, request.state.carePlan.id]
       };
     }
   }

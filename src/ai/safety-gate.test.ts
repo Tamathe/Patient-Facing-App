@@ -110,6 +110,55 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it("escalates on earlier dangerous reading when a later normal reading exists", async () => {
+    const stateWithEarlierDangerousReading = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-latest",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T11:00:00.000Z",
+          contexts: ["morning"],
+          note: "Feeling okay now."
+        },
+        {
+          id: "reading-earlier",
+          patientId: "patient-1",
+          systolic: 170,
+          diastolic: 104,
+          pulse: 76,
+          measuredAt: "2026-07-05T10:00:00.000Z",
+          contexts: ["morning"],
+          note: "Morning check."
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "today",
+        patientInput: "What should I do?",
+        state: stateWithEarlierDangerousReading
+      },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("call threshold");
+    expect(response.content).toContain("If you are feeling worse");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("escalates when an active side effects medication barrier exists before provider call", async () => {
     const stateWithSideEffects = {
       ...demoState,

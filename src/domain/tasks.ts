@@ -1,14 +1,7 @@
 import type { AppState, HomeReading, TaskItem } from "./types";
-import { classifySafety } from "./safety";
-import { interpretBloodPressure, type BloodPressureInsight } from "./blood-pressure";
+import { findRecentClinicalReading, type ClinicalReadingCandidate } from "./recent-clinical-reading";
 
-const RECENT_READING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_TODAY_TASKS = 3;
-
-type ClinicalReadingCandidate = {
-  reading: HomeReading;
-  bloodPressureInsight: BloodPressureInsight;
-};
 
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
@@ -17,19 +10,26 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   if (recentClinicalReading !== undefined) {
     const isCarePlanThreshold = recentClinicalReading.bloodPressureInsight.source === "care_plan";
     const isClinicianThreshold = isCarePlanThreshold && state.carePlan.thresholdSource === "clinician_authored";
+    const isUrgentSymptom = recentClinicalReading.noteSafety.level === "escalate";
 
     tasks.push({
       id: "task-bp-clinical",
-      title: "Share this reading with your care team",
-      body: isCarePlanThreshold
-        ? isClinicianThreshold
-          ? "This met a threshold in your clinician-authored care plan. Share this reading today."
-          : "This met a standard-home blood pressure threshold. Share this reading and check with your care team."
-        : "This reading suggests a same-day review with your care team.",
+      title: isUrgentSymptom ? "Seek urgent help now" : "Share this reading with your care team",
+      body: isUrgentSymptom
+        ? recentClinicalReading.noteSafety.response
+        : isCarePlanThreshold
+          ? isClinicianThreshold
+            ? "This met a threshold in your clinician-authored care plan. Share this reading today."
+            : "This met a standard-home blood pressure threshold. Share this reading and check with your care team."
+          : "This reading suggests a same-day review with your care team.",
       href: "/chat",
       priority: 1,
       kind: "reading",
-      status: isCarePlanThreshold ? (isClinicianThreshold ? "confirmed" : "inferred") : "needs_review"
+      status: isUrgentSymptom
+        ? "needs_review"
+        : isCarePlanThreshold
+          ? (isClinicianThreshold ? "confirmed" : "inferred")
+          : "needs_review"
     });
   } else if (state.readings.length === 0) {
     tasks.push({
@@ -94,46 +94,5 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
 }
 
 function getRecentClinicalReading(readings: HomeReading[], carePlan: AppState["carePlan"]): ClinicalReadingCandidate | undefined {
-  const sortedReadings = sortReadingsByTime(readings);
-  const recentWindowStart = Date.now() - RECENT_READING_WINDOW_MS;
-
-  for (const reading of sortedReadings) {
-    const readingTime = new Date(reading.measuredAt).valueOf();
-    if (readingTime < recentWindowStart) {
-      continue;
-    }
-
-    const bloodPressureInsight = interpretBloodPressure(reading, sortedReadings, carePlan);
-    const requiresClinicalFollowUp =
-      latestReadingNeedsClinicCheck(reading) || bloodPressureInsight.escalation === "clinic";
-
-    if (!requiresClinicalFollowUp) {
-      continue;
-    }
-
-    return { reading, bloodPressureInsight };
-  }
-
-  return undefined;
-}
-
-function sortReadingsByTime(readings: HomeReading[]): HomeReading[] {
-  return [...readings].sort(
-    (left, right) => new Date(right.measuredAt).valueOf() - new Date(left.measuredAt).valueOf()
-  );
-}
-
-function latestReadingNeedsClinicCheck(reading: HomeReading): boolean {
-  const numericSafety = `${reading.systolic}/${reading.diastolic}`;
-  const safetyAssessment = classifySafety(numericSafety);
-
-  if (safetyAssessment.level === "escalate") {
-    return true;
-  }
-
-  if (reading.note) {
-    return classifySafety(reading.note).level === "escalate";
-  }
-
-  return false;
+  return findRecentClinicalReading(readings, carePlan);
 }

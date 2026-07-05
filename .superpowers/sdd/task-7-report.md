@@ -147,3 +147,27 @@
   - PASS: 4 files, 21 tests.
 - `npm run build`
   - PASS: production build completes (`Next.js 15.5.20`) with all routes generated.
+
+## Fix: Task 7 safety consistency review
+
+### Findings addressed
+- Added shared recent-clinical reading lookup logic in `src/domain/recent-clinical-reading.ts` so Today and chat both use the same recent-reading safety window.
+- Switched recent-reading window anchoring to the latest logged reading timestamp instead of wall-clock time.
+- Updated Today task copy to emit a distinct urgent-help task with classifySafety language when an earlier recent reading reports urgent symptoms (for example, chest pain).
+- Updated safety-gate escalation to scan the same recent-reading window so earlier dangerous/urgent readings still block provider responses even if the latest reading is normal.
+
+### Files changed
+- `src/domain/recent-clinical-reading.ts`
+- `src/domain/tasks.ts`
+- `src/domain/tasks.test.ts`
+- `src/ai/safety-gate.ts`
+- `src/ai/safety-gate.test.ts`
+
+### Verification
+- `npm run test -- src/domain/tasks.test.ts src/domain/safety.test.ts src/domain/blood-pressure.test.ts src/ai/safety-gate.test.ts src/components/action-card.test.tsx`
+  - PASS: 5 files, 29 tests.
+- `npm run build`
+  - PASS: production build completes (`Next.js 15.5.20`) with all routes generated.
+
+### Notes
+- Changes are limited to Task 7 safety/tasking code paths and existing behavior for blocked/provider-call sequencing remains intact.
