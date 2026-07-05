@@ -37,7 +37,9 @@ export default function NumbersPage() {
         />
         {insight ? (
           <section className="rounded-control border border-care/30 bg-calm p-4">
-            <h2 className="text-lg font-semibold">Latest insight</h2>
+            <h2 className="text-lg font-semibold">
+              Latest insight {insight.source === "care_plan" ? "from your care plan" : "from health education"}
+            </h2>
             <p className="mt-2 text-sm leading-6">{insight.message}</p>
           </section>
         ) : null}

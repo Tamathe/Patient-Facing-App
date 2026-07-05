@@ -57,6 +57,9 @@ export function BpLogForm({ onSubmit }: { onSubmit: (values: BpLogFormValues) =>
           {[
             ["morning", "Morning"],
             ["evening", "Evening"],
+            ["before_medicine", "Before medicine"],
+            ["after_medicine", "After medicine"],
+            ["after_coffee", "After coffee"],
             ["after_resting", "After resting"],
             ["during_symptoms", "During symptoms"]
           ].map(([value, label]) => (
