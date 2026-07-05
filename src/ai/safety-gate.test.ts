@@ -49,7 +49,9 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("blocked");
-    expect(response.content).toContain("I cannot tell you to stop");
+    expect(response.banner).toContain("I cannot tell you to stop");
+    expect(response.actions).toContain("call_clinic");
+    expect(response.content.length).toBeGreaterThan(0);
   });
 
   it("escalates for dangerous state reading even when patient input is blocked", async () => {
@@ -86,8 +88,9 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("escalate");
-    expect(response.content).toContain("call threshold");
-    expect(provider.respond).not.toHaveBeenCalled();
+    expect(response.banner).toContain("call threshold");
+    expect(response.actions).toContain("call_clinic");
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("allows education requests through the provider", async () => {
@@ -138,9 +141,10 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("escalate");
-    expect(response.content).toContain("call threshold");
-    expect(response.content).toContain("If you are feeling worse");
-    expect(provider.respond).not.toHaveBeenCalled();
+    expect(response.banner).toContain("call threshold");
+    expect(response.banner).toContain("If you are feeling worse");
+    expect(response.actions).toContain("call_clinic");
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("escalates on very low recent reading before provider call", async () => {
@@ -227,9 +231,10 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("escalate");
-    expect(response.content).toContain("call threshold");
-    expect(response.content).toContain("If you are feeling worse");
-    expect(provider.respond).not.toHaveBeenCalled();
+    expect(response.banner).toContain("call threshold");
+    expect(response.banner).toContain("If you are feeling worse");
+    expect(response.actions).toContain("call_clinic");
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("does not escalate from stale urgent or blocked readings outside the 24-hour real-time window", async () => {
@@ -334,10 +339,10 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("escalate");
-    expect(response.content).toContain("call threshold");
+    expect(response.banner).toContain("call threshold");
     expect(response.sources).toContain("reading-earlier-danger");
     expect(response.sources).toContain("plan-1");
-    expect(provider.respond).not.toHaveBeenCalled();
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("escalates on an older chest-pain reading when a newer threshold reading exists", async () => {
@@ -414,9 +419,9 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("blocked");
-    expect(response.content).toContain("I cannot tell you to stop");
+    expect(response.banner).toContain("I cannot tell you to stop");
     expect(response.sources).toContain("reading-blocked-previous");
-    expect(provider.respond).not.toHaveBeenCalled();
+    expect(provider.respond).toHaveBeenCalledTimes(1);
   });
 
   it("allows education when a side effects barrier exists but the current question is safe", async () => {
@@ -515,5 +520,53 @@ describe("createSafeAiResponse", () => {
     expect(response.content).toContain("Some signs need urgent medical attention");
     expect(response.content).not.toContain("active side effects");
     expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("answers the question with a banner instead of a broken record when a fresh high reading exists", async () => {
+    const stateWithFreshHighReading = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-high",
+          patientId: "patient-1",
+          systolic: 162,
+          diastolic: 101,
+          pulse: 78,
+          measuredAt: "2026-07-05T11:30:00.000Z",
+          contexts: ["morning"],
+          note: ""
+        }
+      ]
+    };
+
+    const response = await createSafeAiResponse(
+      {
+        mode: "explain",
+        patientInput: "why do I have to take this if I feel fine?",
+        state: stateWithFreshHighReading
+      },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.banner).toContain("call threshold");
+    expect(response.actions).toEqual(expect.arrayContaining(["call_clinic", "draft_message"]));
+    // The medicine question is still answered (default "explain" is inferred to "why").
+    expect(response.content).toContain("Lisinopril");
+  });
+
+  it("blocks pause-for-a-week phrasing and still offers care-team actions", async () => {
+    const response = await createSafeAiResponse(
+      {
+        mode: "explain",
+        patientInput: "the cough is annoying, can I just stop the lisinopril for a week?",
+        state: demoState
+      },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("blocked");
+    expect(response.banner).toContain("I cannot tell you to stop");
+    expect(response.actions).toContain("call_clinic");
   });
 });

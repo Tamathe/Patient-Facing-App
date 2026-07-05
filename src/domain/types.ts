@@ -99,6 +99,8 @@ export type ExtractedFact = {
 
 export type AiMode = "explain" | "today" | "why" | "ask" | "trouble" | "visit" | "summarize" | "food";
 
+export type AiMessageAction = "call_clinic" | "draft_message";
+
 export type AiMessage = {
   id: string;
   mode: AiMode;
@@ -107,6 +109,8 @@ export type AiMessage = {
   createdAt: string;
   safety: "allowed" | "escalate" | "blocked";
   sources: string[];
+  banner?: string;
+  actions?: AiMessageAction[];
 };
 
 export type HealthBrief = {

@@ -12,7 +12,11 @@ const medicationChangePatterns = [
   /should i increase my dose/i,
   /increase my dose/i,
   /can i take two/i,
-  /stop for a day/i
+  /stop for a day/i,
+  /\bstop\b[^.?!]{0,30}\b(lisinopril|medicine|medication|pill|pills|dose|it)\b/i,
+  /\bstop\b[^.?!]{0,30}\bfor a (day|week|while|few days)\b/i,
+  /\b(pause|hold off on|quit|halve|cut back on)\b[^.?!]{0,25}\b(lisinopril|medicine|medication|pill|pills|dose)\b/i,
+  /\b(come|get) off\b[^.?!]{0,20}\b(lisinopril|medicine|medication|pill|dose)\b/i
 ];
 const dangerousReadingWithSlashPattern = /(\d{2,3})\s*[\/\-]\s*(\d{2,3})/i;
 const dangerousSystolicDiastolicPattern = /systolic\s*(?:is\s*)?(\d{2,3})\D{1,20}?diastolic\s*(?:is\s*)?(\d{2,3})/i;

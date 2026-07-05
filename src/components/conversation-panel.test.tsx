@@ -66,4 +66,35 @@ describe("ConversationPanel", () => {
     expect(screen.getByText("Safety guidance: Escalate to care now")).toBeInTheDocument();
     expect(screen.getByText("Safety guidance: Blocked for safety")).toBeInTheDocument();
   });
+
+  it("renders a banner, call/draft actions, and humanized sources for a soft escalation", () => {
+    const messages: AiMessage[] = [
+      {
+        id: "a",
+        mode: "why",
+        role: "assistant",
+        content: "Lisinopril helps lower your blood pressure.",
+        createdAt: "2026-07-05T12:00:00.000Z",
+        safety: "escalate",
+        sources: ["med-1", "plan-1"],
+        banner: "This reading meets the call threshold in your plan.",
+        actions: ["call_clinic", "draft_message"]
+      }
+    ];
+
+    render(
+      <ConversationPanel
+        onSubmit={vi.fn()}
+        messages={messages}
+        clinic={{ name: "Bluegrass Primary Care", phone: "555-0142" }}
+        careTeamDraft="For my care team: ..."
+        describeSource={(id) => (id === "med-1" ? "Lisinopril" : id === "plan-1" ? "your care plan" : null)}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("call threshold");
+    expect(screen.getByRole("link", { name: /Call Bluegrass Primary Care/ })).toHaveAttribute("href", "tel:555-0142");
+    expect(screen.getByRole("button", { name: "Draft a message" })).toBeInTheDocument();
+    expect(screen.getByText("Based on Lisinopril, your care plan.")).toBeInTheDocument();
+  });
 });
