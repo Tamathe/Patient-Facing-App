@@ -324,7 +324,17 @@ function isPatient(value: unknown): value is PatientProfile {
   );
 }
 
-function isValidAppState(value: unknown): value is AppState {
+type PersistedAppState = Omit<AppState, "tasks"> & { tasks: unknown };
+
+function sanitizeTasks(tasks: unknown): TaskItem[] {
+  if (!Array.isArray(tasks)) {
+    return [];
+  }
+
+  return tasks.filter(isTask);
+}
+
+function isValidCoreAppState(value: unknown): value is PersistedAppState {
   if (!isObject(value)) {
     return false;
   }
@@ -340,7 +350,6 @@ function isValidAppState(value: unknown): value is AppState {
   if (
     !isArrayOfObjects(value.medications, isMedication) ||
     !isArrayOfObjects(value.readings, isReading) ||
-    !isArrayOfObjects(value.tasks, isTask) ||
     !isArrayOfObjects(value.contextItems, isContextItem) ||
     !isArrayOfObjects(value.extractedFacts, isExtractedFact) ||
     !isArrayOfObjects(value.aiMessages, isAiMessage) ||
@@ -350,6 +359,14 @@ function isValidAppState(value: unknown): value is AppState {
   }
 
   return hasValidRelationships(value as AppState);
+}
+
+function isValidAppState(value: unknown): value is AppState {
+  if (!isValidCoreAppState(value)) {
+    return false;
+  }
+
+  return Array.isArray(value.tasks) && value.tasks.every(isTask);
 }
 
 export function loadStoredState(): AppState {
@@ -364,8 +381,20 @@ export function loadStoredState(): AppState {
 
   try {
     const parsed = JSON.parse(raw);
-    if (isValidAppState(parsed)) {
-      return parsed;
+    if (isValidCoreAppState(parsed)) {
+      const sanitizedTasks = sanitizeTasks(parsed.tasks);
+      const sanitizedState: AppState = { ...parsed, tasks: sanitizedTasks };
+
+      if (!isValidAppState(sanitizedState)) {
+        safeRemoveItem(STORAGE_KEY);
+        return demoState;
+      }
+
+      if (JSON.stringify(parsed.tasks) !== JSON.stringify(sanitizedState.tasks)) {
+        safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));
+      }
+
+      return sanitizedState;
     }
 
     safeRemoveItem(STORAGE_KEY);

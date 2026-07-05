@@ -70,33 +70,65 @@ describe("storage", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for tasks without status and clears storage", () => {
+  it("keeps valid saved state when some tasks are invalid by dropping invalid tasks only", () => {
+    const legacySavedState = {
+      ...demoState,
+      patient: {
+        ...demoState.patient,
+        name: "Saved Patient",
+        preferredName: "Sam"
+      },
+      tasks: [
+        {
+          id: "task-valid-1",
+          title: "Review readings",
+          body: "Current readings can be shared with your care team.",
+          href: "/chat",
+          priority: 2,
+          kind: "reading",
+          status: "confirmed"
+        },
+        {
+          id: "task-missing-status",
+          title: "Missing status",
+          body: "Task created before status was required.",
+          href: "/chat",
+          priority: 1,
+          kind: "reading"
+        },
+        {
+          id: "task-valid-2",
+          title: "Prepare visit",
+          body: "Review goals before your next visit.",
+          href: "/visits",
+          priority: 3,
+          kind: "visit",
+          status: "needs_review"
+        }
+      ],
+      readings: [],
+      contextItems: [],
+      extractedFacts: [],
+      aiMessages: [],
+      auditEvents: []
+    };
+
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({
-        ...demoState,
-        tasks: [
-          {
-            id: "task-1",
-            title: "Missing status",
-            body: "Task created before validation update",
-            href: "/chat",
-            priority: 1,
-            kind: "reading"
-          }
-        ],
-        readings: [],
-        contextItems: [],
-        extractedFacts: [],
-        aiMessages: [],
-        auditEvents: []
-      })
+      JSON.stringify(legacySavedState)
     );
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(loaded.patient.name).toBe("Saved Patient");
+    expect(loaded.patient.preferredName).toBe("Sam");
+    expect(loaded.tasks).toHaveLength(2);
+    expect(loaded.tasks.map((task) => task.id)).toEqual(["task-valid-1", "task-valid-2"]);
+    const persisted = window.localStorage.getItem(STORAGE_KEY);
+    expect(persisted).not.toBeNull();
+    const persistedState = JSON.parse(persisted ?? "{}");
+    expect(persistedState.tasks).toHaveLength(2);
+    expect(persistedState.tasks.map((task) => task.id)).toEqual(["task-valid-1", "task-valid-2"]);
   });
 
   it("falls back to demo state for carePlan patient mismatch and clears storage", () => {

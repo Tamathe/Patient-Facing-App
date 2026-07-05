@@ -113,3 +113,20 @@
   - PASS: 3 files, 21 tests.
 - `npm run build`
   - PASS: production build completes (`Next.js 15.5.20`, all static routes generated).
+
+## Follow-up Fix: Task 7 storage recovery handling
+
+### Files changed
+- `src/state/storage.ts`
+- `src/state/storage.test.ts`
+
+### Fix
+- Kept strict fallback behavior for malformed core health data and entity relationships (`patient`, `carePlan`, `medications`, `readings`, `contextItems`, `extractedFacts`, `aiMessages`, `auditEvents`).
+- Sanitized only the `tasks` array during load by dropping invalid/stale task entries (for example, entries missing `status`) while preserving the rest of the saved state.
+- When sanitized state passes core validation, returned the sanitized state and persisted it back to `localStorage`.
+
+### Verification
+- `npm run test -- src/state/storage.test.ts src/domain/tasks.test.ts src/components/action-card.test.tsx`
+  - PASS: 3 files, 21 tests.
+- `npm run build`
+  - PASS: production build completes with static route generation (`Next.js 15.5.20`).
