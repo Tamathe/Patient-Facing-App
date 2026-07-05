@@ -130,3 +130,20 @@
   - PASS: 3 files, 21 tests.
 - `npm run build`
   - PASS: production build completes with static route generation (`Next.js 15.5.20`).
+
+## Fix: Task 7 recent-reading window and Today fallback
+
+### Files changed
+- `src/domain/tasks.ts`
+- `src/domain/tasks.test.ts`
+
+### Fix notes
+- Clinical follow-up now uses the most recent reading within a 24-hour window that requires follow-up (care-plan threshold or safety escalation), instead of only the latest reading.
+- Added a safe fallback Today task so an empty action list is never rendered in low-activity states.
+- Clinician-authored care-plan thresholds still map to `status: "confirmed"` with clinician threshold copy; non-clinician threshold copy/status remains unchanged.
+
+### Verification
+- `npm run test -- src/domain/tasks.test.ts src/domain/blood-pressure.test.ts src/domain/safety.test.ts src/components/action-card.test.tsx`
+  - PASS: 4 files, 21 tests.
+- `npm run build`
+  - PASS: production build completes (`Next.js 15.5.20`) with all routes generated.

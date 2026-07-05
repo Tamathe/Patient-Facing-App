@@ -1,21 +1,22 @@
 import type { AppState, HomeReading, TaskItem } from "./types";
 import { classifySafety } from "./safety";
-import { interpretBloodPressure } from "./blood-pressure";
+import { interpretBloodPressure, type BloodPressureInsight } from "./blood-pressure";
+
+const RECENT_READING_WINDOW_MS = 24 * 60 * 60 * 1000;
+const MAX_TODAY_TASKS = 3;
+
+type ClinicalReadingCandidate = {
+  reading: HomeReading;
+  bloodPressureInsight: BloodPressureInsight;
+};
 
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
-  const latestReading = getLatestReading(state.readings);
-  const bloodPressureInsight = latestReading
-    ? interpretBloodPressure(latestReading, state.readings, state.carePlan)
-    : undefined;
-  const readingRequiresClinicalFollowUp =
-    latestReading !== undefined &&
-    (latestReadingNeedsClinicCheck(latestReading) || bloodPressureInsight?.escalation === "clinic");
+  const recentClinicalReading = getRecentClinicalReading(state.readings, state.carePlan);
 
-  if (readingRequiresClinicalFollowUp) {
-    const isCarePlanThreshold = bloodPressureInsight?.source === "care_plan";
-    const isClinicianThreshold =
-      isCarePlanThreshold && state.carePlan.thresholdSource === "clinician_authored";
+  if (recentClinicalReading !== undefined) {
+    const isCarePlanThreshold = recentClinicalReading.bloodPressureInsight.source === "care_plan";
+    const isClinicianThreshold = isCarePlanThreshold && state.carePlan.thresholdSource === "clinician_authored";
 
     tasks.push({
       id: "task-bp-clinical",
@@ -28,11 +29,7 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       href: "/chat",
       priority: 1,
       kind: "reading",
-      status: isCarePlanThreshold
-        ? isClinicianThreshold
-          ? "confirmed"
-          : "inferred"
-        : "needs_review"
+      status: isCarePlanThreshold ? (isClinicianThreshold ? "confirmed" : "inferred") : "needs_review"
     });
   } else if (state.readings.length === 0) {
     tasks.push({
@@ -81,17 +78,49 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
     });
   }
 
-  return tasks.sort((left, right) => left.priority - right.priority).slice(0, 3);
-}
-
-function getLatestReading(readings: HomeReading[]): HomeReading | undefined {
-  if (readings.length === 0) {
-    return undefined;
+  if (tasks.length === 0) {
+    tasks.push({
+      id: "task-today-safe-state",
+      title: "No urgent items to review today",
+      body: "You have no urgent home signals right now. Keep logging your blood pressure on your normal schedule.",
+      href: "/numbers",
+      priority: 3,
+      kind: "reading",
+      status: "inferred"
+    });
   }
 
+  return tasks.sort((left, right) => left.priority - right.priority).slice(0, MAX_TODAY_TASKS);
+}
+
+function getRecentClinicalReading(readings: HomeReading[], carePlan: AppState["carePlan"]): ClinicalReadingCandidate | undefined {
+  const sortedReadings = sortReadingsByTime(readings);
+  const recentWindowStart = Date.now() - RECENT_READING_WINDOW_MS;
+
+  for (const reading of sortedReadings) {
+    const readingTime = new Date(reading.measuredAt).valueOf();
+    if (readingTime < recentWindowStart) {
+      continue;
+    }
+
+    const bloodPressureInsight = interpretBloodPressure(reading, sortedReadings, carePlan);
+    const requiresClinicalFollowUp =
+      latestReadingNeedsClinicCheck(reading) || bloodPressureInsight.escalation === "clinic";
+
+    if (!requiresClinicalFollowUp) {
+      continue;
+    }
+
+    return { reading, bloodPressureInsight };
+  }
+
+  return undefined;
+}
+
+function sortReadingsByTime(readings: HomeReading[]): HomeReading[] {
   return [...readings].sort(
     (left, right) => new Date(right.measuredAt).valueOf() - new Date(left.measuredAt).valueOf()
-  )[0];
+  );
 }
 
 function latestReadingNeedsClinicCheck(reading: HomeReading): boolean {
