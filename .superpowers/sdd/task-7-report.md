@@ -77,6 +77,20 @@
 - `npm run build`
   - PASS: production build completes with static page generation.
 
+## Follow-up Fix: Task 7 client-boundary review
+
+### Files changed
+- `src/components/app-shell.tsx`
+
+### Fix
+- Added `"use client"` to `AppShell` so it is explicitly client-safe and can be imported by client pages (including `/today`) without component boundary warnings.
+
+### Verification
+- `npm run test -- src/components/app-shell.test.tsx src/domain/tasks.test.ts src/components/action-card.test.tsx`
+  - PASS: `3` files, `10` tests.
+- `npm run build`
+  - PASS: production build succeeds (`Next.js 15.5.20`, all static routes generated).
+
 ### Files updated
 - `src/domain/types.ts`
 - `src/domain/tasks.ts`

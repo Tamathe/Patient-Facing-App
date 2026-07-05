@@ -1,3 +1,5 @@
+"use client";
+
 import { ClipboardList, HeartPulse, Home, LockKeyhole, MessageCircle, Pill, Stethoscope, Upload } from "lucide-react";
 import Link from "next/link";
 import React, { type ReactNode } from "react";
