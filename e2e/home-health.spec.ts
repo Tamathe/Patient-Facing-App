@@ -31,5 +31,12 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
 
   await page.getByRole("link", { name: "My Visits" }).click();
   await expect(page.getByRole("heading", { name: "My Health Brief" })).toBeVisible();
-  await expect(page.getByText("Medicines and barriers")).toBeVisible();
+
+  const readingsSection = page.getByRole("heading", { name: "Recent home readings" });
+  await expect(readingsSection).toBeVisible();
+  await expect(readingsSection.locator("..").locator("..").getByText("151/92")).toBeVisible();
+
+  const medicationSection = page.getByRole("heading", { name: "Medicines and barriers" });
+  await expect(medicationSection).toBeVisible();
+  await expect(medicationSection.locator("..").locator("..").getByText(/Barriers:|It costs too much|cost/i)).toBeVisible();
 });

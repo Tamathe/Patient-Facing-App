@@ -38,6 +38,7 @@ http://127.0.0.1:3000/today
 ```bash
 npm run test
 npm run build
+npx playwright install
 npm run test:e2e
 ```
 

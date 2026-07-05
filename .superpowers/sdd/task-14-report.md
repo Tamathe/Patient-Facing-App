@@ -31,6 +31,15 @@ Current status:
 - `npm run build` passed.
 - `npm run test:e2e` initially failed due missing Playwright browser binaries, then passed after running `npx playwright install`.
 
+## Review-fix pass (Task 14)
+
+### Findings fixed
+
+- Documented `npx playwright install` in `README.md` verification steps so a fresh checkout includes browser binary setup.
+- Strengthened `e2e/home-health.spec.ts` Health Brief assertions to verify:
+  - `151/92` appears in the **Recent home readings** section.
+  - the medications barrier value is present in **Medicines and barriers** (`cost` / `It costs too much` equivalent).
+
 ## Notes
 
 - No app/page/component logic was modified; no functional blockers were found in flow execution after selector/text adjustments.
