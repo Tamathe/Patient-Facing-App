@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoState } from "@/domain/fixtures";
+import { recordAuditEvent } from "@/domain/audit";
 import { healthReducer } from "./store";
 
 describe("healthReducer", () => {
@@ -58,6 +59,27 @@ describe("healthReducer", () => {
 
     const next = healthReducer(modifiedState, { type: "resetDemo" });
 
-    expect(next).toEqual(demoState);
+    expect(next.auditEvents).toHaveLength(1);
+    expect(next.auditEvents[0]).toMatchObject({
+      action: "deleted",
+      label: "Demo data deleted",
+      patientId: demoState.patient.id
+    });
+    expect(next.readings).toHaveLength(0);
+    expect(next.medications).toHaveLength(1);
+    expect(next.auditEvents[0]?.createdAt).toBeTypeOf("string");
+  });
+
+  it("records an exported event through addAuditEvent for privacy actions", () => {
+    const exportedEvent = recordAuditEvent(demoState.patient.id, "exported", "Data exported");
+    const next = healthReducer(demoState, {
+      type: "addAuditEvent",
+      event: exportedEvent
+    });
+
+    expect(next.auditEvents).toHaveLength(1);
+    expect(next.auditEvents[0]).toEqual(exportedEvent);
+    expect(next.auditEvents[0]?.action).toBe("exported");
+    expect(next.auditEvents[0]?.label).toBe("Data exported");
   });
 });

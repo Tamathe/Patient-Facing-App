@@ -80,7 +80,10 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       };
     }
     case "resetDemo":
-      return demoState;
+      return {
+        ...demoState,
+        auditEvents: [recordAuditEvent(state.patient.id, "deleted", "Demo data deleted")]
+      };
     default:
       return state;
   }

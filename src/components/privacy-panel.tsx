@@ -1,40 +1,33 @@
 "use client";
 
 import React from "react";
-import { type AppState } from "@/domain/types";
+import { type AppState, type AuditEvent } from "@/domain/types";
 
 function formatLogTime(createdAt: string): string {
   const eventDate = new Date(createdAt);
   return Number.isNaN(eventDate.getTime()) ? "Date unavailable" : eventDate.toLocaleString();
 }
 
+const actionLabelMap: Record<AuditEvent["action"], string> = {
+  created: "Data created",
+  updated: "Data updated",
+  ai_generated: "AI response generated",
+  shared: "Shared with care team",
+  exported: "Data exported",
+  deleted: "Demo data deleted"
+};
+
 type PrivacyPanelProps = {
   state: AppState;
   onReset: () => void;
+  onExport: () => void;
 };
 
-export function PrivacyPanel({ state, onReset }: PrivacyPanelProps) {
-  function exportData() {
-    const payload = JSON.stringify(state, null, 2);
-    const file = new Blob([payload], { type: "application/json" });
-    const canCreateObjectURL = typeof URL.createObjectURL === "function";
-    const href = canCreateObjectURL
-      ? URL.createObjectURL(file)
-      : `data:application/json;charset=utf-8,${encodeURIComponent(payload)}`;
-    const link = document.createElement("a");
+function getDisplayLabel(event: AuditEvent): string {
+  return event.label === event.action ? actionLabelMap[event.action] : event.label;
+}
 
-    link.href = href;
-    link.download = `home-health-data-${state.patient.id}.json`;
-    link.hidden = true;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    if (canCreateObjectURL) {
-      URL.revokeObjectURL(href);
-    }
-  }
-
+export function PrivacyPanel({ state, onReset, onExport }: PrivacyPanelProps) {
   const eventsNewestFirst = [...state.auditEvents].sort((left, right) => {
     const leftDate = new Date(left.createdAt).getTime();
     const rightDate = new Date(right.createdAt).getTime();
@@ -54,6 +47,11 @@ export function PrivacyPanel({ state, onReset }: PrivacyPanelProps) {
     return rightDate - leftDate;
   });
 
+  const displayedEvents = eventsNewestFirst.map((event) => ({
+    ...event,
+    displayLabel: getDisplayLabel(event)
+  }));
+
   return (
     <div className="grid gap-5">
       <section className="rounded-control border border-care/20 bg-calm p-4">
@@ -67,7 +65,7 @@ export function PrivacyPanel({ state, onReset }: PrivacyPanelProps) {
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             className="rounded-control bg-care px-4 py-2 text-sm font-semibold text-white"
-            onClick={exportData}
+            onClick={onExport}
             type="button"
           >
             Export my data
@@ -87,9 +85,9 @@ export function PrivacyPanel({ state, onReset }: PrivacyPanelProps) {
           <p className="mt-2 text-sm text-ink/70">No activity recorded yet.</p>
         ) : (
           <ul className="mt-3 grid gap-2 text-sm leading-6">
-            {eventsNewestFirst.map((event) => (
+            {displayedEvents.map((event) => (
               <li key={event.id}>
-                <strong>{event.label}</strong> - {event.action} - {formatLogTime(event.createdAt)}
+                <strong>{event.displayLabel}</strong> - {formatLogTime(event.createdAt)}
               </li>
             ))}
           </ul>

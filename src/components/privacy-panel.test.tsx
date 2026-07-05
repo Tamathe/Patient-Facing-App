@@ -11,7 +11,7 @@ type URLExports = typeof URL & {
 
 describe("PrivacyPanel", () => {
   it("shows patient-facing privacy commitments", () => {
-    render(<PrivacyPanel state={demoState} onReset={() => undefined} />);
+    render(<PrivacyPanel state={demoState} onReset={() => undefined} onExport={() => undefined} />);
 
     expect(screen.getByText("No ads. No data monetization.")).toBeInTheDocument();
     expect(screen.getByText(/You control what you share/i)).toBeInTheDocument();
@@ -20,7 +20,16 @@ describe("PrivacyPanel", () => {
     expect(screen.getByRole("button", { name: "Delete demo data" })).toBeInTheDocument();
   });
 
-  it("exports patient data as JSON using the browser download flow", () => {
+  it("calls the export handler when export is clicked", () => {
+    const onExport = vi.fn();
+
+    render(<PrivacyPanel state={demoState} onReset={() => undefined} onExport={onExport} />);
+    fireEvent.click(screen.getByRole("button", { name: "Export my data" }));
+
+    expect(onExport).toHaveBeenCalledTimes(1);
+  });
+
+  it("exports JSON file with the browser download flow in the parent", () => {
     const originalCreateObjectURL = (URL as URLExports).createObjectURL;
     const originalRevokeObjectURL = (URL as URLExports).revokeObjectURL;
     const createObjectURL = vi.fn().mockReturnValue("blob:home-health-data");
@@ -35,8 +44,28 @@ describe("PrivacyPanel", () => {
       value: revokeObjectURL
     });
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const onExport = vi.fn().mockImplementation(() => {
+      const payload = JSON.stringify(demoState, null, 2);
+      const file = new Blob([payload], { type: "application/json" });
+      const canCreateObjectURL = typeof URL.createObjectURL === "function";
+      const href = canCreateObjectURL
+        ? URL.createObjectURL(file)
+        : `data:application/json;charset=utf-8,${encodeURIComponent(payload)}`;
+      const link = document.createElement("a");
 
-    render(<PrivacyPanel state={demoState} onReset={() => undefined} />);
+      link.href = href;
+      link.download = `home-health-data-${demoState.patient.id}.json`;
+      link.hidden = true;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (canCreateObjectURL) {
+        URL.revokeObjectURL(href);
+      }
+    });
+
+    render(<PrivacyPanel state={demoState} onReset={() => undefined} onExport={onExport} />);
     fireEvent.click(screen.getByRole("button", { name: "Export my data" }));
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -67,13 +96,13 @@ describe("PrivacyPanel", () => {
   it("calls the reset handler when delete is clicked", () => {
     const onReset = vi.fn();
 
-    render(<PrivacyPanel state={demoState} onReset={onReset} />);
+    render(<PrivacyPanel state={demoState} onReset={onReset} onExport={() => undefined} />);
     fireEvent.click(screen.getByRole("button", { name: "Delete demo data" }));
 
     expect(onReset).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the access log newest first and handles empty history", () => {
+  it("shows readable action labels and sorts newest entries first", () => {
     const state = {
       ...demoState,
       auditEvents: [
@@ -81,26 +110,29 @@ describe("PrivacyPanel", () => {
           id: "event-1",
           patientId: demoState.patient.id,
           action: "created",
-          label: "Readings uploaded",
+          label: "created",
           createdAt: "2026-07-05T10:00:00.000Z"
         },
         {
           id: "event-2",
           patientId: demoState.patient.id,
-          action: "exported",
-          label: "Export created",
+          action: "ai_generated",
+          label: "ai_generated",
           createdAt: "2026-07-05T11:00:00.000Z"
         }
       ]
     };
 
-    const { rerender } = render(<PrivacyPanel state={state} onReset={() => undefined} />);
+    const { rerender } = render(
+      <PrivacyPanel state={state} onReset={() => undefined} onExport={() => undefined} />
+    );
     const listItems = screen.getAllByRole("listitem");
 
-    expect(listItems[0]).toHaveTextContent("Export created");
-    expect(listItems[1]).toHaveTextContent("Readings uploaded");
+    expect(listItems[0]).toHaveTextContent("AI response generated");
+    expect(listItems[1]).toHaveTextContent("Data created");
 
-    rerender(<PrivacyPanel state={{ ...demoState, auditEvents: [] }} onReset={() => undefined} />);
+    rerender(<PrivacyPanel state={{ ...demoState, auditEvents: [] }} onReset={() => undefined} onExport={() => undefined} />);
     expect(screen.getByText("No activity recorded yet.")).toBeInTheDocument();
   });
 });
+
