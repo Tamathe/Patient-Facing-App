@@ -39,6 +39,40 @@ describe("HealthBriefCard", () => {
     });
   });
 
+  it("does not download when share is unavailable after cancellation", async () => {
+    const user = userEvent.setup();
+    const previousShare = (window.navigator as { share?: () => Promise<void> }).share;
+    const createObjectURL = typeof URL.createObjectURL === "function"
+      ? vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:health-brief")
+      : undefined;
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(window.navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockRejectedValue(new DOMException("Share was cancelled", "AbortError"))
+    });
+
+    render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
+    await user.click(screen.getByRole("button", { name: /share/i }));
+
+    expect(window.navigator.share).toHaveBeenCalledWith({
+      title: "My Health Brief",
+      text: expect.stringContaining("When to call my care team")
+    });
+    expect(anchorClick).not.toHaveBeenCalled();
+    if (createObjectURL) {
+      expect(createObjectURL).not.toHaveBeenCalled();
+    }
+
+    Object.defineProperty(window.navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: previousShare
+    });
+    createObjectURL?.mockRestore();
+    anchorClick.mockRestore();
+  });
+
   it("falls back to download when Web Share is not available", () => {
     const previousShare = (window.navigator as { share?: () => Promise<void> }).share;
     const createObjectURL = typeof URL.createObjectURL === "function"

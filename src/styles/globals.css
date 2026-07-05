@@ -18,3 +18,19 @@ textarea,
 select {
   font: inherit;
 }
+
+@media print {
+  header,
+  nav {
+    display: none !important;
+  }
+
+  .health-brief-card {
+    border: 0;
+    padding: 0;
+  }
+
+  .health-brief-card__actions {
+    display: none !important;
+  }
+}
