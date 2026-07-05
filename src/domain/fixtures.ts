@@ -29,7 +29,7 @@ export const demoState: AppState = {
     dailyActions: ["Check blood pressure in the morning before coffee.", "Take blood pressure medicine as prescribed.", "Write down dizziness, swelling, chest pain, or missed doses."],
     callThresholdSystolic: 160,
     callThresholdDiastolic: 100,
-    thresholdSource: "patient_reported",
+    thresholdSource: "clinician_authored",
     warningSymptoms: ["chest pain", "shortness of breath", "weakness on one side", "new confusion", "severe headache"],
     nextVisitReason: "Review two weeks of home blood pressure readings and medication barriers."
   },

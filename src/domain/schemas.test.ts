@@ -18,6 +18,16 @@ describe("domain schemas", () => {
   it("rejects an implausible blood pressure reading", () => {
     expect(() =>
       bpReadingInputSchema.parse({
+        systolic: 80,
+        diastolic: 120,
+        pulse: 72,
+        contexts: ["morning"],
+        note: "Before coffee"
+      })
+    ).toThrow();
+
+    expect(() =>
+      bpReadingInputSchema.parse({
         systolic: 340,
         diastolic: 20,
         pulse: 72,
@@ -32,6 +42,16 @@ describe("domain schemas", () => {
       careContextInputSchema.parse({
         title: "Visit",
         rawText: "BP",
+        sourceLabel: "Portal"
+      })
+    ).toThrow();
+  });
+
+  it("rejects whitespace-only care context text", () => {
+    expect(() =>
+      careContextInputSchema.parse({
+        title: "Visit",
+        rawText: "         ",
         sourceLabel: "Portal"
       })
     ).toThrow();

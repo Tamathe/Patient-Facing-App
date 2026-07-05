@@ -8,6 +8,14 @@ export const bpReadingInputSchema = z.object({
     z.enum(["morning", "evening", "before_medicine", "after_medicine", "after_coffee", "after_resting", "during_symptoms"])
   ).min(1),
   note: z.string().max(280)
+}).superRefine((reading, ctx) => {
+  if (reading.systolic <= reading.diastolic) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Systolic blood pressure must be greater than diastolic blood pressure.",
+      path: ["systolic"]
+    });
+  }
 });
 
 export const medicationBarrierSchema = z.enum([
@@ -23,6 +31,6 @@ export const medicationBarrierSchema = z.enum([
 
 export const careContextInputSchema = z.object({
   title: z.string().min(2).max(80),
-  rawText: z.string().min(10).max(5000),
+  rawText: z.string().trim().min(10).max(5000),
   sourceLabel: z.string().min(2).max(80)
 });

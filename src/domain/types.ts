@@ -1,4 +1,5 @@
 export type EvidenceStatus = "confirmed" | "patient_reported" | "imported" | "inferred" | "needs_review";
+export type ThresholdSource = "clinician_authored" | "standard_education";
 
 export type PatientProfile = {
   id: string;
@@ -24,7 +25,7 @@ export type CarePlan = {
   dailyActions: string[];
   callThresholdSystolic: number | null;
   callThresholdDiastolic: number | null;
-  thresholdSource: EvidenceStatus;
+  thresholdSource: ThresholdSource;
   warningSymptoms: string[];
   nextVisitReason: string;
 };
