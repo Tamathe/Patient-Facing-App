@@ -1,9 +1,25 @@
+"use client";
+
 import { AppShell } from "@/components/app-shell";
+import { HealthBriefCard } from "@/components/health-brief-card";
+import { buildHealthBrief } from "@/domain/health-brief";
+import { useHealthState } from "@/state/store";
 
 export default function VisitsPage() {
+  const { state } = useHealthState();
+  const brief = buildHealthBrief(state);
+
   return (
     <AppShell title="My Visits">
-      <p>Your visit schedule will show here with who is coming, what they can help with, and how to get ready.</p>
+      <div className="grid gap-5">
+        <section>
+          <h2 className="text-xl font-semibold">Prepare a better care conversation</h2>
+          <p className="mt-1 text-sm leading-6 text-ink/75">
+            Review this before your appointment, show it on your phone, or print it.
+          </p>
+        </section>
+        <HealthBriefCard brief={brief} />
+      </div>
     </AppShell>
   );
 }
