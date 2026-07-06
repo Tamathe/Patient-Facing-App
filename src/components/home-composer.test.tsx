@@ -52,4 +52,33 @@ describe("HomeComposer", () => {
     type("just pick something helpful for me");
     await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining("/chat?ask=")));
   });
+
+  it("routes a spoken transcript through the same safety-first router as typed text", async () => {
+    type FakeResult = { results: Array<Array<{ transcript: string }>> };
+    let instance: { onresult: ((event: FakeResult) => void) | null } | undefined;
+    function FakeRecognition() {
+      const rec = {
+        lang: "",
+        interimResults: false,
+        maxAlternatives: 1,
+        onresult: null as ((event: FakeResult) => void) | null,
+        onerror: null as (() => void) | null,
+        onend: null as (() => void) | null,
+        start() {},
+        stop() {}
+      };
+      instance = rec;
+      return rec;
+    }
+    (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition = FakeRecognition;
+    try {
+      render(<HomeComposer />);
+      const mic = await screen.findByRole("button", { name: /speak to the assistant/i });
+      fireEvent.click(mic);
+      instance?.onresult?.({ results: [[{ transcript: "log my blood pressure" }]] });
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/numbers"));
+    } finally {
+      delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+    }
+  });
 });

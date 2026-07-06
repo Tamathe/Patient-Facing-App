@@ -100,7 +100,13 @@ export function HomeComposer() {
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
     setListening(true);
-    recognition.start();
+    // start() throws if the engine is already running or the mic is unavailable;
+    // fail back to the idle state so the button stays usable.
+    try {
+      recognition.start();
+    } catch {
+      setListening(false);
+    }
   }
 
   return (
