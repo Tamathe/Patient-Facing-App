@@ -16,6 +16,7 @@ export interface RouteClassifier {
 
 const ROUTE_SYNONYMS: Record<string, string[]> = {
   "/numbers": ["blood pressure", "bp", "pressure", "reading", "readings", "vitals", "numbers"],
+  "/glucose": ["blood sugar", "glucose", "a1c", "glucometer", "fingerstick", "sugar level"],
   "/medicines": ["medicine", "medication", "meds", "pill", "pills", "prescription", "prescriptions", "dose", "doses"],
   "/food": ["food", "eat", "eating", "meal", "meals", "diet", "nutrition", "snack"],
   "/plan": ["care plan", "my plan", "goals"],

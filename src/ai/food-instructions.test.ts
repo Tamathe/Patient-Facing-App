@@ -45,7 +45,7 @@ describe("buildFoodVisionSystemPrompt", () => {
     expect(prompt).toContain("You should stop");
     expect(prompt).toContain("gentle suggestions");
     expect(prompt).toContain("you have high blood pressure");
-    expect(prompt).toContain("blood-pressure or A1C number");
+    expect(prompt).toContain("blood-pressure, A1C, or blood-sugar number");
   });
 });
 

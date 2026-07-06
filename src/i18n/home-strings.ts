@@ -50,6 +50,8 @@ export type HomeStringKey =
   | "menuGroupManage"
   | "menuNumbersLabel"
   | "menuNumbersDesc"
+  | "menuGlucoseLabel"
+  | "menuGlucoseDesc"
   | "menuMedicinesLabel"
   | "menuMedicinesDesc"
   | "menuFoodLabel"
@@ -117,6 +119,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuGroupManage: "Manage",
     menuNumbersLabel: "My Numbers",
     menuNumbersDesc: "Log blood pressure and see your trend",
+    menuGlucoseLabel: "My Blood Sugar",
+    menuGlucoseDesc: "Log blood sugar and see your trend",
     menuMedicinesLabel: "My Medicines",
     menuMedicinesDesc: "Understand your medicines and adherence",
     menuFoodLabel: "Food",
@@ -184,6 +188,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuGroupManage: "Administra",
     menuNumbersLabel: "Mis Números",
     menuNumbersDesc: "Registra tu presión arterial y ve tu tendencia",
+    menuGlucoseLabel: "Mi Azúcar en Sangre",
+    menuGlucoseDesc: "Registra tu azúcar en sangre y ve tu tendencia",
     menuMedicinesLabel: "Mis Medicinas",
     menuMedicinesDesc: "Entiende tus medicinas y tu constancia",
     menuFoodLabel: "Comida",

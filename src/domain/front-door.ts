@@ -13,6 +13,7 @@ export type FrontDoorRoute =
 // produce a dead classifier destination.
 const ROUTE_LABELS: Record<string, string> = {
   "/numbers": "My Numbers",
+  "/glucose": "My Blood Sugar",
   "/medicines": "My Medicines",
   "/food": "Food",
   "/plan": "My Plan",
@@ -32,11 +33,13 @@ type NavRule = { test: RegExp; href: string; label: string };
 // form commits) — never a silent write. Checked before the broader nav lexicon.
 const VERB_RULES: NavRule[] = [
   { test: /\b(log|record|add|enter|save|track)\b.*\b(bp|blood pressure|reading|readings|systolic|pressure)\b/, href: "/numbers", label: "Log a blood pressure reading" },
+  { test: /\b(log|record|add|enter|save|track|check)\b.*\b(blood sugar|glucose|a1c|sugar)\b/, href: "/glucose", label: "Log a blood sugar reading" },
   { test: /\b(took|take|taken|log|logged|mark)\b.*\b(medicine|medication|meds?|pill|pills|dose)\b/, href: "/medicines", label: "Your medicines" }
 ];
 
 const NAV_LEXICON: NavRule[] = [
   { test: /\b(numbers|blood pressure|readings)\b/, href: "/numbers", label: "My Numbers" },
+  { test: /\b(blood sugar|glucose|a1c|glucometer)\b/, href: "/glucose", label: "My Blood Sugar" },
   { test: /\b(medicines?|medications?|pills?|meds)\b/, href: "/medicines", label: "My Medicines" },
   { test: /\b(care )?plan\b/, href: "/plan", label: "My Plan" },
   { test: /\b(visits?|appointments?)\b/, href: "/visits", label: "My Visits" },
@@ -54,11 +57,13 @@ const NAV_VERB = /\b(show|open|see|view|go to|take me to|where'?s|where is|bring
 // (the English-synonym mock is skipped for es).
 const VERB_RULES_ES: NavRule[] = [
   { test: /\b(registr|anot|apunt|guard|agreg)\w*\b.*\b(presi[oó]n|lectura|lecturas|sist[oó]lica)\b/, href: "/numbers", label: "Registrar una lectura de presión" },
+  { test: /\b(registr|anot|apunt|guard|agreg)\w*\b.*\b(az[uú]car|glucosa)\b/, href: "/glucose", label: "Registrar tu azúcar en sangre" },
   { test: /\b(tom[eé]|tomad|tom[oó]|registr)\w*\b.*\b(medicina|medicamento|medicinas|medicamentos|pastilla|pastillas|p[ií]ldora|dosis)\b/, href: "/medicines", label: "Tus medicinas" }
 ];
 
 const NAV_LEXICON_ES: NavRule[] = [
   { test: /\b(n[uú]meros|presi[oó]n|lecturas?)\b/, href: "/numbers", label: "Mis Números" },
+  { test: /\b(az[uú]car|glucosa)\b/, href: "/glucose", label: "Mi Azúcar en Sangre" },
   { test: /\b(medicinas?|medicamentos?|pastillas?|dosis)\b/, href: "/medicines", label: "Mis Medicinas" },
   { test: /\bplan\b/, href: "/plan", label: "Mi Plan" },
   { test: /\b(visitas?|citas?)\b/, href: "/visits", label: "Mis Visitas" },

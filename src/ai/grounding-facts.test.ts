@@ -9,6 +9,7 @@ function knownSourceIds(state: AppState): Set<string> {
   state.carePlan.goals.forEach((goal) => ids.add(goal.id));
   state.medications.forEach((medication) => ids.add(medication.id));
   state.readings.forEach((reading) => ids.add(reading.id));
+  state.glucoseReadings.forEach((reading) => ids.add(reading.id));
   state.contextItems.forEach((item) => ids.add(item.id));
   state.extractedFacts.forEach((fact) => ids.add(fact.id));
   return ids;

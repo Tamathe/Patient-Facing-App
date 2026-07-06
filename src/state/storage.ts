@@ -75,6 +75,9 @@ function getKnownSourceIds(state: AppState): Set<string> {
   state.readings.forEach((reading) => {
     sourceIds.add(reading.id);
   });
+  state.glucoseReadings.forEach((reading) => {
+    sourceIds.add(reading.id);
+  });
   state.contextItems.forEach((contextItem) => {
     sourceIds.add(contextItem.id);
   });

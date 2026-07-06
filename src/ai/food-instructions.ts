@@ -29,8 +29,10 @@ function nutrientLimitLines(lens: ConditionLens): string {
 }
 
 function patientCard(state: AppState): string {
-  const { patient, carePlan, medications, readings } = state;
+  const { patient, carePlan, medications, readings, glucoseReadings } = state;
   const latest = [...readings].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt)).at(-1);
+  const latestGlucose = [...glucoseReadings].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt)).at(-1);
+  const latestGlucoseText = latestGlucose ? `${latestGlucose.valueMgDl} mg/dL` : "none recorded";
   const goals = carePlan.goals.map((goal) => goal.label).join("; ") || "none recorded";
   const meds =
     medications.length > 0
@@ -45,6 +47,7 @@ function patientCard(state: AppState): string {
     `Medications: ${meds}.`,
     `Latest blood pressure: ${latestReading}; trend: ${trendDirection(readings)}.`,
     `Call the care team if blood pressure is at or above ${carePlan.callThresholdSystolic ?? "?"}/${carePlan.callThresholdDiastolic ?? "?"}.`,
+    `Latest blood sugar: ${latestGlucoseText}.`,
     `Care team: ${patient.primaryClinicName}, ${patient.primaryClinicPhone}.`
   ].join("\n");
 }
@@ -76,7 +79,7 @@ export function buildFoodLensInstructions(state: AppState, lens: ConditionLens):
 const GROUNDING_SAFE_PHRASING = [
   'Give advice as gentle suggestions, never commands. Never begin advice with "You should stop / start / change / lower / raise / increase / decrease". Instead say things like "a lower-sodium version would be a better pick", "try a smaller portion", or "going easy on the salt helps here".',
   'Never tell the patient they "have" a condition. Refer to their care plan instead — say "for your blood-pressure plan" or "since lower sodium matters for you", not "you have high blood pressure" or "because you have hypertension".',
-  "Never state a specific blood-pressure or A1C number — talk about the food."
+  "Never state a specific blood-pressure, A1C, or blood-sugar number — talk about the food."
 ];
 
 // System prompt for the single-turn HTTP vision fallback (typed questions and the

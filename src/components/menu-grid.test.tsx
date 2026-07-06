@@ -5,7 +5,7 @@ import { MenuGrid, MENU_GROUPS } from "./menu-grid";
 
 // Every route the old flat bottom bar reached, except the home (/today), which
 // is the persistent Home nav item.
-const REQUIRED_ROUTES = ["/numbers", "/medicines", "/food", "/plan", "/visits", "/chat", "/checkin", "/support", "/intake", "/privacy"];
+const REQUIRED_ROUTES = ["/numbers", "/glucose", "/medicines", "/food", "/plan", "/visits", "/chat", "/checkin", "/support", "/intake", "/privacy"];
 
 describe("MenuGrid reachability", () => {
   it("renders a link to every destination so collapsing the tab bar orphans no route", () => {

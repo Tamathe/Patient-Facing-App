@@ -44,6 +44,16 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
     expect(decideFrontDoor("open support", en)).toMatchObject({ kind: "navigate", href: "/support" });
   });
 
+  it("routes blood-sugar logging and browsing to the glucose screen", () => {
+    expect(decideFrontDoor("log my blood sugar", en)).toMatchObject({ kind: "navigate", href: "/glucose" });
+    expect(decideFrontDoor("blood sugar", en)).toMatchObject({ kind: "navigate", href: "/glucose" });
+    expect(decideFrontDoor("glucose", en)).toMatchObject({ kind: "navigate", href: "/glucose" });
+  });
+
+  it("sends a blood-sugar question to the Coach, not the glucose screen", () => {
+    expect(decideFrontDoor("how do I keep my blood sugar under control", en).kind).toBe("coach");
+  });
+
   it("sends a genuine question to the Coach rather than a keyword screen", () => {
     expect(decideFrontDoor("why does my medicine even matter if I feel fine?", en).kind).toBe("coach");
   });

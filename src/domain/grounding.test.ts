@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   containsClinicalAdjacentClaim,
   extractBloodPressureClaims,
+  extractGlucoseClaims,
   extractQuantitativeClaims,
   verifyGrounding,
   type SourceFact
@@ -57,6 +58,16 @@ const facts: SourceFact[] = [
     confidence: "imported",
     patientConfirmed: false,
     effectiveDate: ""
+  },
+  {
+    id: "glucose-latest",
+    label: "Home glucose",
+    value: "152 mg/dL",
+    sourceKind: "reading",
+    sourceName: "Home monitor",
+    confidence: "patient_reported",
+    patientConfirmed: true,
+    effectiveDate: "2026-07-04T07:05:00.000Z"
   }
 ];
 
@@ -81,6 +92,12 @@ describe("extractQuantitativeClaims / extractBloodPressureClaims", () => {
     expect(extractBloodPressureClaims("blood pressure 200 over 130")).toEqual([
       { systolic: "200", diastolic: "130" }
     ]);
+  });
+
+  it("extracts glucose claims but ignores bare grams of sugar", () => {
+    expect(extractGlucoseClaims("Your blood sugar was 152.")).toEqual([{ value: "152" }]);
+    expect(extractGlucoseClaims("glucose of 250")).toEqual([{ value: "250" }]);
+    expect(extractGlucoseClaims("65 g of added sugar")).toEqual([]);
   });
 });
 
@@ -125,6 +142,37 @@ describe("verifyGrounding", () => {
 
     expect(result.allowed).toBe(false);
     expect(result.blockedReasons).toContain("unsupported_numeric_claim:blood_pressure:200/130");
+  });
+
+  it("allows a blood-sugar number that matches a cited glucose reading", () => {
+    const result = verifyGrounding({
+      answer: "Your blood sugar was 152 this morning, and your care team is watching it.",
+      sourceFacts: facts,
+      citationIds: ["glucose-latest"]
+    });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it("blocks a blood-sugar number that does not match a cited glucose reading", () => {
+    const result = verifyGrounding({
+      answer: "Your blood sugar is 250 now.",
+      sourceFacts: facts,
+      citationIds: ["glucose-latest"]
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.blockedReasons).toContain("unsupported_numeric_claim:glucose:250");
+  });
+
+  it("does not misread grams of added sugar in a food answer as a glucose claim", () => {
+    const result = verifyGrounding({
+      answer: "This bottle has about 65 g of added sugar — more than two days' worth.",
+      sourceFacts: facts,
+      citationIds: ["plan-brent"]
+    });
+
+    expect(result.blockedReasons).not.toContain("unsupported_numeric_claim:glucose:65");
   });
 
   it("blocks diagnosis claims", () => {

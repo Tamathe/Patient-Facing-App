@@ -65,6 +65,19 @@ export function collectSourceFacts(state: AppState): SourceFact[] {
     });
   });
 
+  state.glucoseReadings.forEach((reading) => {
+    facts.push({
+      id: reading.id,
+      label: "Home glucose",
+      value: `${reading.valueMgDl} mg/dL`,
+      sourceKind: "reading",
+      sourceName: "Home monitor",
+      confidence: "patient_reported",
+      patientConfirmed: true,
+      effectiveDate: reading.measuredAt
+    });
+  });
+
   state.contextItems.forEach((item) => {
     facts.push({
       id: item.id,
@@ -92,4 +105,16 @@ export function collectSourceFacts(state: AppState): SourceFact[] {
   });
 
   return facts;
+}
+
+// Citation ids a text Coach answer may lean on: the care plan plus the most
+// recent glucose and blood-pressure readings. A live provider returns these as
+// its `sources`, which the safety gate passes to verifyGrounding as citationIds,
+// so a grounded blood-sugar answer can name a real reading.
+export function coachCitations(state: AppState): string[] {
+  const latest = <T extends { measuredAt: string; id: string }>(items: T[]): string | null =>
+    items.length === 0 ? null : [...items].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt)).at(-1)!.id;
+  return [state.carePlan.id, latest(state.glucoseReadings), latest(state.readings)].filter(
+    (id): id is string => id !== null
+  );
 }

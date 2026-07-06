@@ -54,6 +54,10 @@ export interface BloodPressureClaim {
   diastolic: string;
 }
 
+export interface GlucoseClaim {
+  value: string;
+}
+
 export interface GroundingVerificationInput {
   answer: string;
   sourceFacts: SourceFact[];
@@ -133,6 +137,21 @@ export function extractBloodPressureClaims(answer: string): BloodPressureClaim[]
   return claims;
 }
 
+// Requires a "blood sugar" / "glucose" prefix (never a bare "sugar"), so a food
+// answer that mentions "65 g of added sugar" is not misread as a glucose claim.
+export function extractGlucoseClaims(answer: string): GlucoseClaim[] {
+  const claims: GlucoseClaim[] = [];
+  const glucosePattern = /\b(?:blood\s+sugar|glucose)\s*(?:is|was|of|at|reading|:)?\s*(\d{2,3})\b/gi;
+
+  for (const match of answer.matchAll(glucosePattern)) {
+    if (match[1]) {
+      claims.push({ value: match[1] });
+    }
+  }
+
+  return claims;
+}
+
 function normalizeText(value: string): string {
   return value.toLowerCase();
 }
@@ -155,6 +174,15 @@ function citedReadingPairs(citedFacts: SourceFact[]): Array<[number, number]> {
     if (fact.sourceKind !== "reading") return [];
     const match = fact.value.match(/\b(\d{2,3})\s*\/\s*(\d{2,3})\b/);
     return match ? [[Number(match[1]), Number(match[2])] as [number, number]] : [];
+  });
+}
+
+function citedGlucoseValues(citedFacts: SourceFact[]): number[] {
+  return citedFacts.flatMap((fact) => {
+    const text = `${fact.label} ${fact.value}`;
+    if (!/mg\/?dl|glucose|blood\s+sugar/i.test(text)) return [];
+    const match = fact.value.match(/\b(\d{2,3})\b/);
+    return match ? [Number(match[1])] : [];
   });
 }
 
@@ -255,6 +283,20 @@ export function verifyGrounding(input: GroundingVerificationInput): GroundingVer
           "numeric_mismatch",
           `unsupported_numeric_claim:blood_pressure:${claim.systolic}/${claim.diastolic}`,
           `Claimed blood pressure ${claim.systolic}/${claim.diastolic} does not match a cited reading.`
+        )
+      );
+    }
+  }
+
+  const glucoseValues = citedGlucoseValues(citedFacts);
+  for (const claim of extractGlucoseClaims(input.answer)) {
+    const claimValue = Number(claim.value);
+    if (!glucoseValues.some((value) => value === claimValue)) {
+      findings.push(
+        finding(
+          "numeric_mismatch",
+          `unsupported_numeric_claim:glucose:${claim.value}`,
+          `Claimed blood sugar ${claim.value} does not match a cited reading.`
         )
       );
     }
