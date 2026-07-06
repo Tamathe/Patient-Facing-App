@@ -1,8 +1,8 @@
 "use client";
 
-import { ActionCard } from "@/components/action-card";
 import { AppShell } from "@/components/app-shell";
 import { DoseCard } from "@/components/dose-card";
+import { TodayGreeting } from "@/components/today-greeting";
 import { getAdherenceStreak, getDoseForDate, summarizeBpTrend, toDateKey } from "@/domain/adherence";
 import { buildTodayTasks } from "@/domain/tasks";
 import type { DoseEvent, MedicationBarrier } from "@/domain/types";
@@ -39,11 +39,8 @@ export default function TodayPage() {
 
   return (
     <AppShell title="Today">
-      <section className="space-y-4">
-        <div>
-          <p className="text-sm font-medium text-care">Hi {state.patient.preferredName}</p>
-          <h2 className="mt-1 text-2xl font-semibold">Here is what matters at home today.</h2>
-        </div>
+      <div className="space-y-4">
+        <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} />
         {primaryMedication ? (
           <DoseCard
             medication={primaryMedication}
@@ -55,12 +52,7 @@ export default function TodayPage() {
             onUndo={() => dispatch({ type: "undoDose", medicationId: primaryMedication.id, date: todayKey })}
           />
         ) : null}
-        <div className="grid gap-3">
-          {tasks.map((task) => (
-            <ActionCard key={task.id} task={task} />
-          ))}
-        </div>
-      </section>
+      </div>
     </AppShell>
   );
 }
