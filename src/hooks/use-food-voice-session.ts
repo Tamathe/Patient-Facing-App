@@ -6,7 +6,7 @@ import { openLocalCoachSession } from "@/ai/local-coach-session";
 import { buildFoodLensInstructions } from "@/ai/food-instructions";
 import { connectRealtimeSession } from "@/ai/realtime-session";
 import { evaluateVoiceTranscript } from "@/ai/voice-gate";
-import { selectLens } from "@/domain/condition-lens";
+import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { hasUnacknowledgedCrisis } from "@/state/selectors";
 import type { AiMessageAction, AppState } from "@/domain/types";
 import type { LiveSessionContext, LiveSessionEvent, LiveSessionHandle, LiveSessionStatus } from "@/ai/types";
@@ -165,7 +165,7 @@ export function useFoodVoiceSession(args: {
         handleRef.current = await connectRealtimeSession({
           clientSecret: token.clientSecret,
           model: token.model,
-          instructions: buildFoodLensInstructions(state, selectLens(state.carePlan.condition)),
+          instructions: buildFoodLensInstructions(state, selectLenses(activeConditions(state.carePlan))),
           language,
           getContext,
           onEvent: handleEvent,

@@ -473,6 +473,11 @@ function isCarePlan(value: unknown): value is CarePlan {
     hasString(value, "patientId") &&
     hasString(value, "condition") &&
     (value.condition === "hypertension" || value.condition === "diabetes" || value.condition === "obesity") &&
+    (value.conditions === undefined ||
+      (Array.isArray(value.conditions) &&
+        value.conditions.every(
+          (condition) => condition === "hypertension" || condition === "diabetes" || condition === "obesity"
+        ))) &&
     hasString(value, "plainLanguageSummary") &&
     isArrayOfObjects(value.goals, isCareGoal) &&
     isArrayOfStrings(value.dailyActions) &&
@@ -720,4 +725,17 @@ export function clearStoredState(): void {
   }
 
   safeRemoveItem(STORAGE_KEY);
+}
+
+// The first-run onboarding marker lives outside AppState (its own localStorage
+// key), so it never participates in the reset-to-demo validation and a returning
+// user is never bounced back into onboarding.
+const ONBOARDING_COMPLETED_KEY = "home-health-onboarding-completed";
+
+export function isOnboardingComplete(): boolean {
+  return safeGetItem(ONBOARDING_COMPLETED_KEY) === "true";
+}
+
+export function markOnboardingComplete(): void {
+  safeSetItem(ONBOARDING_COMPLETED_KEY, "true");
 }

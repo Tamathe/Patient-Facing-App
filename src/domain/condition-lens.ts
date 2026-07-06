@@ -1,5 +1,5 @@
 import type { FoodLensStringKey } from "@/i18n/strings";
-import type { Condition, NutritionFacts } from "./types";
+import type { CarePlan, Condition, NutritionFacts } from "./types";
 
 export type NumericNutrient = Exclude<keyof NutritionFacts, "servingSize">;
 
@@ -146,4 +146,68 @@ export function selectLens(condition: Condition): ConditionLens {
     default:
       return hypertensionLens;
   }
+}
+
+// Canonical order so a patient's active conditions (and the merged lens) are
+// deterministic regardless of how they were entered. `condition` stays the
+// single "primary"; `conditions` is the optional full set. When conditions is
+// absent everything derives from the primary, so existing single-condition
+// patients see identical behavior.
+const CONDITION_ORDER: Condition[] = ["hypertension", "diabetes", "obesity"];
+
+export function activeConditions(plan: Pick<CarePlan, "condition" | "conditions">): Condition[] {
+  const raw = plan.conditions && plan.conditions.length > 0 ? plan.conditions : [plan.condition];
+  return CONDITION_ORDER.filter((condition) => raw.includes(condition));
+}
+
+// Returns the exact single lens reference for one active condition (so existing
+// callers and the selectLens identity contract are preserved), otherwise a
+// merged lens.
+export function selectLenses(conditions: Condition[]): ConditionLens {
+  const lenses = conditions.map(selectLens);
+  if (lenses.length <= 1) {
+    return lenses[0] ?? hypertensionLens;
+  }
+  return mergeLenses(lenses);
+}
+
+function resolveNutrientConflict(existing: NutrientRule, incoming: NutrientRule): NutrientRule {
+  // Never encourage a nutrient another active condition limits.
+  if (existing.direction !== incoming.direction) {
+    return existing.direction === "limit" ? existing : incoming;
+  }
+  // Two limits on the same nutrient: keep the stricter (lower) daily limit.
+  if (existing.direction === "limit") {
+    return incoming.dailyLimit < existing.dailyLimit ? incoming : existing;
+  }
+  return existing;
+}
+
+function mergeLenses(lenses: ConditionLens[]): ConditionLens {
+  const byNutrient = new Map<NumericNutrient, NutrientRule>();
+  for (const lens of lenses) {
+    for (const rule of lens.nutrientRules) {
+      const existing = byNutrient.get(rule.nutrient);
+      byNutrient.set(rule.nutrient, existing ? resolveNutrientConflict(existing, rule) : rule);
+    }
+  }
+
+  const seenMedRuleIds = new Set<string>();
+  const medDietRules: MedDietRule[] = [];
+  for (const lens of lenses) {
+    for (const rule of lens.medDietRules) {
+      if (!seenMedRuleIds.has(rule.id)) {
+        seenMedRuleIds.add(rule.id);
+        medDietRules.push(rule);
+      }
+    }
+  }
+
+  return {
+    condition: lenses[0].condition,
+    personaFocus: lenses.map((lens) => lens.personaFocus).join(" "),
+    nutrientRules: [...byNutrient.values()],
+    medDietRules,
+    betterOptionGuidance: lenses[0].betterOptionGuidance
+  };
 }

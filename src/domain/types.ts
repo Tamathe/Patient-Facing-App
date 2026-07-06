@@ -33,6 +33,7 @@ export type CarePlan = {
   id: string;
   patientId: string;
   condition: Condition;
+  conditions?: Condition[];
   plainLanguageSummary: string;
   goals: CareGoal[];
   dailyActions: string[];

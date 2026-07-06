@@ -1,3 +1,4 @@
+import { activeConditions } from "@/domain/condition-lens";
 import type { SourceFact } from "@/domain/grounding";
 import type { AppState } from "@/domain/types";
 
@@ -17,7 +18,7 @@ export function collectSourceFacts(state: AppState): SourceFact[] {
   facts.push({
     id: plan.id,
     label: "Care plan",
-    value: `${plan.plainLanguageSummary}${thresholdText} Condition: ${plan.condition}.`,
+    value: `${plan.plainLanguageSummary}${thresholdText} Condition: ${activeConditions(plan).join(" + ")}.`,
     sourceKind: "care_plan",
     sourceName: clinicName,
     confidence: plan.thresholdSource === "clinician_authored" ? "confirmed" : "inferred",

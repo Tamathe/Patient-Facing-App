@@ -5,6 +5,15 @@ import { healthReducer } from "./store";
 import type { GlucoseReading } from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("completeOnboarding sets the primary and full conditions, preserving the plan relationship", () => {
+    const next = healthReducer(demoState, { type: "completeOnboarding", conditions: ["diabetes", "hypertension"] });
+
+    expect(next.carePlan.conditions).toEqual(["hypertension", "diabetes"]);
+    expect(next.carePlan.condition).toBe("hypertension");
+    expect(next.carePlan.patientId).toBe(demoState.patient.id);
+    expect(next.auditEvents.at(-1)?.label).toContain("Onboarding");
+  });
+
   it("adds a glucose reading and audit event", () => {
     const reading: GlucoseReading = {
       id: "g-1",

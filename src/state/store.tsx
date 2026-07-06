@@ -11,6 +11,7 @@ import {
 } from "react";
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
+import { activeConditions } from "@/domain/condition-lens";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -18,6 +19,7 @@ import type {
   AppState,
   AuditEvent,
   CareContextItem,
+  Condition,
   DoseEvent,
   ExtractedFact,
   GlucoseReading,
@@ -43,6 +45,7 @@ export type HealthAction =
   | { type: "logMedicationFill"; fill: MedicationFill }
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
+  | { type: "completeOnboarding"; conditions: Condition[] }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -188,6 +191,15 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
           ...state.auditEvents,
           recordAuditEvent(state.patient.id, "updated", "Display and access preferences updated")
         ]
+      };
+    }
+    case "completeOnboarding": {
+      const ordered = activeConditions({ condition: action.conditions[0], conditions: action.conditions });
+      const primary = ordered[0] ?? state.carePlan.condition;
+      return {
+        ...state,
+        carePlan: { ...state.carePlan, condition: primary, conditions: ordered },
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Onboarding completed")]
       };
     }
     case "resetDemo":

@@ -1,6 +1,6 @@
 import { MockHealthAiProvider } from "./mock-provider";
 import { buildFoodVisionSystemPrompt, buildPerAskContext } from "./food-instructions";
-import { selectLens } from "@/domain/condition-lens";
+import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { computeFoodFlags } from "@/domain/food-flags";
 import type { AppState, HomeReading } from "@/domain/types";
 import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./types";
@@ -42,7 +42,7 @@ export class OpenAiVisionProvider implements HealthAiProvider {
 
   async respond(request: HealthAiRequest): Promise<HealthAiResponse> {
     const { state } = request;
-    const lens = selectLens(state.carePlan.condition);
+    const lens = selectLenses(activeConditions(state.carePlan));
     const flags = computeFoodFlags(
       request.identifiedFood ?? null,
       lens,

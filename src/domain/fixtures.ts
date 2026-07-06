@@ -161,6 +161,7 @@ export const brentState: AppState = {
     id: "plan-brent",
     patientId: "patient-brent",
     condition: "hypertension",
+    conditions: ["hypertension", "diabetes"],
     plainLanguageSummary:
       "You are working to keep your blood pressure in a safer range at home and keep your blood sugar steadier. Doing both protects your heart, brain, kidneys, and eyes over time. This plan follows what your care team wrote down for you — it does not replace their advice.",
     goals: [

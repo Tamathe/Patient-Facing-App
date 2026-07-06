@@ -419,6 +419,20 @@ describe("storage", () => {
     expect(loaded.carePlan.callThresholdGlucoseHigh).toBe(300);
   });
 
+  it("keeps an optional conditions array on the care plan", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        carePlan: { ...demoState.carePlan, conditions: ["hypertension", "diabetes"] }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.carePlan.conditions).toEqual(["hypertension", "diabetes"]);
+  });
+
   it("accepts food-mode ai messages", () => {
     window.localStorage.setItem(
       STORAGE_KEY,

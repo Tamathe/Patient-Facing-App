@@ -10,7 +10,7 @@ import { PantryRecipes } from "@/components/pantry-recipes";
 import { MealLogList } from "@/components/meal-log-list";
 import { createSafeAiResponse } from "@/ai/safety-gate";
 import { PantryProvider, PANTRY_REQUEST_TEXT } from "@/ai/pantry-provider";
-import { selectLens } from "@/domain/condition-lens";
+import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { computeFoodFlags, type FoodFlag } from "@/domain/food-flags";
 import { buildMealLogEntry } from "@/domain/meal-log";
 import { foodLookupResponseSchema, mealLogEntrySchema } from "@/domain/schemas";
@@ -25,7 +25,7 @@ import type { LiveSessionContext } from "@/ai/types";
 export default function FoodPage() {
   const { state, dispatch } = useHealthState();
   const language = state.patient.language;
-  const lens = useMemo(() => selectLens(state.carePlan.condition), [state.carePlan.condition]);
+  const lens = useMemo(() => selectLenses(activeConditions(state.carePlan)), [state.carePlan]);
 
   const camera = useFoodCamera();
   const [identifiedFood, setIdentifiedFood] = useState<IdentifiedFood | null>(null);

@@ -1,5 +1,5 @@
 import { activeMedDietRules, type FoodFlag } from "@/domain/food-flags";
-import type { ConditionLens } from "@/domain/condition-lens";
+import { activeConditions, type ConditionLens } from "@/domain/condition-lens";
 import type { AppState, HomeReading, IdentifiedFood } from "@/domain/types";
 
 export const FOOD_LENS_PROMPT_VERSION = "food-lens-v0.1-2026-07-05";
@@ -40,7 +40,7 @@ function patientCard(state: AppState): string {
 
   return [
     `Patient: ${patient.preferredName}, speaks ${patient.language === "es" ? "Spanish" : "English"}.`,
-    `Condition: ${carePlan.condition}.`,
+    `Condition: ${activeConditions(carePlan).join(" + ")}.`,
     `Goals: ${goals}.`,
     `Medications: ${meds}.`,
     `Latest blood pressure: ${latestReading}; trend: ${trendDirection(readings)}.`,

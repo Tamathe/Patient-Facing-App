@@ -1,5 +1,5 @@
 import { buildPantryPrompt } from "./food-instructions";
-import { selectLens } from "@/domain/condition-lens";
+import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { pantryResultSchema } from "@/domain/schemas";
 import { t } from "@/i18n/strings";
 import type { AppState, HomeReading, PantryRecipe } from "@/domain/types";
@@ -77,7 +77,7 @@ export class PantryProvider implements HealthAiProvider {
 
   async respond(request: HealthAiRequest): Promise<HealthAiResponse> {
     const { state } = request;
-    const lens = selectLens(state.carePlan.condition);
+    const lens = selectLenses(activeConditions(state.carePlan));
     const sources = groundingCitations(state);
 
     let route: VisionRouteResponse;
