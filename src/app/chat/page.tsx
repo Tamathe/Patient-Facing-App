@@ -2,21 +2,27 @@
 
 import { AppShell } from "@/components/app-shell";
 import { ConversationPanel } from "@/components/conversation-panel";
-import { MockHealthAiProvider } from "@/ai/mock-provider";
+import { OpenAiCoachProvider } from "@/ai/coach-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
 import { buildCareTeamMessage } from "@/domain/care-team-message";
 import { prefilledMessageForTask } from "@/domain/task-prefill";
 import { recordAuditEvent } from "@/domain/audit";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { AiMessage, AiMode } from "@/domain/types";
 import { useHealthState } from "@/state/store";
-
-const provider = new MockHealthAiProvider();
 
 export default function ChatPage() {
   const { state, dispatch } = useHealthState();
   const latestStateRef = useRef(state);
   const prefillHandled = useRef(false);
+  // Live text coach when a key is configured (and the demo passcode from ?k= is
+  // present); otherwise the provider degrades to the on-device mock. The answer
+  // always flows back through createSafeAiResponse, so crisis + grounding hold.
+  const provider = useMemo(() => {
+    const passcode =
+      typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("k") ?? undefined : undefined;
+    return new OpenAiCoachProvider({ passcode });
+  }, []);
 
   function describeSource(id: string): string | null {
     if (id === state.carePlan.id) {
@@ -31,6 +37,11 @@ export default function ChatPage() {
     const reading = state.readings.find((item) => item.id === id);
     if (reading) {
       return `your reading of ${reading.systolic}/${reading.diastolic}`;
+    }
+
+    const glucose = state.glucoseReadings.find((item) => item.id === id);
+    if (glucose) {
+      return `your blood sugar of ${glucose.valueMgDl} mg/dL`;
     }
 
     return null;
