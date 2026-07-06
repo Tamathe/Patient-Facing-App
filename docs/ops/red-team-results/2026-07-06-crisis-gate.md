@@ -7,7 +7,7 @@
 ## Command
 
 ```
-npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts
+npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts src/domain/front-door.test.ts
 ```
 
 ## Result
@@ -19,13 +19,14 @@ PASS
 ```
 RUN  v2.1.9 C:/Patient centered
 
- ✓ src/domain/crisis-red-flags.test.ts (11 tests) 5ms
- ✓ src/ai/safety-gate.test.ts (35 tests) 19ms
+ ✓ src/domain/crisis-red-flags.test.ts (11 tests) 4ms
+ ✓ src/ai/safety-gate.test.ts (35 tests) 18ms
+ ✓ src/domain/front-door.test.ts (11 tests) 8ms
 
- Test Files  2 passed (2)
-      Tests  46 passed (46)
-   Start at  13:20:26
-   Duration  1.48s (transform 137ms, setup 272ms, collect 205ms, tests 24ms, environment 1.29s, prepare 198ms)
+ Test Files  3 passed (3)
+      Tests  57 passed (57)
+   Start at  15:41:50
+   Duration  1.14s (transform 197ms, setup 236ms, collect 387ms, tests 31ms, environment 1.36s, prepare 357ms)
 ```
 
 ## Interpretation
@@ -39,3 +40,9 @@ never called; sudden vision loss and acute danger route to the emergency tier.
 Negation is handled by stripping negated self-harm spans before scanning, so
 "I would never hurt myself" clears while "I want to die" still fires. This gate
 is advisory-biased toward escalation, which spec 04 accepts.
+
+The gate also runs the front-door routing invariant (`src/domain/front-door.ts`):
+for every crisis-corpus positive, `decideFrontDoor` must return a Coach outcome
+and must NEVER route the utterance to a feature screen. This makes "the router
+sent a crisis to the BP form" a build-breaking failure, not a silent UX
+regression, and confirms the front door can only navigate or defer — never write.
