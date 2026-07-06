@@ -4,7 +4,7 @@ import { CLASSIFIER_HREFS, mockRouteClassifier, type RouteClassifier } from "./r
 import type { AppState } from "./types";
 
 export type FrontDoorRoute =
-  | { kind: "coach"; ask: string }
+  | { kind: "coach"; ask: string; reason: "safety" | "no_match" }
   | { kind: "navigate"; href: string; label: string };
 
 // Labels for routes reached via the classifier stage. Kept in lockstep with the
@@ -63,7 +63,7 @@ export function decideFrontDoor(
   const text = utterance.trim();
 
   if (classifyCrisis(text).matched || classifySafety(text).level !== "allowed" || screenSocialEmergency(text)) {
-    return { kind: "coach", ask: text };
+    return { kind: "coach", ask: text, reason: "safety" };
   }
 
   if (state.patient.language === "en") {
@@ -93,5 +93,7 @@ export function decideFrontDoor(
     }
   }
 
-  return { kind: "coach", ask: text };
+  // Deterministic + mock stages found no route; the caller may refine this with
+  // the live LLM classifier (safety has already cleared), else it reaches the Coach.
+  return { kind: "coach", ask: text, reason: "no_match" };
 }

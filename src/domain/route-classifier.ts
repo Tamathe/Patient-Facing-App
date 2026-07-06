@@ -62,3 +62,33 @@ export const mockRouteClassifier: RouteClassifier = {
     return { kind: "navigate", href: matches[0].href, confidence: 0.8 };
   }
 };
+
+function clamp01(value: number): number {
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
+}
+
+// Validates the raw arguments a live LLM returns from its `route` tool call into
+// a trusted RouteDecision. This is the structural guard: even if the model
+// hallucinates a destination, a navigate to any href outside the allowed set is
+// rejected down to `coach`, and there is no code path that could turn tool
+// output into a write. Used by the /api/route/classify handler.
+export function parseRouteToolArgs(raw: unknown, allowedHrefs: readonly string[]): RouteDecision {
+  const args = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const confidence = typeof args.confidence === "number" ? clamp01(args.confidence) : 0;
+
+  if (args.kind === "navigate" && typeof args.href === "string" && allowedHrefs.includes(args.href)) {
+    return { kind: "navigate", href: args.href, confidence };
+  }
+
+  if (args.kind === "clarify" && Array.isArray(args.candidates)) {
+    const candidates = args.candidates.filter((entry): entry is string => typeof entry === "string" && allowedHrefs.includes(entry));
+    if (candidates.length > 0) {
+      return { kind: "clarify", candidates, confidence };
+    }
+  }
+
+  return { kind: "coach", confidence };
+}

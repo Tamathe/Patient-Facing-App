@@ -23,6 +23,13 @@ describe("decideFrontDoor — safety first", () => {
     expect(decideFrontDoor("should I stop taking my lisinopril", en).kind).toBe("coach");
     expect(decideFrontDoor("I have no food today", en).kind).toBe("coach");
   });
+
+  it("tags a safety coach distinctly from a no-match coach, so only no-match reaches the LLM", () => {
+    const crisis = decideFrontDoor("I want to die", en);
+    const question = decideFrontDoor("what should I make for dinner tonight really", en);
+    expect(crisis).toMatchObject({ kind: "coach", reason: "safety" });
+    expect(question).toMatchObject({ kind: "coach", reason: "no_match" });
+  });
 });
 
 describe("decideFrontDoor — deterministic navigation (English)", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockRouteClassifier, CLASSIFIER_HREFS } from "./route-classifier";
+import { mockRouteClassifier, parseRouteToolArgs, CLASSIFIER_HREFS } from "./route-classifier";
 
 describe("mockRouteClassifier", () => {
   it("only ever returns navigate, coach, or clarify — never a write action", () => {
@@ -32,5 +32,30 @@ describe("mockRouteClassifier", () => {
 
   it("asks to clarify when two destinations tie", () => {
     expect(mockRouteClassifier.classify("my food and my medicine", CLASSIFIER_HREFS).kind).toBe("clarify");
+  });
+});
+
+describe("parseRouteToolArgs (live LLM output guard)", () => {
+  it("accepts a navigate to an allowed href", () => {
+    expect(parseRouteToolArgs({ kind: "navigate", href: "/numbers", confidence: 0.9 }, CLASSIFIER_HREFS)).toEqual({
+      kind: "navigate",
+      href: "/numbers",
+      confidence: 0.9
+    });
+  });
+
+  it("rejects a hallucinated href down to coach", () => {
+    expect(parseRouteToolArgs({ kind: "navigate", href: "/wire-money", confidence: 0.99 }, CLASSIFIER_HREFS).kind).toBe("coach");
+  });
+
+  it("drops clarify candidates outside the allowed set", () => {
+    const decision = parseRouteToolArgs({ kind: "clarify", candidates: ["/numbers", "/evil"], confidence: 0.5 }, CLASSIFIER_HREFS);
+    expect(decision).toEqual({ kind: "clarify", candidates: ["/numbers"], confidence: 0.5 });
+  });
+
+  it("clamps confidence and coerces garbage to coach", () => {
+    expect(parseRouteToolArgs({ kind: "navigate", href: "/numbers", confidence: 5 }, CLASSIFIER_HREFS)).toMatchObject({ confidence: 1 });
+    expect(parseRouteToolArgs("not an object", CLASSIFIER_HREFS)).toEqual({ kind: "coach", confidence: 0 });
+    expect(parseRouteToolArgs({ kind: "addReading", href: "/numbers", value: "80/50" }, CLASSIFIER_HREFS).kind).toBe("coach");
   });
 });

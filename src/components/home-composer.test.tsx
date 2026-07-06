@@ -1,10 +1,11 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import React from "react";
 import { HomeComposer } from "./home-composer";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+const { push, classifyRouteRemote } = vi.hoisted(() => ({ push: vi.fn(), classifyRouteRemote: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("@/ai/route-classifier-client", () => ({ classifyRouteRemote }));
 vi.mock("@/state/store", async () => {
   const { demoState } = await vi.importActual<typeof import("@/domain/fixtures")>("@/domain/fixtures");
   return { useHealthState: () => ({ state: demoState, dispatch: () => {} }) };
@@ -16,26 +17,39 @@ function type(value: string) {
   fireEvent.submit(input.closest("form") as HTMLFormElement);
 }
 
+beforeEach(() => {
+  push.mockClear();
+  classifyRouteRemote.mockReset();
+  classifyRouteRemote.mockResolvedValue({ kind: "coach", confidence: 0 });
+});
+
 describe("HomeComposer", () => {
-  it("routes a deterministic verb straight to the feature screen", () => {
-    push.mockClear();
+  it("routes a deterministic verb straight to the feature screen, no LLM call", async () => {
     render(<HomeComposer />);
     type("log my blood pressure");
-    expect(push).toHaveBeenCalledWith("/numbers");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/numbers"));
+    expect(classifyRouteRemote).not.toHaveBeenCalled();
   });
 
-  it("hands crisis text to the Coach through the safety gate, never a feature screen", () => {
-    push.mockClear();
+  it("sends crisis text to the Coach and never to the LLM", async () => {
     render(<HomeComposer />);
     type("I want to die");
-    expect(push).toHaveBeenCalledWith(expect.stringContaining("/chat?ask="));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining("/chat?ask=")));
+    expect(classifyRouteRemote).not.toHaveBeenCalled();
   });
 
-  it("hands a genuine question to the Coach", () => {
-    push.mockClear();
+  it("lets the live LLM upgrade a no-match to a navigate", async () => {
+    classifyRouteRemote.mockResolvedValue({ kind: "navigate", href: "/plan", confidence: 0.9 });
     render(<HomeComposer />);
-    type("why does my medicine matter if I feel fine?");
-    const call = push.mock.calls[0]?.[0] as string;
-    expect(call.startsWith("/chat?ask=")).toBe(true);
+    type("just pick something helpful for me");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/plan"));
+    expect(classifyRouteRemote).toHaveBeenCalled();
+  });
+
+  it("falls back to the Coach when the LLM defers", async () => {
+    classifyRouteRemote.mockResolvedValue({ kind: "coach", confidence: 0 });
+    render(<HomeComposer />);
+    type("just pick something helpful for me");
+    await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining("/chat?ask=")));
   });
 });

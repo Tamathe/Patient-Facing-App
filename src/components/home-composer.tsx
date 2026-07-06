@@ -4,6 +4,8 @@ import { Mic, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { decideFrontDoor } from "@/domain/front-door";
+import { CLASSIFIER_HREFS } from "@/domain/route-classifier";
+import { classifyRouteRemote } from "@/ai/route-classifier-client";
 import { useHealthState } from "@/state/store";
 
 // Minimal shim for the browser Web Speech API (the webkit-prefixed variant is
@@ -44,7 +46,7 @@ export function HomeComposer() {
     setVoiceSupported(getSpeechRecognition() !== null);
   }, []);
 
-  function route(utterance: string) {
+  async function route(utterance: string) {
     const trimmed = utterance.trim();
     if (trimmed.length === 0) {
       return;
@@ -52,14 +54,27 @@ export function HomeComposer() {
     const decision = decideFrontDoor(trimmed, state);
     if (decision.kind === "navigate") {
       router.push(decision.href);
-    } else {
-      router.push(`/chat?ask=${encodeURIComponent(decision.ask)}`);
+      return;
     }
+    // A safety-triggered coach goes straight to the Coach — the crisis utterance
+    // must never be sent to the LLM router.
+    if (decision.reason === "safety") {
+      router.push(`/chat?ask=${encodeURIComponent(trimmed)}`);
+      return;
+    }
+    // No deterministic route matched; refine with the live LLM router if it is
+    // configured. It fails closed to the Coach.
+    const llm = await classifyRouteRemote(trimmed, CLASSIFIER_HREFS);
+    if (llm.kind === "navigate" && typeof llm.href === "string" && CLASSIFIER_HREFS.includes(llm.href) && llm.confidence >= 0.75) {
+      router.push(llm.href);
+      return;
+    }
+    router.push(`/chat?ask=${encodeURIComponent(trimmed)}`);
   }
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    route(input);
+    void route(input);
   }
 
   function toggleVoice() {
@@ -78,7 +93,7 @@ export function HomeComposer() {
     recognition.onresult = (event) => {
       const transcript = event.results?.[0]?.[0]?.transcript ?? "";
       setInput(transcript);
-      route(transcript);
+      void route(transcript);
     };
     recognition.onerror = () => setListening(false);
     recognition.onend = () => setListening(false);
