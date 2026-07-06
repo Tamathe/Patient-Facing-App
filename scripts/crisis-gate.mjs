@@ -5,7 +5,8 @@
 import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const COMMAND = "npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts";
+const COMMAND =
+  "npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts src/domain/front-door.test.ts";
 
 let output = "";
 let result = "PASS";
@@ -66,6 +67,12 @@ never called; sudden vision loss and acute danger route to the emergency tier.
 Negation is handled by stripping negated self-harm spans before scanning, so
 "I would never hurt myself" clears while "I want to die" still fires. This gate
 is advisory-biased toward escalation, which spec 04 accepts.
+
+The gate also runs the front-door routing invariant (\`src/domain/front-door.ts\`):
+for every crisis-corpus positive, \`decideFrontDoor\` must return a Coach outcome
+and must NEVER route the utterance to a feature screen. This makes "the router
+sent a crisis to the BP form" a build-breaking failure, not a silent UX
+regression, and confirms the front door can only navigate or defer — never write.
 `;
 
 writeFileSync(file, markdown);

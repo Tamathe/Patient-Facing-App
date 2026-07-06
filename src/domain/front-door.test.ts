@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { decideFrontDoor } from "./front-door";
 import { crisisGateCorpus } from "./crisis-red-flags.corpus";
+import { CLASSIFIER_HREFS } from "./route-classifier";
+import { MENU_GROUPS } from "@/components/menu-grid";
 import { demoState } from "./fixtures";
 import type { AppState } from "./types";
 
@@ -37,6 +39,28 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
 
   it("sends a genuine question to the Coach rather than a keyword screen", () => {
     expect(decideFrontDoor("why does my medicine even matter if I feel fine?", en).kind).toBe("coach");
+  });
+});
+
+describe("decideFrontDoor — constrained classifier stage", () => {
+  it("uses the classifier to bridge a synonym the lexicon misses", () => {
+    expect(decideFrontDoor("take me to my prescription list", en)).toMatchObject({ kind: "navigate", href: "/medicines" });
+  });
+
+  it("still defers a concern to the Coach rather than a screen", () => {
+    expect(decideFrontDoor("my prescriptions are confusing me", en).kind).toBe("coach");
+  });
+
+  it("never emits anything but coach or navigate — the front door cannot write", () => {
+    const samples = ["log my blood pressure", "show my medicines", "why does this matter", "I want to die", "random gibberish", "take me to my prescriptions"];
+    for (const sample of samples) {
+      expect(["coach", "navigate"], `"${sample}"`).toContain(decideFrontDoor(sample, en).kind);
+    }
+  });
+
+  it("keeps the classifier route set in lockstep with the menu (no dead destinations)", () => {
+    const menuRoutes = new Set(MENU_GROUPS.flatMap((group) => group.items.map((item) => item.href)));
+    expect(new Set(CLASSIFIER_HREFS)).toEqual(menuRoutes);
   });
 });
 

@@ -1,10 +1,29 @@
 import { classifyCrisis, classifySafety } from "./safety";
 import { screenSocialEmergency } from "./social-screen";
+import { CLASSIFIER_HREFS, mockRouteClassifier, type RouteClassifier } from "./route-classifier";
 import type { AppState } from "./types";
 
 export type FrontDoorRoute =
   | { kind: "coach"; ask: string }
   | { kind: "navigate"; href: string; label: string };
+
+// Labels for routes reached via the classifier stage. Kept in lockstep with the
+// menu route catalog by front-door.test.ts, so a renamed route can't silently
+// produce a dead classifier destination.
+const ROUTE_LABELS: Record<string, string> = {
+  "/numbers": "My Numbers",
+  "/medicines": "My Medicines",
+  "/food": "Food",
+  "/plan": "My Plan",
+  "/visits": "My Visits",
+  "/chat": "Coach",
+  "/checkin": "Check-in",
+  "/support": "Support",
+  "/intake": "Add Instructions",
+  "/privacy": "Privacy"
+};
+
+const CLASSIFIER_CONFIDENCE_FLOOR = 0.75;
 
 type NavRule = { test: RegExp; href: string; label: string };
 
@@ -36,7 +55,11 @@ const NAV_VERB = /\b(show|open|see|view|go to|take me to|where'?s|where is|bring
 // Only a "clean" utterance is eligible for the English verb/nav lexicon;
 // non-English patients skip the lexicon (gated behind translation) and reach the
 // Coach, where the answer path is bilingual. No LLM is involved.
-export function decideFrontDoor(utterance: string, state: AppState): FrontDoorRoute {
+export function decideFrontDoor(
+  utterance: string,
+  state: AppState,
+  classifier: RouteClassifier = mockRouteClassifier
+): FrontDoorRoute {
   const text = utterance.trim();
 
   if (classifyCrisis(text).matched || classifySafety(text).level !== "allowed" || screenSocialEmergency(text)) {
@@ -59,6 +82,14 @@ export function decideFrontDoor(utterance: string, state: AppState): FrontDoorRo
           return { kind: "navigate", href: rule.href, label: rule.label };
         }
       }
+    }
+
+    // Final stage: the constrained classifier catches fuzzier phrasings the
+    // lexicon missed. It can only navigate or defer — never write — and we act
+    // on it only above the confidence floor; everything else reaches the Coach.
+    const decision = classifier.classify(text, CLASSIFIER_HREFS);
+    if (decision.kind === "navigate" && decision.confidence >= CLASSIFIER_CONFIDENCE_FLOOR) {
+      return { kind: "navigate", href: decision.href, label: ROUTE_LABELS[decision.href] ?? decision.href };
     }
   }
 
