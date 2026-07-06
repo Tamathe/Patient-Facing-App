@@ -1,6 +1,7 @@
-import type { DoseEvent, HomeReading } from "./types";
+import type { DoseEvent, GlucoseReading, HomeReading } from "./types";
 
 const MIN_TREND_READINGS = 5;
+const GLUCOSE_TREND_DELTA = 10;
 
 export function toDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -62,7 +63,16 @@ export function getAdherenceRate(
   return { taken: takenDays.size, of: days };
 }
 
+// A minimal trend shape both BpTrend and GlucoseTrend satisfy, so a shared card
+// (DoseCard) can render either without a discriminated union.
+export type TrendSummary = { direction: string; message: string };
+
 export type BpTrend = {
+  direction: "improving" | "steady" | "rising";
+  message: string;
+};
+
+export type GlucoseTrend = {
   direction: "improving" | "steady" | "rising";
   message: string;
 };
@@ -98,5 +108,42 @@ export function summarizeBpTrend(readings: HomeReading[]): BpTrend | null {
   return {
     direction: "steady",
     message: "Your recent top numbers are holding steady compared with earlier readings. Keep logging so your care team can see the pattern."
+  };
+}
+
+// Mirrors summarizeBpTrend for blood sugar. mg/dL swings wider than blood
+// pressure, so the improving/rising band is ±10 mg/dL rather than ±3 points.
+// Rising glucose is bad (same polarity as blood pressure).
+export function summarizeGlucoseTrend(readings: GlucoseReading[]): GlucoseTrend | null {
+  if (readings.length < MIN_TREND_READINGS) {
+    return null;
+  }
+
+  const ordered = [...readings].sort(
+    (left, right) => new Date(left.measuredAt).valueOf() - new Date(right.measuredAt).valueOf()
+  );
+  const half = Math.floor(ordered.length / 2);
+  const earlier = ordered.slice(0, half);
+  const recent = ordered.slice(ordered.length - half);
+  const average = (items: GlucoseReading[]) => items.reduce((sum, reading) => sum + reading.valueMgDl, 0) / items.length;
+  const delta = Math.round(average(recent) - average(earlier));
+
+  if (delta <= -GLUCOSE_TREND_DELTA) {
+    return {
+      direction: "improving",
+      message: `Your recent blood-sugar numbers average about ${Math.abs(delta)} mg/dL lower than when you started tracking — a sign your plan is helping. This is general education, not a diagnosis.`
+    };
+  }
+
+  if (delta >= GLUCOSE_TREND_DELTA) {
+    return {
+      direction: "rising",
+      message: `Your recent blood-sugar numbers average about ${delta} mg/dL higher than earlier readings. Keep logging and bring this to your care team. This is general education, not a diagnosis.`
+    };
+  }
+
+  return {
+    direction: "steady",
+    message: "Your recent blood-sugar numbers are holding steady compared with earlier readings. Keep logging so your care team can see the pattern."
   };
 }

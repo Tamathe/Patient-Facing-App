@@ -1,8 +1,58 @@
 import { interpretBloodPressure, type BloodPressureInsight } from "./blood-pressure";
-import type { CarePlan, HomeReading } from "./types";
+import { interpretGlucose, type GlucoseInsight } from "./blood-glucose";
+import type { CarePlan, GlucoseReading, HomeReading } from "./types";
 import { classifySafety, type SafetyClassification } from "./safety";
 
 export const RECENT_READING_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const SEVERE_LOW_GLUCOSE = 54;
+
+export type GlucoseReadingSeverity = "severe" | "clinic_threshold";
+
+export type GlucoseReadingCandidate = {
+  reading: GlucoseReading;
+  glucoseInsight: GlucoseInsight;
+  severity: GlucoseReadingSeverity;
+};
+
+// The stored-glucose analogue of findRecentClinicalReading. It classifies by the
+// mg/dL VALUE (not a slash string), so a bare severe-low reading is never
+// silenced by the glucose-cue gate on the free-text path. A value under 54 is a
+// standalone emergency; a care-plan threshold breach is a clinic escalation.
+export function findRecentGlucoseReading(
+  glucoseReadings: GlucoseReading[],
+  carePlan: CarePlan,
+  options: { referenceTime?: Date | string | number } = {}
+): GlucoseReadingCandidate | undefined {
+  const { referenceTime = new Date() } = options;
+  const recentWindowStart = new Date(referenceTime).valueOf() - RECENT_READING_WINDOW_MS;
+  const windowReadings = [...glucoseReadings]
+    .sort((left, right) => new Date(right.measuredAt).valueOf() - new Date(left.measuredAt).valueOf())
+    .filter((reading) => new Date(reading.measuredAt).valueOf() >= recentWindowStart);
+  const chronological = [...windowReadings].reverse();
+
+  let best: GlucoseReadingCandidate | undefined;
+  for (const reading of windowReadings) {
+    const glucoseInsight = interpretGlucose(reading, chronological, carePlan);
+    const severe = reading.valueMgDl < SEVERE_LOW_GLUCOSE;
+    if (!severe && glucoseInsight.escalation !== "clinic") {
+      continue;
+    }
+    const candidate: GlucoseReadingCandidate = {
+      reading,
+      glucoseInsight,
+      severity: severe ? "severe" : "clinic_threshold"
+    };
+    if (best === undefined || glucoseSeverityPriority(candidate.severity) > glucoseSeverityPriority(best.severity)) {
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+function glucoseSeverityPriority(severity: GlucoseReadingSeverity): number {
+  return severity === "severe" ? 2 : 1;
+}
 
 export type ClinicalReadingCandidate = {
   reading: HomeReading;

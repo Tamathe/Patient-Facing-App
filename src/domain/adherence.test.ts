@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getAdherenceRate, getAdherenceStreak, getDoseForDate, summarizeBpTrend, toDateKey } from "./adherence";
-import type { DoseEvent, HomeReading } from "./types";
+import {
+  getAdherenceRate,
+  getAdherenceStreak,
+  getDoseForDate,
+  summarizeBpTrend,
+  summarizeGlucoseTrend,
+  toDateKey
+} from "./adherence";
+import type { DoseEvent, GlucoseReading, HomeReading } from "./types";
 
 const TODAY = new Date(2026, 6, 5, 12, 0, 0); // 2026-07-05 local noon
 
@@ -125,5 +132,59 @@ describe("summarizeBpTrend", () => {
       reading(129, "2026-07-06T08:00:00.000Z")
     ];
     expect(summarizeBpTrend(readings)?.direction).toBe("steady");
+  });
+});
+
+function glucose(valueMgDl: number, measuredAt: string): GlucoseReading {
+  return {
+    id: `g-${measuredAt}-${valueMgDl}`,
+    patientId: "patient-1",
+    valueMgDl,
+    measuredAt,
+    contexts: ["morning"],
+    note: ""
+  };
+}
+
+describe("summarizeGlucoseTrend", () => {
+  it("returns null below the minimum reading count", () => {
+    const readings = [glucose(150, "2026-07-01T08:00:00.000Z"), glucose(148, "2026-07-02T08:00:00.000Z")];
+    expect(summarizeGlucoseTrend(readings)).toBeNull();
+  });
+
+  it("reports improvement when recent readings are lower", () => {
+    const readings = [
+      glucose(170, "2026-07-01T08:00:00.000Z"),
+      glucose(172, "2026-07-02T08:00:00.000Z"),
+      glucose(168, "2026-07-03T08:00:00.000Z"),
+      glucose(150, "2026-07-04T08:00:00.000Z"),
+      glucose(148, "2026-07-05T08:00:00.000Z"),
+      glucose(152, "2026-07-06T08:00:00.000Z")
+    ];
+    expect(summarizeGlucoseTrend(readings)?.direction).toBe("improving");
+  });
+
+  it("reports rising when recent readings are higher", () => {
+    const readings = [
+      glucose(148, "2026-07-01T08:00:00.000Z"),
+      glucose(150, "2026-07-02T08:00:00.000Z"),
+      glucose(146, "2026-07-03T08:00:00.000Z"),
+      glucose(170, "2026-07-04T08:00:00.000Z"),
+      glucose(172, "2026-07-05T08:00:00.000Z"),
+      glucose(168, "2026-07-06T08:00:00.000Z")
+    ];
+    expect(summarizeGlucoseTrend(readings)?.direction).toBe("rising");
+  });
+
+  it("reports steady when readings are flat", () => {
+    const readings = [
+      glucose(150, "2026-07-01T08:00:00.000Z"),
+      glucose(151, "2026-07-02T08:00:00.000Z"),
+      glucose(149, "2026-07-03T08:00:00.000Z"),
+      glucose(150, "2026-07-04T08:00:00.000Z"),
+      glucose(151, "2026-07-05T08:00:00.000Z"),
+      glucose(149, "2026-07-06T08:00:00.000Z")
+    ];
+    expect(summarizeGlucoseTrend(readings)?.direction).toBe("steady");
   });
 });

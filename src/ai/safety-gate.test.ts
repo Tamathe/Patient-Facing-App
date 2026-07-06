@@ -74,6 +74,35 @@ describe("createSafeAiResponse", () => {
     vi.useRealTimers();
   });
 
+  it("escalates when a recent stored glucose reading is a severe low, before calling the provider", async () => {
+    const stateWithLowGlucose: AppState = {
+      ...demoState,
+      glucoseReadings: [
+        {
+          id: "g-low",
+          patientId: "patient-1",
+          valueMgDl: 45,
+          measuredAt: "2026-07-05T12:00:00.000Z",
+          contexts: ["morning"],
+          note: ""
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "should not be called", safety: "allowed" as const, sources: ["plan-1"] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "explain", patientInput: "how do I keep my blood sugar under control", state: stateWithLowGlucose },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.sources).toContain("g-low");
+    expect(response.content).toContain("very low");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("blocks unsafe medication change requests before provider call", async () => {
     const response = await createSafeAiResponse(
       {

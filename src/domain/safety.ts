@@ -42,6 +42,13 @@ const urgentSymptomPatterns = [
   /fainting/i
 ];
 
+// A glucose utterance only escalates when an explicit blood-sugar cue is present,
+// so a bare "180" is never misread as a systolic. Severe low (<54) is a
+// standalone emergency; a very high reading (>=250) escalates only alongside a
+// diabetic-ketoacidosis symptom cue — a high number alone stays clinic education.
+const glucoseCuePattern = /blood sugar|glucose|mg\s*\/?\s*dl|finger\s*stick|sugar (?:is|was|reading|of|at|hit)/i;
+const dkaCuePattern = /nausea|vomit|throwing up|fruity breath|deep breathing|very thirsty|can'?t stop drinking|new confusion|confused/i;
+
 function hasDangerousBloodPressure(systolic: number, diastolic: number): boolean {
   const plausibleReading = systolic >= 50 && systolic <= 260 && diastolic >= 20 && diastolic <= 160;
 
@@ -173,8 +180,32 @@ function hasDangerousReading(input: string): boolean {
   return hasDangerousBloodPressure(systolic, diastolic);
 }
 
+export function extractGlucose(input: string): number | null {
+  const match = input.match(/\b(\d{2,3})\b/);
+  if (!match) {
+    return null;
+  }
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function hasDangerousGlucose(input: string): boolean {
+  if (!glucoseCuePattern.test(input)) {
+    return false;
+  }
+  const value = extractGlucose(input);
+  if (value === null || value < 20 || value > 900) {
+    return false;
+  }
+  return value < 54 || (value >= 250 && dkaCuePattern.test(input));
+}
+
 export function classifySafety(input: string): SafetyClassification {
-  if (urgentSymptomPatterns.some((pattern) => pattern.test(input)) || hasDangerousReading(input)) {
+  if (
+    urgentSymptomPatterns.some((pattern) => pattern.test(input)) ||
+    hasDangerousReading(input) ||
+    hasDangerousGlucose(input)
+  ) {
     return {
       level: "escalate",
       response:

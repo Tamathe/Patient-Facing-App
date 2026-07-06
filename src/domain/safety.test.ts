@@ -62,6 +62,25 @@ describe("classifySafety", () => {
 
     expect(result.level).toBe("allowed");
   });
+
+  it("escalates a severe low blood-sugar utterance", () => {
+    expect(classifySafety("my blood sugar is 45").level).toBe("escalate");
+    expect(classifySafety("glucose reading of 48 this morning").level).toBe("escalate");
+  });
+
+  it("escalates a very high reading only alongside a ketoacidosis symptom cue", () => {
+    expect(classifySafety("my blood sugar is 260 and I keep vomiting").level).toBe("escalate");
+    expect(classifySafety("blood sugar 260").level).toBe("allowed");
+  });
+
+  it("does not treat a bare number without a glucose cue as dangerous", () => {
+    expect(classifySafety("180").level).toBe("allowed");
+    expect(classifySafety("I walked 45 minutes today").level).toBe("allowed");
+  });
+
+  it("does not misread honest metformin logging as an escalation", () => {
+    expect(classifySafety("I took all my metformin this morning").level).not.toBe("escalate");
+  });
 });
 
 describe("normalizeSpokenReading", () => {

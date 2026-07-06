@@ -2,7 +2,7 @@ import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { crisisTierForDomain } from "@/domain/crisis-red-flags";
 import { screenSocialEmergency } from "@/domain/social-screen";
 import { verifyGrounding } from "@/domain/grounding";
-import { findRecentClinicalReading } from "@/domain/recent-clinical-reading";
+import { findRecentClinicalReading, findRecentGlucoseReading } from "@/domain/recent-clinical-reading";
 import { tSafety, type Language } from "@/i18n/strings";
 import { collectSourceFacts } from "./grounding-facts";
 import { inferAiMode } from "./intent";
@@ -85,6 +85,19 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
     };
   }
 
+  // A logged severe-low (or care-plan threshold) blood-sugar reading is checked
+  // here, right after crisis + social, so a co-occurring blood-pressure reading
+  // in the same window can never bury it. The severe tier is a full emergency.
+  const recentGlucoseReading = findRecentGlucoseReading(request.state.glucoseReadings, request.state.carePlan);
+  if (recentGlucoseReading && recentGlucoseReading.severity === "severe") {
+    return {
+      kind: "hard_escalate",
+      tier: "emergency",
+      message: `A recent blood-sugar reading of ${recentGlucoseReading.reading.valueMgDl} mg/dL is very low and can be dangerous. If you feel shaky, sweaty, or confused, treat a low now and seek urgent help if you do not improve.`,
+      sources: [recentGlucoseReading.reading.id]
+    };
+  }
+
   const inputSafety = classifySafety(request.patientInput);
   const latestReading = getLatestReading(request.state.readings);
   const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
@@ -115,6 +128,17 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
     if (noteSafety.level === "blocked") {
       softBlock = { kind: "soft_block", message: noteSafety.response, sources: [reading.id] };
     }
+  }
+
+  // A stored glucose reading that breached the care-plan threshold (but is not a
+  // severe low) is a soft clinic escalation, mirroring the blood-pressure
+  // clinic-threshold path: still answer the question, but carry the guidance.
+  if (recentGlucoseReading && recentGlucoseReading.severity === "clinic_threshold") {
+    return {
+      kind: "soft_escalate",
+      message: `${recentGlucoseReading.glucoseInsight.message} This can happen even when you feel fine. If you are feeling worse, seek urgent care now.`,
+      sources: [recentGlucoseReading.reading.id, request.state.carePlan.id]
+    };
   }
 
   if (latestReading) {

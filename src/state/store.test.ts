@@ -2,8 +2,25 @@ import { describe, expect, it } from "vitest";
 import { brentState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { healthReducer } from "./store";
+import type { GlucoseReading } from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("adds a glucose reading and audit event", () => {
+    const reading: GlucoseReading = {
+      id: "g-1",
+      patientId: demoState.patient.id,
+      valueMgDl: 120,
+      measuredAt: "2026-07-05T07:00:00.000Z",
+      contexts: ["morning"],
+      note: ""
+    };
+    const next = healthReducer({ ...demoState, glucoseReadings: [] }, { type: "addGlucoseReading", reading });
+
+    expect(next.glucoseReadings).toHaveLength(1);
+    expect(next.glucoseReadings[0].valueMgDl).toBe(120);
+    expect(next.auditEvents.at(-1)?.label).toContain("Blood sugar");
+  });
+
   it("adds a blood pressure reading and audit event", () => {
     const next = healthReducer({ ...demoState, readings: [] }, {
       type: "addReading",

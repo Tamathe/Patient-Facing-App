@@ -20,6 +20,7 @@ import type {
   CareContextItem,
   DoseEvent,
   ExtractedFact,
+  GlucoseReading,
   HomeReading,
   MealLogEntry,
   MedicationBarrier,
@@ -29,6 +30,7 @@ import { loadStoredState, saveStoredState } from "./storage";
 
 export type HealthAction =
   | { type: "addReading"; reading: HomeReading }
+  | { type: "addGlucoseReading"; reading: GlucoseReading }
   | { type: "setMedicationBarriers"; medicationId: string; barriers: MedicationBarrier[] }
   | { type: "addContextItem"; item: CareContextItem; facts: ExtractedFact[] }
   | { type: "confirmFact"; factId: string }
@@ -51,6 +53,13 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ...state,
         readings: [...state.readings, action.reading],
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Blood pressure reading added")]
+      };
+    }
+    case "addGlucoseReading": {
+      return {
+        ...state,
+        glucoseReadings: [...state.glucoseReadings, action.reading],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Blood sugar reading added")]
       };
     }
     case "setMedicationBarriers": {
