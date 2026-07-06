@@ -13,3 +13,6 @@ docs/superpowers/
 
 certificates
 .vercel
+
+# Vendored UK "Food as Health" reference prototype — separate project, own node_modules
+rhtp-prototype/

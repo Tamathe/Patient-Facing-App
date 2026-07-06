@@ -1,4 +1,4 @@
-import type { AiMessageAction, AiMode, AppState, IdentifiedFood, SafetyLevel } from "@/domain/types";
+import type { AiMessageAction, AiMode, AppState, IdentifiedFood, PantryRecipe, SafetyLevel } from "@/domain/types";
 import type { RealtimeVoiceMetricsReport } from "./realtime-voice-metrics";
 
 export type HealthAiRequest = {
@@ -16,6 +16,11 @@ export type HealthAiResponse = {
   banner?: string;
   actions?: AiMessageAction[];
   grounding?: { allowed: boolean; blockedReasons: string[] };
+  // Structured pantry output, present only for the pantry-recipe path. `content`
+  // still carries a plain-text summary of the same recipes so the safety gate
+  // (grounding) and any fallback display have something to read.
+  detectedItems?: string[];
+  recipes?: PantryRecipe[];
 };
 
 export type LiveSessionStatus =

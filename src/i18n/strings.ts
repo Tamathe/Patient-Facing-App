@@ -37,14 +37,24 @@ export type FoodLensStringKey =
   | "flagFiberGood"
   | "flagPotassiumMed"
   | "flagSaltSubstituteMed"
-  | "flagBpTrend";
+  | "flagBpTrend"
+  | "pantryButton"
+  | "pantryScanning"
+  | "pantryDetectedTitle"
+  | "pantryRecipesTitle"
+  | "pantryToBuyLabel"
+  | "pantryShoppingTitle"
+  | "pantryWatchLabel"
+  | "pantryUnavailable"
+  | "pantryNoFood"
+  | "pantryLocked";
 
 export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>> = {
   en: {
     pageTitle: "Food Lens",
     navLabel: "Food",
     viewfinderHint: "Point at a food and just ask.",
-    scanHint: "Line up the barcode.",
+    scanHint: "Point at any food and ask about it.",
     statusConnecting: "Connecting…",
     statusListening: "Listening — just talk.",
     statusThinking: "Thinking…",
@@ -59,7 +69,7 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     cameraDenied: "Camera access is off. Turn it on in Chrome site settings to scan foods.",
     micDenied: "Microphone access is off. You can still type your question below.",
     cameraUnavailable: "Camera is not available on this device.",
-    fallbackNotice: "Voice is not set up, so type your question and I will answer.",
+    fallbackNotice: "Type your question about what's in the camera and I'll answer.",
     askPlaceholder: "Ask about this food…",
     askButton: "Ask",
     holdToTalkHint: "Speak your question out loud.",
@@ -77,13 +87,23 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     flagFiberGood: "{amount} g fiber — good for your heart",
     flagPotassiumMed: "High in potassium — check with your care team first because you take {med}",
     flagSaltSubstituteMed: "This is a salt substitute — check with your care team first because you take {med}",
-    flagBpTrend: "Your recent readings are trending up — extra reason to go easy on salt this week"
+    flagBpTrend: "Your recent readings are trending up — extra reason to go easy on salt this week",
+    pantryButton: "Find recipes in my pantry",
+    pantryScanning: "Reading your pantry…",
+    pantryDetectedTitle: "In your pantry",
+    pantryRecipesTitle: "Recipe ideas",
+    pantryToBuyLabel: "To pick up",
+    pantryShoppingTitle: "Shopping list",
+    pantryWatchLabel: "Heads up",
+    pantryUnavailable: "I need the live camera model to read your pantry. Once it's set up, point the camera at your open pantry or fridge and tap Find recipes.",
+    pantryNoFood: "I couldn't spot foods to build a recipe from. Try pointing the camera at your open pantry or fridge so I can see the items.",
+    pantryLocked: "This demo needs its access code before it can read your pantry."
   },
   es: {
     pageTitle: "Lente de Comida",
     navLabel: "Comida",
     viewfinderHint: "Apunta a una comida y pregunta.",
-    scanHint: "Alinea el código de barras.",
+    scanHint: "Apunta a cualquier comida y pregunta.",
     statusConnecting: "Conectando…",
     statusListening: "Escuchando — solo habla.",
     statusThinking: "Pensando…",
@@ -98,7 +118,7 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     cameraDenied: "El acceso a la cámara está desactivado. Actívalo en la configuración de Chrome para escanear comidas.",
     micDenied: "El acceso al micrófono está desactivado. Aún puedes escribir tu pregunta abajo.",
     cameraUnavailable: "La cámara no está disponible en este dispositivo.",
-    fallbackNotice: "La voz no está configurada, así que escribe tu pregunta y te respondo.",
+    fallbackNotice: "Escribe tu pregunta sobre lo que ves en la cámara y te respondo.",
     askPlaceholder: "Pregunta sobre esta comida…",
     askButton: "Preguntar",
     holdToTalkHint: "Di tu pregunta en voz alta.",
@@ -116,7 +136,17 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     flagFiberGood: "{amount} g de fibra — bueno para tu corazón",
     flagPotassiumMed: "Alto en potasio — consulta primero con tu equipo de salud porque tomas {med}",
     flagSaltSubstituteMed: "Esto es un sustituto de sal — consulta primero con tu equipo de salud porque tomas {med}",
-    flagBpTrend: "Tus lecturas recientes están subiendo — una razón más para cuidar la sal esta semana"
+    flagBpTrend: "Tus lecturas recientes están subiendo — una razón más para cuidar la sal esta semana",
+    pantryButton: "Buscar recetas en mi despensa",
+    pantryScanning: "Leyendo tu despensa…",
+    pantryDetectedTitle: "En tu despensa",
+    pantryRecipesTitle: "Ideas de recetas",
+    pantryToBuyLabel: "Para comprar",
+    pantryShoppingTitle: "Lista de compras",
+    pantryWatchLabel: "Ojo",
+    pantryUnavailable: "Necesito el modelo de cámara en vivo para leer tu despensa. Cuando esté configurado, apunta la cámara a tu despensa o refrigerador abierto y toca Buscar recetas.",
+    pantryNoFood: "No pude ver alimentos para armar una receta. Intenta apuntar la cámara a tu despensa o refrigerador abierto para que vea los productos.",
+    pantryLocked: "Esta demostración necesita su código de acceso antes de leer tu despensa."
   }
 };
 

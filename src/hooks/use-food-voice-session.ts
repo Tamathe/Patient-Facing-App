@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MockHealthAiProvider } from "@/ai/mock-provider";
+import { OpenAiVisionProvider } from "@/ai/vision-provider";
+import { openLocalCoachSession } from "@/ai/local-coach-session";
 import { buildFoodLensInstructions } from "@/ai/food-instructions";
 import { connectRealtimeSession } from "@/ai/realtime-session";
 import { evaluateVoiceTranscript } from "@/ai/voice-gate";
@@ -20,7 +21,6 @@ export type VoiceSafetyIntercept = {
 export type VoiceMode = "unknown" | "live" | "mock";
 
 const IDLE_TIMEOUT_MS = 180000;
-const mockProvider = new MockHealthAiProvider();
 
 type TokenResponse =
   | { mode: "live"; clientSecret: string; model: string; expiresAt: number | null }
@@ -179,13 +179,14 @@ export function useFoodVoiceSession(args: {
       return;
     }
 
+    // Non-realtime fallback: typed questions still get a real image answer from the
+    // HTTP vision provider (which degrades to the on-device coach when the model is
+    // not configured or the demo is locked), read aloud via speech synthesis.
     setMode("mock");
-    handleRef.current = await mockProvider.openLiveSession({
-      language,
-      getState,
-      getContext,
-      onEvent: handleEvent
-    });
+    handleRef.current = await openLocalCoachSession(
+      { language, getState, getContext, onEvent: handleEvent },
+      new OpenAiVisionProvider({ passcode })
+    );
     armIdleTimer();
   }, [armIdleTimer, gateTranscript, getContext, getState, handleEvent, language]);
 

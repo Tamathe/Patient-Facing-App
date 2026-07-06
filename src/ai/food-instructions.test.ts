@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { demoState } from "@/domain/fixtures";
 import { hypertensionLens } from "@/domain/condition-lens";
 import type { FoodFlag } from "@/domain/food-flags";
-import { buildFoodLensInstructions, buildPerAskContext } from "./food-instructions";
+import { buildFoodLensInstructions, buildFoodVisionSystemPrompt, buildPerAskContext } from "./food-instructions";
 
 describe("buildFoodLensInstructions", () => {
   it("includes the patient name, medication, condition, and reading trend", () => {
@@ -27,6 +27,25 @@ describe("buildFoodLensInstructions", () => {
       hypertensionLens
     );
     expect(instructions).toContain("Speak Spanish");
+  });
+});
+
+describe("buildFoodVisionSystemPrompt", () => {
+  it("carries the base coach persona", () => {
+    const prompt = buildFoodVisionSystemPrompt(demoState, hypertensionLens);
+    expect(prompt).toContain("Jordan");
+    expect(prompt).toContain("hypertension");
+  });
+
+  it("steers away from the phrasing that trips the grounding gate", () => {
+    const prompt = buildFoodVisionSystemPrompt(demoState, hypertensionLens);
+    // Command-shaped advice ("You should lower…") is blocked by the med-change
+    // verifier; diagnosis-shaped statements ("you have hypertension") by the
+    // diagnosis verifier. The prompt must explicitly warn the model off both.
+    expect(prompt).toContain("You should stop");
+    expect(prompt).toContain("gentle suggestions");
+    expect(prompt).toContain("you have high blood pressure");
+    expect(prompt).toContain("blood-pressure or A1C number");
   });
 });
 

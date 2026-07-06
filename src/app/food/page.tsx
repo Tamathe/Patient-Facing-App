@@ -6,7 +6,10 @@ import { FoodAskBar } from "@/components/food-ask-bar";
 import { FoodConversation } from "@/components/food-conversation";
 import { FoodFactsCard } from "@/components/food-facts-card";
 import { FoodViewfinder } from "@/components/food-viewfinder";
+import { PantryRecipes } from "@/components/pantry-recipes";
 import { MealLogList } from "@/components/meal-log-list";
+import { createSafeAiResponse } from "@/ai/safety-gate";
+import { PantryProvider, PANTRY_REQUEST_TEXT } from "@/ai/pantry-provider";
 import { selectLens } from "@/domain/condition-lens";
 import { computeFoodFlags, type FoodFlag } from "@/domain/food-flags";
 import { buildMealLogEntry } from "@/domain/meal-log";
@@ -16,7 +19,7 @@ import { useFoodCamera } from "@/hooks/use-food-camera";
 import { useBarcodeScan } from "@/hooks/use-barcode-scan";
 import { useFoodVoiceSession, type VoiceSafetyIntercept } from "@/hooks/use-food-voice-session";
 import { useHealthState } from "@/state/store";
-import type { AiMessage, IdentifiedFood } from "@/domain/types";
+import type { AiMessage, IdentifiedFood, PantryResult } from "@/domain/types";
 import type { LiveSessionContext } from "@/ai/types";
 
 export default function FoodPage() {
@@ -99,6 +102,42 @@ export default function FoodPage() {
     onFinalTranscript: appendMessage,
     onSafetyIntercept: appendIntercept
   });
+
+  const [pantryResult, setPantryResult] = useState<PantryResult | null>(null);
+  const [pantryLoading, setPantryLoading] = useState(false);
+
+  const findPantryRecipes = useCallback(async () => {
+    if (pantryLoading) {
+      return;
+    }
+    setPantryLoading(true);
+    setPantryResult(null);
+    const passcode =
+      typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("k") ?? undefined : undefined;
+    const image = camera.grabFrame() ?? undefined;
+    try {
+      // Same safety gate as every other AI answer: crisis + reading escalation run
+      // on the synthetic pantry utterance, and grounding runs on the recipe summary.
+      const response = await createSafeAiResponse(
+        { mode: "food", patientInput: PANTRY_REQUEST_TEXT, state: stateRef.current, image },
+        new PantryProvider({ passcode })
+      );
+      if (response.recipes && response.recipes.length > 0) {
+        setPantryResult({ detectedItems: response.detectedItems ?? [], recipes: response.recipes });
+      } else if (response.safety !== "allowed") {
+        appendIntercept({
+          safety: response.safety,
+          content: response.content,
+          banner: response.banner,
+          actions: response.actions ?? []
+        });
+      } else {
+        appendMessage("assistant", response.content);
+      }
+    } finally {
+      setPantryLoading(false);
+    }
+  }, [appendIntercept, appendMessage, camera, pantryLoading]);
 
   useEffect(() => {
     void camera.start();
@@ -198,6 +237,19 @@ export default function FoodPage() {
           onSendText={voice.sendUserText}
           language={language}
         />
+
+        <button
+          className="min-h-14 w-full rounded-control border border-care bg-white px-4 py-2 font-semibold text-care disabled:opacity-40"
+          onClick={() => void findPantryRecipes()}
+          disabled={pantryLoading || camera.status !== "active"}
+          type="button"
+        >
+          {pantryLoading ? t(language, "pantryScanning") : t(language, "pantryButton")}
+        </button>
+
+        {pantryResult ? (
+          <PantryRecipes detectedItems={pantryResult.detectedItems} recipes={pantryResult.recipes} language={language} />
+        ) : null}
 
         {identifiedFood || flags.length > 0 ? (
           <FoodFactsCard food={identifiedFood} flags={flags} logged={logged} canLog={canLog} onLog={onLog} language={language} />

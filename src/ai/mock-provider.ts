@@ -1,12 +1,11 @@
-import { createSafeAiResponse } from "./safety-gate";
+import { openLocalCoachSession } from "./local-coach-session";
 import type { HomeReading, IdentifiedFood, Medication } from "@/domain/types";
 import type {
   HealthAiProvider,
   HealthAiRequest,
   HealthAiResponse,
   LiveSessionHandle,
-  LiveSessionInit,
-  LiveSessionStatus
+  LiveSessionInit
 } from "./types";
 
 const ACE_ARB_NAMES = [
@@ -44,7 +43,7 @@ function getLatestReadingId(readings: HomeReading[]): string | null {
 
 function buildFoodAnswer(food: IdentifiedFood | undefined, aceMedication: Medication | null): string {
   if (!food) {
-    return "Point your camera at a food's barcode and I can look up the details and tell you how it fits your plan.";
+    return "Point your camera at any food and ask me about it — for example how many carbs or how much sodium it has — and I'll tell you how it fits your plan.";
   }
 
   const label = food.brand ? `${food.brand} ${food.name}` : food.name;
@@ -132,93 +131,10 @@ export class MockHealthAiProvider implements HealthAiProvider {
     };
   }
 
+  // Route through the full safety gate (crisis + grounding) via the shared local
+  // coach loop instead of calling respond directly — this closes the mock voice
+  // bypass so the mock path enforces the same guarantees as the live path.
   async openLiveSession(init: LiveSessionInit): Promise<LiveSessionHandle> {
-    let status: LiveSessionStatus = "listening";
-    let closed = false;
-
-    const emit = init.onEvent;
-    emit({ type: "status", status: "listening" });
-
-    const speak = (text: string) => {
-      if (typeof window === "undefined" || typeof window.speechSynthesis === "undefined") {
-        return;
-      }
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = init.language === "es" ? "es-ES" : "en-US";
-        window.speechSynthesis.speak(utterance);
-      } catch {
-        // speech synthesis is best-effort in the mock session
-      }
-    };
-
-    const handle: LiveSessionHandle = {
-      sendUserText: (text: string) => {
-        if (closed) {
-          return;
-        }
-        status = "thinking";
-        emit({ type: "userTranscript", text, final: true });
-        emit({ type: "status", status: "thinking" });
-
-        const context = init.getContext();
-        // Route through the full safety gate (crisis + grounding) instead of
-        // calling respond directly — this closes the mock voice bypass so the
-        // mock path enforces the same guarantees as the live path.
-        void createSafeAiResponse(
-          {
-            mode: "food",
-            patientInput: text,
-            state: init.getState(),
-            identifiedFood: context.identifiedFood ?? undefined,
-            image: context.frameDataUrl ?? undefined
-          },
-          this
-        ).then((response) => {
-          if (closed) {
-            return;
-          }
-          if (response.safety !== "allowed") {
-            emit({
-              type: "safetyIntercept",
-              safety: response.safety,
-              content: response.content,
-              banner: response.banner,
-              actions: response.actions ?? []
-            });
-            status = "listening";
-            emit({ type: "status", status: "listening" });
-            return;
-          }
-          status = "speaking";
-          emit({ type: "assistantTranscript", text: response.content, final: true });
-          emit({ type: "status", status: "speaking" });
-          speak(response.content);
-          status = "listening";
-          emit({ type: "status", status: "listening" });
-        });
-      },
-      updateInstructions: () => {
-        // no-op in the mock session
-      },
-      close: () => {
-        if (closed) {
-          return;
-        }
-        closed = true;
-        status = "closed";
-        if (typeof window !== "undefined" && typeof window.speechSynthesis !== "undefined") {
-          try {
-            window.speechSynthesis.cancel();
-          } catch {
-            // ignore
-          }
-        }
-        emit({ type: "status", status: "closed" });
-      },
-      getStatus: () => status
-    };
-
-    return handle;
+    return openLocalCoachSession(init, this);
   }
 }

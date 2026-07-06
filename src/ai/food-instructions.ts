@@ -69,6 +69,41 @@ export function buildFoodLensInstructions(state: AppState, lens: ConditionLens):
   return sections.filter((section) => section.length > 0).join("\n\n");
 }
 
+// Phrasing guards shared by every food answer that passes through the grounding
+// verifier. Each shape below trips a verifier rule — command-shaped medication
+// advice, diagnosis-shaped statements, or an unverifiable BP/A1C number — so the
+// model is steered away from them while the substance of the advice stays identical.
+const GROUNDING_SAFE_PHRASING = [
+  'Give advice as gentle suggestions, never commands. Never begin advice with "You should stop / start / change / lower / raise / increase / decrease". Instead say things like "a lower-sodium version would be a better pick", "try a smaller portion", or "going easy on the salt helps here".',
+  'Never tell the patient they "have" a condition. Refer to their care plan instead — say "for your blood-pressure plan" or "since lower sodium matters for you", not "you have high blood pressure" or "because you have hypertension".',
+  "Never state a specific blood-pressure or A1C number — talk about the food."
+];
+
+// System prompt for the single-turn HTTP vision fallback (typed questions and the
+// on-device coach). Reuses the live-voice persona so answers match, then adds the
+// grounding-safe phrasing guards so a good answer is not degraded by the verifier.
+export function buildFoodVisionSystemPrompt(state: AppState, lens: ConditionLens): string {
+  return [
+    buildFoodLensInstructions(state, lens),
+    "You are answering a single question about the photo. If you reference the patient's readings or their trend, keep it general.",
+    ...GROUNDING_SAFE_PHRASING,
+    "If the photo does not clearly show food, say so plainly and ask them to point the camera at what they want to ask about."
+  ].join("\n\n");
+}
+
+// System prompt for the pantry-recipe scan. Same coach persona and grounding-safe
+// phrasing, but the task is to read a whole pantry/fridge and return structured
+// JSON recipes tailored to the patient's plan.
+export function buildPantryPrompt(state: AppState, lens: ConditionLens): string {
+  return [
+    buildFoodLensInstructions(state, lens),
+    "The photo shows the inside of the patient's pantry, fridge, or a group of grocery items. First identify the individual food items you can see. Then suggest up to three simple recipes they could make mostly from those items that fit the plan above — favor the lower-sodium, plan-friendly options.",
+    ...GROUNDING_SAFE_PHRASING,
+    'Respond with ONLY a JSON object, no prose, matching exactly this shape: {"detectedItems": string[], "recipes": [{"title": string, "whyItFits": string, "haveItems": string[], "buyItems": string[], "watchOut": string | null}]}. "haveItems" are ingredients visible in the photo; "buyItems" are the few extra ingredients they would still need; "watchOut" is one short plan-relevant caution or null. Keep every string short and in the patient\'s language.',
+    'If the photo does not show food, return {"detectedItems": [], "recipes": []}.'
+  ].join("\n\n");
+}
+
 export function buildPerAskContext(food: IdentifiedFood | null, flags: FoodFlag[]): string {
   const foodData = food
     ? JSON.stringify({

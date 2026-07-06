@@ -18,6 +18,14 @@ export const bpReadingInputSchema = z.object({
   }
 });
 
+export const glucoseReadingInputSchema = z.object({
+  valueMgDl: z.coerce.number().int().min(20).max(600),
+  contexts: z.array(
+    z.enum(["morning", "evening", "before_medicine", "after_medicine", "after_coffee", "after_resting", "during_symptoms"])
+  ).min(1),
+  note: z.string().max(280)
+});
+
 export const medicationBarrierSchema = z.enum([
   "forgot",
   "ran_out",
@@ -74,4 +82,20 @@ export const mealLogEntrySchema = z.object({
   food: identifiedFoodSchema,
   flags: z.array(z.string()),
   assistantSummary: z.string().max(280)
+});
+
+// Validates the JSON the vision model returns for a pantry scan. Kept lenient on
+// content (free text) but bounded in size/shape so a malformed completion is
+// rejected rather than rendered.
+export const pantryRecipeSchema = z.object({
+  title: z.string().min(1).max(120),
+  whyItFits: z.string().min(1).max(400),
+  haveItems: z.array(z.string().min(1).max(80)).max(20),
+  buyItems: z.array(z.string().min(1).max(80)).max(20),
+  watchOut: z.string().max(200).nullable().catch(null)
+});
+
+export const pantryResultSchema = z.object({
+  detectedItems: z.array(z.string().min(1).max(80)).max(40),
+  recipes: z.array(pantryRecipeSchema).max(5)
 });

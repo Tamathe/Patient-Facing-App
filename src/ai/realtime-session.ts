@@ -271,6 +271,9 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
 
   return {
     sendUserText: (text: string) => {
+      // Attach the current camera frame + food context first, so a typed live turn
+      // sees the image just like a spoken one does.
+      injectContext();
       send({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text }] } });
       // Typed live turns run the same gate as spoken turns before any answer.
       applyTranscriptGate(args.gateTranscript(text), send, args.onEvent);
