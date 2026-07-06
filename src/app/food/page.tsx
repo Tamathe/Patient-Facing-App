@@ -14,7 +14,7 @@ import { foodLookupResponseSchema, mealLogEntrySchema } from "@/domain/schemas";
 import { t } from "@/i18n/strings";
 import { useFoodCamera } from "@/hooks/use-food-camera";
 import { useBarcodeScan } from "@/hooks/use-barcode-scan";
-import { useFoodVoiceSession } from "@/hooks/use-food-voice-session";
+import { useFoodVoiceSession, type VoiceSafetyIntercept } from "@/hooks/use-food-voice-session";
 import { useHealthState } from "@/state/store";
 import type { AiMessage, IdentifiedFood } from "@/domain/types";
 import type { LiveSessionContext } from "@/ai/types";
@@ -74,11 +74,30 @@ export default function FoodPage() {
     [dispatch]
   );
 
+  const appendIntercept = useCallback(
+    (intercept: VoiceSafetyIntercept) => {
+      const message: AiMessage = {
+        id: crypto.randomUUID(),
+        mode: "food",
+        role: "assistant",
+        content: intercept.content,
+        createdAt: new Date().toISOString(),
+        safety: intercept.safety,
+        sources: [],
+        banner: intercept.banner,
+        actions: intercept.actions
+      };
+      dispatch({ type: "addAiMessage", message });
+    },
+    [dispatch]
+  );
+
   const voice = useFoodVoiceSession({
     language,
     getState: () => stateRef.current,
     getContext,
-    onFinalTranscript: appendMessage
+    onFinalTranscript: appendMessage,
+    onSafetyIntercept: appendIntercept
   });
 
   useEffect(() => {
@@ -184,7 +203,12 @@ export default function FoodPage() {
           <FoodFactsCard food={identifiedFood} flags={flags} logged={logged} canLog={canLog} onLog={onLog} language={language} />
         ) : null}
 
-        <FoodConversation messages={foodMessages} partialAssistantText={voice.partialAssistantText} />
+        <FoodConversation
+          messages={foodMessages}
+          partialAssistantText={voice.partialAssistantText}
+          language={language}
+          clinic={{ name: state.patient.primaryClinicName, phone: state.patient.primaryClinicPhone }}
+        />
 
         <MealLogList entries={recentMeals} language={language} />
       </div>

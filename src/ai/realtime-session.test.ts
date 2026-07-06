@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { reduceRealtimeEvent } from "./realtime-session";
+import { REALTIME_SESSION_CONFIG, applyTranscriptGate, reduceRealtimeEvent } from "./realtime-session";
+import type { LiveSessionEvent } from "./types";
+import type { VoiceGateDecision } from "./voice-gate";
 
 describe("reduceRealtimeEvent", () => {
   it("moves from connecting to listening on session.updated", () => {
@@ -59,5 +61,70 @@ describe("reduceRealtimeEvent", () => {
   it("ignores unknown events", () => {
     const result = reduceRealtimeEvent("listening", { type: "something.else" });
     expect(result).toEqual({ status: "listening", emits: [], actions: [] });
+  });
+});
+
+describe("REALTIME_SESSION_CONFIG", () => {
+  it("pins server VAD auto-response OFF so classify-before-respond is possible", () => {
+    expect(REALTIME_SESSION_CONFIG.audio.input.turn_detection.create_response).toBe(false);
+    expect(REALTIME_SESSION_CONFIG.audio.input.turn_detection.type).toBe("server_vad");
+  });
+});
+
+describe("applyTranscriptGate", () => {
+  function harness() {
+    const sends: unknown[] = [];
+    const events: LiveSessionEvent[] = [];
+    return {
+      sends,
+      events,
+      send: (payload: unknown) => sends.push(payload),
+      onEvent: (event: LiveSessionEvent) => events.push(event)
+    };
+  }
+
+  it("creates a response when the gate passes", () => {
+    const { sends, events, send, onEvent } = harness();
+
+    applyTranscriptGate({ kind: "pass" }, send, onEvent);
+
+    expect(sends).toEqual([{ type: "response.create" }]);
+    expect(events).toEqual([]);
+  });
+
+  it("cancels, clears audio, and emits an intercept on a crisis gate — never creating a response", () => {
+    const { sends, events, send, onEvent } = harness();
+    const decision: VoiceGateDecision = {
+      kind: "intercept",
+      safety: "crisis",
+      content: "Please reach out now.",
+      actions: ["crisis_call_988"]
+    };
+
+    applyTranscriptGate(decision, send, onEvent);
+
+    expect(sends).toEqual([{ type: "response.cancel" }, { type: "output_audio_buffer.clear" }]);
+    expect(sends).not.toContainEqual({ type: "response.create" });
+    expect(events).toContainEqual({
+      type: "safetyIntercept",
+      safety: "crisis",
+      content: "Please reach out now.",
+      banner: undefined,
+      actions: ["crisis_call_988"]
+    });
+  });
+
+  it("fails closed: an intercepted turn produces no spoken-answer trigger", () => {
+    const { sends, send, onEvent } = harness();
+    // Without a passing decision there is never a response.create, so no answer
+    // is ever spoken for that turn — the same guarantee the fail-closed timer
+    // enforces when a transcript never arrives.
+    applyTranscriptGate(
+      { kind: "intercept", safety: "blocked", content: "x", actions: [], banner: "b" },
+      send,
+      onEvent
+    );
+
+    expect(sends).not.toContainEqual({ type: "response.create" });
   });
 });

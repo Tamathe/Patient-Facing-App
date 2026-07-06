@@ -1,3 +1,4 @@
+import { createSafeAiResponse } from "./safety-gate";
 import type { HomeReading, IdentifiedFood, Medication } from "@/domain/types";
 import type {
   HealthAiProvider,
@@ -161,14 +162,32 @@ export class MockHealthAiProvider implements HealthAiProvider {
         emit({ type: "status", status: "thinking" });
 
         const context = init.getContext();
-        void this.respond({
-          mode: "food",
-          patientInput: text,
-          state: init.getState(),
-          identifiedFood: context.identifiedFood ?? undefined,
-          image: context.frameDataUrl ?? undefined
-        }).then((response) => {
+        // Route through the full safety gate (crisis + grounding) instead of
+        // calling respond directly — this closes the mock voice bypass so the
+        // mock path enforces the same guarantees as the live path.
+        void createSafeAiResponse(
+          {
+            mode: "food",
+            patientInput: text,
+            state: init.getState(),
+            identifiedFood: context.identifiedFood ?? undefined,
+            image: context.frameDataUrl ?? undefined
+          },
+          this
+        ).then((response) => {
           if (closed) {
+            return;
+          }
+          if (response.safety !== "allowed") {
+            emit({
+              type: "safetyIntercept",
+              safety: response.safety,
+              content: response.content,
+              banner: response.banner,
+              actions: response.actions ?? []
+            });
+            status = "listening";
+            emit({ type: "status", status: "listening" });
             return;
           }
           status = "speaking";

@@ -1,3 +1,5 @@
+import { createRealtimeVoiceMetricsRecorder } from "./realtime-voice-metrics";
+import type { VoiceGateDecision } from "./voice-gate";
 import type {
   LiveSessionContext,
   LiveSessionEvent,
@@ -6,6 +8,48 @@ import type {
 } from "./types";
 
 export type RealtimeServerEvent = { type: string; [key: string]: unknown };
+
+// Load-bearing: create_response is FALSE so the model never speaks on its own.
+// Every turn waits for an explicit response.create that we send only after the
+// transcript clears the safety gate. With auto-response on, classify-before-
+// respond would be impossible.
+export const REALTIME_SESSION_CONFIG = {
+  type: "realtime",
+  audio: {
+    input: {
+      transcription: { model: "gpt-4o-mini-transcribe" },
+      turn_detection: { type: "server_vad", create_response: false, interrupt_response: true }
+    }
+  }
+} as const;
+
+// A final transcript that never arrives must fail closed: after this window with
+// no transcription.completed we never create a response for that turn.
+const TRANSCRIPT_FAIL_CLOSED_MS = 4000;
+
+// Turns a gate decision into realtime control messages. On pass we create the
+// response; on intercept we cancel any in-flight response, clear buffered output
+// audio, and surface the intercept instead of a spoken answer.
+export function applyTranscriptGate(
+  decision: VoiceGateDecision,
+  send: (payload: unknown) => void,
+  onEvent: (event: LiveSessionEvent) => void
+): void {
+  if (decision.kind === "pass") {
+    send({ type: "response.create" });
+    return;
+  }
+
+  send({ type: "response.cancel" });
+  send({ type: "output_audio_buffer.clear" });
+  onEvent({
+    type: "safetyIntercept",
+    safety: decision.safety,
+    content: decision.content,
+    banner: decision.banner,
+    actions: decision.actions
+  });
+}
 
 export type RealtimeReduction = {
   status: LiveSessionStatus;
@@ -74,6 +118,7 @@ export type ConnectArgs = {
   language: "en" | "es";
   getContext: () => LiveSessionContext;
   onEvent: (event: LiveSessionEvent) => void;
+  gateTranscript: (transcript: string) => VoiceGateDecision;
 };
 
 const CONNECT_TIMEOUT_MS = 10000;
@@ -83,6 +128,15 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
   let status: LiveSessionStatus = "connecting";
   let closed = false;
   let lastInjectedFoodId: string | null = null;
+  const metrics = createRealtimeVoiceMetricsRecorder();
+  let failClosedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearFailClosedTimer = () => {
+    if (failClosedTimer) {
+      clearTimeout(failClosedTimer);
+      failClosedTimer = null;
+    }
+  };
 
   args.onEvent({ type: "status", status: "connecting" });
 
@@ -151,6 +205,8 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
   };
 
   channel.onmessage = (message) => {
+    metrics.observeServerEvent(message.data);
+
     let event: RealtimeServerEvent;
     try {
       event = JSON.parse(message.data) as RealtimeServerEvent;
@@ -163,21 +219,32 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
     if (reduction.actions.includes("injectContext")) {
       injectContext();
     }
+
+    if (event.type === "input_audio_buffer.speech_stopped") {
+      // Arm the fail-closed watchdog: if no final transcript lands, this turn
+      // never gets a response.create.
+      clearFailClosedTimer();
+      failClosedTimer = setTimeout(() => {
+        failClosedTimer = null;
+        if (!closed) {
+          args.onEvent({ type: "error", message: "I didn't catch that — please try again.", fatal: false });
+        }
+      }, TRANSCRIPT_FAIL_CLOSED_MS);
+    }
+
+    if (event.type === "conversation.item.input_audio_transcription.completed") {
+      clearFailClosedTimer();
+      const transcript = str(event.transcript);
+      if (transcript.trim().length > 0) {
+        applyTranscriptGate(args.gateTranscript(transcript), send, args.onEvent);
+      }
+    }
   };
 
   channel.onopen = () => {
     send({
       type: "session.update",
-      session: {
-        type: "realtime",
-        instructions: args.instructions,
-        audio: {
-          input: {
-            transcription: { model: "gpt-4o-mini-transcribe" },
-            turn_detection: { type: "server_vad", create_response: true, interrupt_response: true }
-          }
-        }
-      }
+      session: { ...REALTIME_SESSION_CONFIG, instructions: args.instructions }
     });
   };
 
@@ -205,7 +272,8 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
   return {
     sendUserText: (text: string) => {
       send({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text }] } });
-      send({ type: "response.create" });
+      // Typed live turns run the same gate as spoken turns before any answer.
+      applyTranscriptGate(args.gateTranscript(text), send, args.onEvent);
     },
     updateInstructions: (instructions: string) => {
       send({ type: "session.update", session: { type: "realtime", instructions } });
@@ -216,6 +284,7 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
       }
       closed = true;
       status = "closed";
+      clearFailClosedTimer();
       try {
         channel.close();
       } catch {
@@ -224,6 +293,7 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
       cleanup();
       args.onEvent({ type: "status", status: "closed" });
     },
-    getStatus: () => status
+    getStatus: () => status,
+    getMetricsReport: () => metrics.report()
   };
 }

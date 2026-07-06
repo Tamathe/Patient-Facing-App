@@ -52,8 +52,107 @@ function hasDangerousBloodPressure(systolic: number, diastolic: number): boolean
   return systolic >= 180 || diastolic >= 120 || systolic < 90 || diastolic < 60;
 }
 
+const SPOKEN_NUMBER_WORD =
+  "zero|oh|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred";
+const SPOKEN_ONES: Record<string, number> = {
+  zero: 0,
+  oh: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9
+};
+const SPOKEN_TEENS: Record<string, number> = {
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19
+};
+const SPOKEN_TENS: Record<string, number> = {
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90
+};
+
+function parseTwoDigitWords(words: string[]): number | null {
+  if (words.length === 0) {
+    return null;
+  }
+  let total = 0;
+  for (const word of words) {
+    if (SPOKEN_TEENS[word] !== undefined) total += SPOKEN_TEENS[word];
+    else if (SPOKEN_TENS[word] !== undefined) total += SPOKEN_TENS[word];
+    else if (SPOKEN_ONES[word] !== undefined) total += SPOKEN_ONES[word];
+    else if (/^\d{1,3}$/.test(word)) total += Number(word);
+    else return null;
+  }
+  return total;
+}
+
+function parseSpokenNumber(phrase: string): number | null {
+  const words = phrase.trim().toLowerCase().split(/[\s-]+/).filter(Boolean);
+  if (words.length === 0) {
+    return null;
+  }
+  if (words.length === 1 && /^\d{2,3}$/.test(words[0])) {
+    return Number(words[0]);
+  }
+  if (words.includes("hundred")) {
+    const index = words.indexOf("hundred");
+    const before = words.slice(0, index);
+    const after = words.slice(index + 1);
+    const hundreds = before.length === 0 ? 1 : before.length === 1 && SPOKEN_ONES[before[0]] !== undefined ? SPOKEN_ONES[before[0]] : NaN;
+    if (Number.isNaN(hundreds)) {
+      return null;
+    }
+    const rest = after.length === 0 ? 0 : parseTwoDigitWords(after);
+    return rest === null ? null : hundreds * 100 + rest;
+  }
+  if (words.length >= 2 && SPOKEN_ONES[words[0]] !== undefined && SPOKEN_ONES[words[0]] <= 2) {
+    const rest = parseTwoDigitWords(words.slice(1));
+    return rest === null ? null : SPOKEN_ONES[words[0]] * 100 + rest;
+  }
+  return parseTwoDigitWords(words);
+}
+
+// Rewrites spoken blood-pressure phrases into the "S/D" digit form the numeric
+// safety patterns already understand. Fixes both the live-voice path and the
+// today-broken typed "200 over 130". Only rewrites when both sides parse to
+// numbers, so ordinary "over" prose is left untouched.
+export function normalizeSpokenReading(input: string): string {
+  const numberToken = `(?:\\b(?:${SPOKEN_NUMBER_WORD})\\b|\\d{1,3})`;
+  const numberPhrase = `${numberToken}(?:[\\s-]+${numberToken})*`;
+  const pattern = new RegExp(`(${numberPhrase})\\s+over\\s+(${numberPhrase})`, "gi");
+
+  return input.replace(pattern, (match: string, left: string, right: string) => {
+    const systolic = parseSpokenNumber(left);
+    const diastolic = parseSpokenNumber(right);
+    if (systolic === null || diastolic === null) {
+      return match;
+    }
+    return `${systolic}/${diastolic}`;
+  });
+}
+
 function hasDangerousReading(input: string): boolean {
-  const slashMatch = dangerousReadingWithSlashPattern.exec(input);
+  const normalized = normalizeSpokenReading(input);
+  const slashMatch = dangerousReadingWithSlashPattern.exec(normalized);
 
   if (slashMatch) {
     const systolic = Number.parseInt(slashMatch[1], 10);
@@ -62,7 +161,7 @@ function hasDangerousReading(input: string): boolean {
     return hasDangerousBloodPressure(systolic, diastolic);
   }
 
-  const wordMatch = dangerousSystolicDiastolicPattern.exec(input);
+  const wordMatch = dangerousSystolicDiastolicPattern.exec(normalized);
 
   if (!wordMatch) {
     return false;

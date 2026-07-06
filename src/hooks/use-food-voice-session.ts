@@ -4,9 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MockHealthAiProvider } from "@/ai/mock-provider";
 import { buildFoodLensInstructions } from "@/ai/food-instructions";
 import { connectRealtimeSession } from "@/ai/realtime-session";
+import { evaluateVoiceTranscript } from "@/ai/voice-gate";
 import { selectLens } from "@/domain/condition-lens";
-import type { AppState } from "@/domain/types";
+import { hasUnacknowledgedCrisis } from "@/state/selectors";
+import type { AiMessageAction, AppState } from "@/domain/types";
 import type { LiveSessionContext, LiveSessionEvent, LiveSessionHandle, LiveSessionStatus } from "@/ai/types";
+
+export type VoiceSafetyIntercept = {
+  safety: "crisis" | "escalate" | "blocked";
+  content: string;
+  banner?: string;
+  actions: AiMessageAction[];
+};
 
 export type VoiceMode = "unknown" | "live" | "mock";
 
@@ -23,6 +32,7 @@ export function useFoodVoiceSession(args: {
   getState: () => AppState;
   getContext: () => LiveSessionContext;
   onFinalTranscript: (role: "patient" | "assistant", text: string) => void;
+  onSafetyIntercept: (intercept: VoiceSafetyIntercept) => void;
 }): {
   mode: VoiceMode;
   status: LiveSessionStatus;
@@ -32,7 +42,9 @@ export function useFoodVoiceSession(args: {
   stop: () => void;
   sendUserText: (text: string) => void;
 } {
-  const { language, getState, getContext, onFinalTranscript } = args;
+  const { language, getState, getContext, onFinalTranscript, onSafetyIntercept } = args;
+  const onInterceptRef = useRef(onSafetyIntercept);
+  onInterceptRef.current = onSafetyIntercept;
   const [mode, setMode] = useState<VoiceMode>("unknown");
   const [status, setStatus] = useState<LiveSessionStatus>("idle");
   const [partialAssistantText, setPartialAssistantText] = useState("");
@@ -91,6 +103,16 @@ export function useFoodVoiceSession(args: {
             setPartialAssistantText(partialRef.current);
           }
           break;
+        case "safetyIntercept":
+          partialRef.current = "";
+          setPartialAssistantText("");
+          onInterceptRef.current({
+            safety: event.safety,
+            content: event.content,
+            banner: event.banner,
+            actions: event.actions
+          });
+          break;
         case "error":
           setError(event.message);
           if (event.fatal) {
@@ -102,12 +124,30 @@ export function useFoodVoiceSession(args: {
     [armIdleTimer]
   );
 
+  const gateTranscript = useCallback(
+    (text: string) => evaluateVoiceTranscript(text, getState(), language),
+    [getState, language]
+  );
+
   const start = useCallback(async () => {
     setError(null);
+
+    const stateBeforeStart = getState();
+    // Refuse to open a routine voice session while an unacknowledged crisis is on
+    // screen — the crisis resources must stay the focus.
+    if (hasUnacknowledgedCrisis(stateBeforeStart)) {
+      setStatus("idle");
+      return;
+    }
+
     setStatus("connecting");
     let token: TokenResponse;
     try {
-      const response = await fetch("/api/realtime/token", { method: "POST" });
+      const response = await fetch("/api/realtime/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId: stateBeforeStart.patient.id, crisisOpen: false })
+      });
       token = (await response.json()) as TokenResponse;
     } catch {
       token = { mode: "mock", reason: "fetch_failed" };
@@ -124,7 +164,8 @@ export function useFoodVoiceSession(args: {
           instructions: buildFoodLensInstructions(state, selectLens(state.carePlan.condition)),
           language,
           getContext,
-          onEvent: handleEvent
+          onEvent: handleEvent,
+          gateTranscript
         });
         armIdleTimer();
       } catch {
@@ -142,7 +183,7 @@ export function useFoodVoiceSession(args: {
       onEvent: handleEvent
     });
     armIdleTimer();
-  }, [armIdleTimer, getContext, getState, handleEvent, language]);
+  }, [armIdleTimer, gateTranscript, getContext, getState, handleEvent, language]);
 
   const sendUserText = useCallback((text: string) => {
     handleRef.current?.sendUserText(text);

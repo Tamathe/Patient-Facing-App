@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoState } from "@/domain/fixtures";
 import { MockHealthAiProvider } from "./mock-provider";
+import type { LiveSessionEvent } from "./types";
 
 describe("MockHealthAiProvider", () => {
   it("explains a medication using the patient medication list", async () => {
@@ -157,6 +158,30 @@ describe("MockHealthAiProvider", () => {
     expect(events).toContain("assistantTranscript");
     expect(events.indexOf("status:thinking")).toBeLessThan(events.indexOf("assistantTranscript"));
     expect(events.at(-1)).toBe("status:listening");
+    handle.close();
+  });
+
+  it("runs the safety gate on live text turns and intercepts a crisis utterance", async () => {
+    const provider = new MockHealthAiProvider();
+    const events: LiveSessionEvent[] = [];
+    const handle = await provider.openLiveSession({
+      language: "en",
+      getState: () => demoState,
+      getContext: () => ({ frameDataUrl: null, identifiedFood: null, flagTexts: [] }),
+      onEvent: (event) => events.push(event)
+    });
+
+    handle.sendUserText("I want to die");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const intercept = events.find((event) => event.type === "safetyIntercept");
+    expect(intercept).toBeDefined();
+    if (intercept && intercept.type === "safetyIntercept") {
+      expect(intercept.safety).toBe("crisis");
+      expect(intercept.actions).toContain("crisis_call_988");
+    }
+    // The mock voice bypass is closed: no spoken assistant answer is produced.
+    expect(events.some((event) => event.type === "assistantTranscript")).toBe(false);
     handle.close();
   });
 });

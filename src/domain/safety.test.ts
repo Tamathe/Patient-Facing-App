@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifySafety } from "./safety";
+import { classifySafety, normalizeSpokenReading } from "./safety";
 
 describe("classifySafety", () => {
   it("blocks medication change advice", () => {
@@ -46,9 +46,32 @@ describe("classifySafety", () => {
     expect(classifySafety("Can I stop for a day").level).toBe("blocked");
   });
 
+  it("escalates spoken and 'over' word-form dangerous readings", () => {
+    expect(classifySafety("my blood pressure is 200 over 130").level).toBe("escalate");
+    expect(classifySafety("one eighty over one twenty").level).toBe("escalate");
+    expect(classifySafety("two hundred over one ten").level).toBe("escalate");
+  });
+
+  it("still ignores implausible or non-dangerous 'over' readings", () => {
+    expect(classifySafety("my blood pressure was 150 over 95 after the stairs").level).toBe("allowed");
+    expect(classifySafety("I walked over 100 steps today").level).toBe("allowed");
+  });
+
   it("allows education questions", () => {
     const result = classifySafety("Why does blood pressure medicine matter?");
 
     expect(result.level).toBe("allowed");
+  });
+});
+
+describe("normalizeSpokenReading", () => {
+  it("rewrites spoken and digit blood-pressure phrases to S/D", () => {
+    expect(normalizeSpokenReading("200 over 130")).toBe("200/130");
+    expect(normalizeSpokenReading("one eighty over one twenty")).toBe("180/120");
+    expect(normalizeSpokenReading("ninety over sixty")).toBe("90/60");
+  });
+
+  it("leaves ordinary 'over' prose untouched", () => {
+    expect(normalizeSpokenReading("I climbed over the fence")).toBe("I climbed over the fence");
   });
 });

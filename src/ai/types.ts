@@ -1,4 +1,5 @@
 import type { AiMessageAction, AiMode, AppState, IdentifiedFood, SafetyLevel } from "@/domain/types";
+import type { RealtimeVoiceMetricsReport } from "./realtime-voice-metrics";
 
 export type HealthAiRequest = {
   mode: AiMode;
@@ -30,6 +31,13 @@ export type LiveSessionEvent =
   | { type: "status"; status: LiveSessionStatus }
   | { type: "userTranscript"; text: string; final: boolean }
   | { type: "assistantTranscript"; text: string; final: boolean }
+  | {
+      type: "safetyIntercept";
+      safety: "crisis" | "escalate" | "blocked";
+      content: string;
+      banner?: string;
+      actions: AiMessageAction[];
+    }
   | { type: "error"; message: string; fatal: boolean };
 
 export type LiveSessionContext = {
@@ -50,6 +58,7 @@ export type LiveSessionHandle = {
   updateInstructions(instructions: string): void;
   close(): void;
   getStatus(): LiveSessionStatus;
+  getMetricsReport?(): RealtimeVoiceMetricsReport;
 };
 
 export type HealthAiProvider = {
