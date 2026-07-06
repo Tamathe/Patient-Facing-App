@@ -99,7 +99,15 @@ export type ExtractedFact = {
 
 export type AiMode = "explain" | "today" | "why" | "ask" | "trouble" | "visit" | "summarize" | "food";
 
-export type AiMessageAction = "call_clinic" | "draft_message";
+export type AiMessageAction =
+  | "call_clinic"
+  | "draft_message"
+  | "crisis_call_988"
+  | "crisis_text_988"
+  | "call_emergency"
+  | "safety_plan";
+
+export type SafetyLevel = "allowed" | "escalate" | "blocked" | "crisis";
 
 export type AiMessage = {
   id: string;
@@ -107,10 +115,11 @@ export type AiMessage = {
   role: "patient" | "assistant";
   content: string;
   createdAt: string;
-  safety: "allowed" | "escalate" | "blocked";
+  safety: SafetyLevel;
   sources: string[];
   banner?: string;
   actions?: AiMessageAction[];
+  acknowledged?: boolean;
 };
 
 export type HealthBrief = {
@@ -127,7 +136,7 @@ export type HealthBrief = {
 export type AuditEvent = {
   id: string;
   patientId: string;
-  action: "created" | "updated" | "ai_generated" | "shared" | "exported" | "deleted";
+  action: "created" | "updated" | "ai_generated" | "shared" | "exported" | "deleted" | "crisis_escalated";
   label: string;
   createdAt: string;
 };

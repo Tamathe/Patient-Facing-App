@@ -97,4 +97,56 @@ describe("ConversationPanel", () => {
     expect(screen.getByRole("button", { name: "Draft a message" })).toBeInTheDocument();
     expect(screen.getByText("Based on Lisinopril, your care plan.")).toBeInTheDocument();
   });
+
+  const crisisMessage: AiMessage = {
+    id: "crisis-1",
+    mode: "trouble",
+    role: "assistant",
+    content: "Please reach out now.",
+    createdAt: "2026-07-06T12:00:00.000Z",
+    safety: "crisis",
+    sources: [],
+    actions: ["crisis_call_988", "crisis_text_988", "call_emergency", "safety_plan"]
+  };
+
+  it("renders offline-safe 988 and 911 deep links without a clinic phone", () => {
+    render(<ConversationPanel onSubmit={vi.fn()} messages={[crisisMessage]} onAcknowledgeCrisis={vi.fn()} />);
+
+    expect(screen.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
+    expect(screen.getByRole("link", { name: /Text 988/ })).toHaveAttribute("href", "sms:988");
+    expect(screen.getByRole("link", { name: /Call 911/ })).toHaveAttribute("href", "tel:911");
+  });
+
+  it("expands the safety plan block on request", async () => {
+    const user = userEvent.setup();
+    render(<ConversationPanel onSubmit={vi.fn()} messages={[crisisMessage]} onAcknowledgeCrisis={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /A few steps that can help right now/ }));
+
+    expect(screen.getByText(/You do not have to face this by yourself/)).toBeInTheDocument();
+  });
+
+  it("locks the composer until an unacknowledged crisis message is acknowledged", async () => {
+    const user = userEvent.setup();
+    const onAcknowledgeCrisis = vi.fn();
+
+    const { rerender } = render(
+      <ConversationPanel onSubmit={vi.fn()} messages={[crisisMessage]} onAcknowledgeCrisis={onAcknowledgeCrisis} />
+    );
+
+    expect(screen.getByLabelText("Message")).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /seen this/ }));
+    expect(onAcknowledgeCrisis).toHaveBeenCalledWith("crisis-1");
+
+    rerender(
+      <ConversationPanel
+        onSubmit={vi.fn()}
+        messages={[{ ...crisisMessage, acknowledged: true }]}
+        onAcknowledgeCrisis={onAcknowledgeCrisis}
+      />
+    );
+
+    expect(screen.getByLabelText("Message")).not.toBeDisabled();
+  });
 });

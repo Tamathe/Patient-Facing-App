@@ -1,8 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "@/domain/fixtures";
+import { tSafety } from "@/i18n/strings";
 import { MockHealthAiProvider } from "./mock-provider";
-import { createSafeAiResponse } from "./safety-gate";
+import { CRISIS_ACTIONS, EMERGENCY_ACTIONS, createSafeAiResponse } from "./safety-gate";
+import type { AppState } from "@/domain/types";
 import type { HealthAiProvider } from "./types";
+
+const dangerousReadingAtNow = {
+  id: "reading-1",
+  patientId: "patient-1",
+  systolic: 170,
+  diastolic: 104,
+  pulse: 76,
+  measuredAt: "2026-07-05T12:00:00.000Z",
+  contexts: ["morning" as const],
+  note: ""
+};
 
 const NOW = new Date("2026-07-05T12:00:00.000Z");
 
@@ -568,5 +581,120 @@ describe("createSafeAiResponse", () => {
     expect(response.safety).toBe("blocked");
     expect(response.banner).toContain("I cannot tell you to stop");
     expect(response.actions).toContain("call_clinic");
+  });
+
+  it("routes a self-harm disclosure to the crisis tier ahead of a dangerous stored reading", async () => {
+    const state: AppState = { ...demoState, readings: [dangerousReadingAtNow] };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "I want to die", state },
+      provider
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toBe(tSafety("en", "crisisResponse"));
+    expect(response.actions).toEqual(CRISIS_ACTIONS);
+    expect(response.sources).toEqual([]);
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("returns the Spanish crisis constant for a Spanish speaker", async () => {
+    const state: AppState = {
+      ...demoState,
+      patient: { ...demoState.patient, language: "es" }
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "no quiero estar aquí, I don't want to be here", state },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toBe(tSafety("es", "crisisResponse"));
+  });
+
+  it("does not let a co-mingled clinical question bury the crisis response", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "Your blood pressure target is under 130/80.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "ask", patientInput: "I don't want to be here, also what is my BP?", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toBe(tSafety("en", "crisisResponse"));
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("does not escalate negated self-harm phrasing to a crisis", async () => {
+    const response = await createSafeAiResponse(
+      {
+        mode: "explain",
+        patientInput: "I would never hurt myself, I just want to understand my plan",
+        state: demoState
+      },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("allowed");
+  });
+
+  it("gives urgent symptoms an emergency-tier answer with a call 911 action", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "This should not be called.",
+        safety: "allowed" as const,
+        sources: ["plan-1"]
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "I have chest pain", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.actions).toEqual(EMERGENCY_ACTIONS);
+    expect(response.actions).toContain("call_emergency");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("escalates sudden vision loss to the emergency tier with a 911 action", async () => {
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "I suddenly cannot see out of my left eye", state: demoState },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.actions).toContain("call_emergency");
+  });
+
+  it("keeps a side-effect escalation on the care-team tier", async () => {
+    const stateWithSideEffects: AppState = {
+      ...demoState,
+      medications: [{ ...demoState.medications[0], activeBarriers: ["side_effects"] }]
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "this medicine made me feel dizzy", state: stateWithSideEffects },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.actions).toEqual(["call_clinic", "draft_message"]);
+    expect(response.actions).not.toContain("call_emergency");
   });
 });

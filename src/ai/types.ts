@@ -1,4 +1,4 @@
-import type { AiMessageAction, AiMode, AppState, IdentifiedFood } from "@/domain/types";
+import type { AiMessageAction, AiMode, AppState, IdentifiedFood, SafetyLevel } from "@/domain/types";
 
 export type HealthAiRequest = {
   mode: AiMode;
@@ -10,7 +10,7 @@ export type HealthAiRequest = {
 
 export type HealthAiResponse = {
   content: string;
-  safety: "allowed" | "escalate" | "blocked";
+  safety: SafetyLevel;
   sources: string[];
   banner?: string;
   actions?: AiMessageAction[];

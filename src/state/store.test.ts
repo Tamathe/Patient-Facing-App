@@ -120,6 +120,48 @@ describe("healthReducer", () => {
     expect(next.auditEvents[0]?.createdAt).toBeTypeOf("string");
   });
 
+  it("audits an assistant crisis message as crisis_escalated instead of ai_generated", () => {
+    const next = healthReducer(demoState, {
+      type: "addAiMessage",
+      message: {
+        id: "message-crisis",
+        mode: "trouble",
+        role: "assistant",
+        content: "Please reach out now: call or text 988.",
+        createdAt: "2026-07-06T12:00:00.000Z",
+        safety: "crisis",
+        sources: [],
+        actions: ["crisis_call_988", "crisis_text_988", "call_emergency", "safety_plan"]
+      }
+    });
+
+    expect(next.aiMessages.at(-1)?.safety).toBe("crisis");
+    expect(next.auditEvents.at(-1)?.action).toBe("crisis_escalated");
+    expect(next.auditEvents.at(-1)?.label).toBe("Crisis resources shown");
+  });
+
+  it("marks a crisis message acknowledged and audits the acknowledgement", () => {
+    const withMessage = healthReducer(demoState, {
+      type: "addAiMessage",
+      message: {
+        id: "message-crisis",
+        mode: "trouble",
+        role: "assistant",
+        content: "Please reach out now.",
+        createdAt: "2026-07-06T12:00:00.000Z",
+        safety: "crisis",
+        sources: [],
+        actions: ["crisis_call_988"]
+      }
+    });
+
+    const next = healthReducer(withMessage, { type: "acknowledgeCrisis", messageId: "message-crisis" });
+
+    expect(next.aiMessages.find((message) => message.id === "message-crisis")?.acknowledged).toBe(true);
+    expect(next.auditEvents.at(-1)?.action).toBe("updated");
+    expect(next.auditEvents.at(-1)?.label).toBe("Crisis resources acknowledged");
+  });
+
   it("records an exported event through addAuditEvent for privacy actions", () => {
     const exportedEvent = recordAuditEvent(demoState.patient.id, "exported", "Data exported");
     const next = healthReducer(demoState, {

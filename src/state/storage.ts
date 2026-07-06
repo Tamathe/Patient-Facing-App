@@ -2,6 +2,7 @@ import { demoState } from "@/domain/fixtures";
 import type {
   AppState,
   AiMessage,
+  AiMessageAction,
   AuditEvent,
   CareContextItem,
   CarePlan,
@@ -338,9 +339,40 @@ function isAiMessage(value: unknown): value is AiMessage {
     (value.role === "patient" || value.role === "assistant") &&
     hasString(value, "content") &&
     hasString(value, "createdAt") &&
-    (value.safety === "allowed" || value.safety === "escalate" || value.safety === "blocked") &&
+    (value.safety === "allowed" ||
+      value.safety === "escalate" ||
+      value.safety === "blocked" ||
+      value.safety === "crisis") &&
     isArrayOfStrings(value.sources)
   );
+}
+
+function isAiMessageAction(value: unknown): value is AiMessageAction {
+  return (
+    value === "call_clinic" ||
+    value === "draft_message" ||
+    value === "crisis_call_988" ||
+    value === "crisis_text_988" ||
+    value === "call_emergency" ||
+    value === "safety_plan"
+  );
+}
+
+// Actions are not part of the isAiMessage guard (they were never validated), so
+// rather than introduce a new rejection vector we lenient-filter unknown action
+// strings out of persisted messages. A rolled-back build that wrote a newer
+// action value therefore loads cleanly instead of resetting to demoState.
+function sanitizeAiMessageActions(messages: AiMessage[]): AiMessage[] {
+  return messages.map((message) => {
+    if (!Array.isArray(message.actions)) {
+      return message;
+    }
+    const filtered = message.actions.filter(isAiMessageAction);
+    if (filtered.length === message.actions.length) {
+      return message;
+    }
+    return { ...message, actions: filtered };
+  });
 }
 
 function isAuditEvent(value: unknown): value is AuditEvent {
@@ -354,7 +386,8 @@ function isAuditEvent(value: unknown): value is AuditEvent {
       value.action === "ai_generated" ||
       value.action === "shared" ||
       value.action === "exported" ||
-      value.action === "deleted") &&
+      value.action === "deleted" ||
+      value.action === "crisis_escalated") &&
     hasString(value, "createdAt")
   );
 }
@@ -492,11 +525,13 @@ export function loadStoredState(): AppState {
       const sanitizedMealLog = sanitizeMealLog(parsed.mealLog, parsed.patient.id);
       const medicationIds = new Set(parsed.medications.map((medication) => medication.id));
       const sanitizedDoseEvents = sanitizeDoseEvents(parsed.doseEvents, parsed.patient.id, medicationIds);
+      const sanitizedAiMessages = sanitizeAiMessageActions(parsed.aiMessages);
       const sanitizedState: AppState = {
         ...parsed,
         tasks: sanitizedTasks,
         mealLog: sanitizedMealLog,
-        doseEvents: sanitizedDoseEvents
+        doseEvents: sanitizedDoseEvents,
+        aiMessages: sanitizedAiMessages
       };
 
       if (!isValidAppState(sanitizedState)) {
@@ -507,7 +542,8 @@ export function loadStoredState(): AppState {
       if (
         JSON.stringify(parsed.tasks) !== JSON.stringify(sanitizedState.tasks) ||
         JSON.stringify(parsed.mealLog) !== JSON.stringify(sanitizedState.mealLog) ||
-        JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents)
+        JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents) ||
+        JSON.stringify(parsed.aiMessages) !== JSON.stringify(sanitizedState.aiMessages)
       ) {
         safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));
       }

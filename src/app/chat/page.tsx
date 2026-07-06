@@ -80,6 +80,8 @@ export default function ChatPage() {
         clinic={{ name: state.patient.primaryClinicName, phone: state.patient.primaryClinicPhone }}
         careTeamDraft={buildCareTeamMessage(state)}
         describeSource={describeSource}
+        language={state.patient.language}
+        onAcknowledgeCrisis={(messageId) => dispatch({ type: "acknowledgeCrisis", messageId })}
       />
     </AppShell>
   );

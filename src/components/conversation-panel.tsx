@@ -1,7 +1,8 @@
 "use client";
 
-import { Phone, Send, Share2 } from "lucide-react";
+import { LifeBuoy, MessageCircle, Phone, Send, Share2, ShieldAlert } from "lucide-react";
 import React, { useState } from "react";
+import { tSafety, type Language } from "@/i18n/strings";
 import type { AiMessage, AiMode } from "@/domain/types";
 
 const modes: Array<{ mode: AiMode; label: string }> = [
@@ -18,19 +19,22 @@ const modes: Array<{ mode: AiMode; label: string }> = [
 const safetyGuidanceText: Record<AiMessage["safety"], string> = {
   allowed: "Safe to continue",
   escalate: "Escalate to care now",
-  blocked: "Blocked for safety"
+  blocked: "Blocked for safety",
+  crisis: "Crisis support — reach out now"
 };
 
 const safetyGuidanceClass: Record<AiMessage["safety"], string> = {
   allowed: "text-emerald-700",
   escalate: "text-amber-700",
-  blocked: "text-rose-700"
+  blocked: "text-rose-700",
+  crisis: "text-rose-800"
 };
 
 const bannerClass: Record<AiMessage["safety"], string> = {
   allowed: "border-ink/15 bg-calm text-ink",
   escalate: "border-amber-300 bg-amber-50 text-amber-900",
-  blocked: "border-rose-300 bg-rose-50 text-rose-900"
+  blocked: "border-rose-300 bg-rose-50 text-rose-900",
+  crisis: "border-rose-400 bg-rose-100 text-rose-900"
 };
 
 type ConversationPanelProps = {
@@ -39,12 +43,28 @@ type ConversationPanelProps = {
   clinic?: { name: string; phone: string };
   careTeamDraft?: string;
   describeSource?: (id: string) => string | null;
+  language?: Language;
+  onAcknowledgeCrisis?: (messageId: string) => void;
 };
 
-export function ConversationPanel({ messages, onSubmit, clinic, careTeamDraft, describeSource }: ConversationPanelProps) {
+export function ConversationPanel({
+  messages,
+  onSubmit,
+  clinic,
+  careTeamDraft,
+  describeSource,
+  language = "en",
+  onAcknowledgeCrisis
+}: ConversationPanelProps) {
   const [mode, setMode] = useState<AiMode>("explain");
   const [input, setInput] = useState("");
   const [draftShared, setDraftShared] = useState(false);
+  const [openSafetyPlanId, setOpenSafetyPlanId] = useState<string | null>(null);
+
+  const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const crisisLock = Boolean(
+    latestAssistant && latestAssistant.safety === "crisis" && !latestAssistant.acknowledged
+  );
 
   async function shareDraft() {
     if (!careTeamDraft) {
@@ -79,6 +99,83 @@ export function ConversationPanel({ messages, onSubmit, clinic, careTeamDraft, d
     return null;
   }
 
+  function renderActions(message: AiMessage) {
+    const actions = message.actions ?? [];
+    if (message.role !== "assistant" || actions.length === 0) {
+      return null;
+    }
+
+    return (
+      <>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {actions.includes("crisis_call_988") ? (
+            <a
+              className="inline-flex min-h-12 items-center gap-2 rounded-control bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+              href="tel:988"
+            >
+              <Phone aria-hidden="true" className="h-4 w-4" />
+              {tSafety(language, "crisisCall988")}
+            </a>
+          ) : null}
+          {actions.includes("crisis_text_988") ? (
+            <a
+              className="inline-flex min-h-12 items-center gap-2 rounded-control border border-rose-500 px-4 py-2 text-sm font-semibold text-rose-700"
+              href="sms:988"
+            >
+              <MessageCircle aria-hidden="true" className="h-4 w-4" />
+              {tSafety(language, "crisisText988")}
+            </a>
+          ) : null}
+          {actions.includes("call_emergency") ? (
+            <a
+              className="inline-flex min-h-12 items-center gap-2 rounded-control bg-rose-700 px-4 py-2 text-sm font-semibold text-white"
+              href="tel:911"
+            >
+              <ShieldAlert aria-hidden="true" className="h-4 w-4" />
+              {tSafety(language, "callEmergency")}
+            </a>
+          ) : null}
+          {actions.includes("safety_plan") ? (
+            <button
+              className="inline-flex min-h-12 items-center gap-2 rounded-control border border-rose-500 px-4 py-2 text-sm font-semibold text-rose-700"
+              onClick={() => setOpenSafetyPlanId((current) => (current === message.id ? null : message.id))}
+              type="button"
+              aria-expanded={openSafetyPlanId === message.id}
+            >
+              <LifeBuoy aria-hidden="true" className="h-4 w-4" />
+              {tSafety(language, "safetyPlanLabel")}
+            </button>
+          ) : null}
+          {actions.includes("call_clinic") && clinic && clinic.phone ? (
+            <a
+              className="inline-flex min-h-11 items-center gap-2 rounded-control bg-care px-4 py-2 text-sm font-semibold text-white"
+              href={`tel:${clinic.phone}`}
+            >
+              <Phone aria-hidden="true" className="h-4 w-4" />
+              Call {clinic.name}
+            </a>
+          ) : null}
+          {actions.includes("draft_message") && careTeamDraft ? (
+            <button
+              className="inline-flex min-h-11 items-center gap-2 rounded-control border border-care px-4 py-2 text-sm font-semibold text-care"
+              onClick={shareDraft}
+              type="button"
+            >
+              <Share2 aria-hidden="true" className="h-4 w-4" />
+              Draft a message
+            </button>
+          ) : null}
+        </div>
+        {actions.includes("safety_plan") && openSafetyPlanId === message.id ? (
+          <div className="mt-2 rounded-control border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+            <p className="font-semibold">{tSafety(language, "safetyPlanLabel")}</p>
+            <p className="mt-1 leading-6">{tSafety(language, "safetyPlanBody")}</p>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap gap-2">
@@ -105,29 +202,7 @@ export function ConversationPanel({ messages, onSubmit, clinic, careTeamDraft, d
               </p>
             ) : null}
             <p>{message.content}</p>
-            {message.role === "assistant" && message.actions && message.actions.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {message.actions.includes("call_clinic") && clinic && clinic.phone ? (
-                  <a
-                    className="inline-flex min-h-11 items-center gap-2 rounded-control bg-care px-4 py-2 text-sm font-semibold text-white"
-                    href={`tel:${clinic.phone}`}
-                  >
-                    <Phone aria-hidden="true" className="h-4 w-4" />
-                    Call {clinic.name}
-                  </a>
-                ) : null}
-                {message.actions.includes("draft_message") && careTeamDraft ? (
-                  <button
-                    className="inline-flex min-h-11 items-center gap-2 rounded-control border border-care px-4 py-2 text-sm font-semibold text-care"
-                    onClick={shareDraft}
-                    type="button"
-                  >
-                    <Share2 aria-hidden="true" className="h-4 w-4" />
-                    Draft a message
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
+            {renderActions(message)}
             {message.role === "assistant" && draftShared && message.actions?.includes("draft_message") ? (
               <p className="mt-2 text-xs text-ink/60">Draft ready — check your share sheet or clipboard, then send it to your team.</p>
             ) : null}
@@ -140,8 +215,25 @@ export function ConversationPanel({ messages, onSubmit, clinic, careTeamDraft, d
           </article>
         ))}
       </div>
+      {crisisLock && latestAssistant ? (
+        <div className="grid gap-2 rounded-control border border-rose-300 bg-rose-50 p-3">
+          <p className="text-sm font-medium text-rose-900">
+            The message box is paused so the support options above stay in view. When you are ready, you can continue.
+          </p>
+          <button
+            className="inline-flex min-h-12 items-center justify-center rounded-control border border-rose-600 bg-white px-4 py-2 text-sm font-semibold text-rose-700"
+            onClick={() => onAcknowledgeCrisis?.(latestAssistant.id)}
+            type="button"
+          >
+            {tSafety(language, "crisisAcknowledge")}
+          </button>
+        </div>
+      ) : null}
       <form
         action={() => {
+          if (crisisLock) {
+            return;
+          }
           const trimmed = input.trim();
           if (trimmed.length === 0) {
             return;
@@ -154,12 +246,17 @@ export function ConversationPanel({ messages, onSubmit, clinic, careTeamDraft, d
         <label className="grid gap-1 text-sm font-medium">
           Message
           <textarea
-            className="min-h-24 rounded-control border border-ink/20 px-3 py-2"
+            className="min-h-24 rounded-control border border-ink/20 px-3 py-2 disabled:bg-ink/5"
+            disabled={crisisLock}
             onChange={(event) => setInput(event.target.value)}
             value={input}
           />
         </label>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-control bg-care px-4 py-2 font-semibold text-white" type="submit">
+        <button
+          className="mt-3 inline-flex items-center gap-2 rounded-control bg-care px-4 py-2 font-semibold text-white disabled:opacity-50"
+          disabled={crisisLock}
+          type="submit"
+        >
           <Send aria-hidden="true" className="h-4 w-4" />
           Send
         </button>

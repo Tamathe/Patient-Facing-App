@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foodLensStrings, t, type FoodLensStringKey } from "./strings";
+import { foodLensStrings, safetyStrings, t, tSafety } from "./strings";
 
 describe("t", () => {
   it("interpolates variables", () => {
@@ -18,9 +18,17 @@ describe("t", () => {
 });
 
 describe("locale parity", () => {
-  it("defines every key in both locales", () => {
-    const enKeys = Object.keys(foodLensStrings.en) as FoodLensStringKey[];
-    const esKeys = Object.keys(foodLensStrings.es) as FoodLensStringKey[];
+  const catalogs = { foodLensStrings, safetyStrings };
+
+  it.each(Object.entries(catalogs))("defines every %s key in both locales", (_name, catalog) => {
+    const enKeys = Object.keys(catalog.en);
+    const esKeys = Object.keys(catalog.es);
     expect(new Set(esKeys)).toEqual(new Set(enKeys));
+  });
+
+  it("returns Spanish safety strings with equal urgency", () => {
+    expect(tSafety("es", "callEmergency")).toBe("Llama al 911");
+    expect(tSafety("es", "crisisResponse")).toContain("988");
+    expect(tSafety("es", "crisisResponse")).toContain("911");
   });
 });

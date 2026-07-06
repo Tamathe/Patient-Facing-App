@@ -130,3 +130,64 @@ export function t(language: Language, key: FoodLensStringKey, vars?: Record<stri
     return value === undefined ? match : String(value);
   });
 }
+
+export type SafetyStringKey =
+  | "crisisResponse"
+  | "crisisCall988"
+  | "crisisText988"
+  | "callEmergency"
+  | "safetyPlanLabel"
+  | "safetyPlanBody"
+  | "crisisAcknowledge"
+  | "emergencyResponseSuffix"
+  | "groundingFallback"
+  | "groundingFallbackBanner"
+  | "voiceInterceptNotice";
+
+export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = {
+  en: {
+    crisisResponse:
+      "It sounds like you may be going through something very painful right now, and you deserve real support from a person. This is more than I can help with safely on my own. Please reach out right now: call or text 988 to reach the Suicide & Crisis Lifeline — it is free, confidential, and open every hour of every day. If you are in immediate danger, call 911. You are not alone, and help is available.",
+    crisisCall988: "Call 988 — Crisis Lifeline",
+    crisisText988: "Text 988",
+    callEmergency: "Call 911",
+    safetyPlanLabel: "A few steps that can help right now",
+    safetyPlanBody:
+      "You do not have to face this by yourself. If you can, tell someone you trust what is happening. Move to a safer space and put anything you could use to hurt yourself out of reach. Stay on the line with 988 — they will stay with you. If things feel unsafe, call 911.",
+    crisisAcknowledge: "I've seen this — continue",
+    emergencyResponseSuffix:
+      "If this may be a medical emergency, call 911 now. I can help you share what is happening with your care team.",
+    groundingFallback:
+      "I could not confirm that answer against your own records, so I do not want to guess. Please contact your care team and they can help with this directly.",
+    groundingFallbackBanner: "This answer was replaced because it was not backed by your records.",
+    voiceInterceptNotice: "I paused here for your safety."
+  },
+  es: {
+    crisisResponse:
+      "Parece que estás pasando por algo muy doloroso ahora mismo, y mereces apoyo real de una persona. Esto es más de lo que puedo ayudar de forma segura por mi cuenta. Por favor, busca ayuda ahora mismo: llama o envía un mensaje de texto al 988 para comunicarte con la Línea de Crisis y Suicidio — es gratis, confidencial y está disponible a toda hora, todos los días. Si estás en peligro inmediato, llama al 911. No estás solo, y hay ayuda disponible.",
+    crisisCall988: "Llama al 988 — Línea de Crisis",
+    crisisText988: "Envía un texto al 988",
+    callEmergency: "Llama al 911",
+    safetyPlanLabel: "Unos pasos que pueden ayudar ahora mismo",
+    safetyPlanBody:
+      "No tienes que enfrentar esto solo. Si puedes, dile a alguien de confianza lo que está pasando. Ve a un lugar más seguro y aleja cualquier cosa que podrías usar para lastimarte. Quédate en la línea con el 988 — se quedarán contigo. Si algo se siente inseguro, llama al 911.",
+    crisisAcknowledge: "Ya lo vi — continuar",
+    emergencyResponseSuffix:
+      "Si esto puede ser una emergencia médica, llama al 911 ahora. Puedo ayudarte a compartir lo que está pasando con tu equipo de salud.",
+    groundingFallback:
+      "No pude confirmar esa respuesta con tus propios registros, así que no quiero adivinar. Por favor, comunícate con tu equipo de salud y ellos pueden ayudarte con esto directamente.",
+    groundingFallbackBanner: "Esta respuesta fue reemplazada porque no estaba respaldada por tus registros.",
+    voiceInterceptNotice: "Hice una pausa aquí por tu seguridad."
+  }
+};
+
+export function tSafety(language: Language, key: SafetyStringKey, vars?: Record<string, string | number>): string {
+  const template = safetyStrings[language]?.[key] ?? safetyStrings.en[key];
+  if (!vars) {
+    return template;
+  }
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const value = vars[name];
+    return value === undefined ? match : String(value);
+  });
+}

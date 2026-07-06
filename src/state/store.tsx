@@ -30,6 +30,7 @@ export type HealthAction =
   | { type: "addContextItem"; item: CareContextItem; facts: ExtractedFact[] }
   | { type: "confirmFact"; factId: string }
   | { type: "addAiMessage"; message: AiMessage }
+  | { type: "acknowledgeCrisis"; messageId: string }
   | { type: "addAuditEvent"; event: AuditEvent }
   | { type: "addMealLogEntry"; entry: MealLogEntry }
   | { type: "logDose"; event: DoseEvent }
@@ -73,10 +74,25 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       };
     }
     case "addAiMessage": {
+      const isCrisis = action.message.role === "assistant" && action.message.safety === "crisis";
+      // A crisis message cannot persist without its audit record, so it audits as
+      // "crisis_escalated" rather than the generic ai_generated event.
+      const auditEvent = isCrisis
+        ? recordAuditEvent(state.patient.id, "crisis_escalated", "Crisis resources shown")
+        : recordAuditEvent(state.patient.id, "ai_generated", "AI response generated");
       return {
         ...state,
         aiMessages: [...state.aiMessages, action.message],
-        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "ai_generated", "AI response generated")]
+        auditEvents: [...state.auditEvents, auditEvent]
+      };
+    }
+    case "acknowledgeCrisis": {
+      return {
+        ...state,
+        aiMessages: state.aiMessages.map((message) =>
+          message.id === action.messageId ? { ...message, acknowledged: true } : message
+        ),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Crisis resources acknowledged")]
       };
     }
     case "addAuditEvent": {

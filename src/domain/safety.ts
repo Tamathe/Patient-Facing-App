@@ -1,7 +1,17 @@
+import { screenCrisisRedFlags, type CrisisScreeningResult } from "./crisis-red-flags";
+
 export type SafetyClassification = {
   level: "allowed" | "escalate" | "blocked";
   response: string;
 };
+
+// The public F4 crisis symbol: deterministic self-harm / acute-danger / vision
+// red-flag screening that the safety gate and voice gate run before anything
+// else. `classifySafety` stays a 3-level classifier because reading-note
+// consumers depend on its exact semantics.
+export function classifyCrisis(input: string): CrisisScreeningResult {
+  return screenCrisisRedFlags(input);
+}
 
 const medicationChangePatterns = [
   /stop taking/i,

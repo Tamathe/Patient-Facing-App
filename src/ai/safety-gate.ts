@@ -1,13 +1,25 @@
-import { classifySafety } from "@/domain/safety";
+import { classifyCrisis, classifySafety } from "@/domain/safety";
+import { crisisTierForDomain } from "@/domain/crisis-red-flags";
 import { findRecentClinicalReading } from "@/domain/recent-clinical-reading";
+import { tSafety, type Language } from "@/i18n/strings";
 import { inferAiMode } from "./intent";
 import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./types";
 import type { AiMessageAction, HomeReading, Medication } from "@/domain/types";
 
-const CARE_TEAM_ACTIONS: AiMessageAction[] = ["call_clinic", "draft_message"];
+export const CARE_TEAM_ACTIONS: AiMessageAction[] = ["call_clinic", "draft_message"];
+export const CRISIS_ACTIONS: AiMessageAction[] = [
+  "crisis_call_988",
+  "crisis_text_988",
+  "call_emergency",
+  "safety_plan"
+];
+export const EMERGENCY_ACTIONS: AiMessageAction[] = ["call_emergency", "call_clinic", "draft_message"];
+
+type EscalationTier = "emergency" | "care_team";
 
 type SafetyDecision =
-  | { kind: "hard_escalate"; message: string; sources: string[] }
+  | { kind: "crisis_escalate" }
+  | { kind: "hard_escalate"; tier: EscalationTier; message: string; sources: string[] }
   | { kind: "soft_escalate"; message: string; sources: string[] }
   | { kind: "soft_block"; message: string; sources: string[] }
   | { kind: "allowed" };
@@ -37,6 +49,28 @@ function dedupe(sources: string[]): string[] {
 // (the escalation is the whole answer); clinic-threshold readings and dose-change
 // requests are "soft" (still answer the question, but attach a prominent banner).
 function decideSafety(request: HealthAiRequest): SafetyDecision {
+  const language = request.state.patient.language;
+
+  // The literal first statement of the gate: a self-harm disclosure short-circuits
+  // to the crisis tier (provider never called); sudden vision loss or acute danger
+  // escalates to the emergency tier. Running this before the stored-reading block
+  // is what stops "my face is drooping" from being buried under a threshold reading.
+  const crisis = classifyCrisis(request.patientInput);
+  if (crisis.matched) {
+    const tier = crisisTierForDomain(crisis.domain);
+    if (tier === "crisis") {
+      return { kind: "crisis_escalate" };
+    }
+    if (tier === "emergency") {
+      return {
+        kind: "hard_escalate",
+        tier: "emergency",
+        message: `Some signs need urgent medical attention. ${tSafety(language, "emergencyResponseSuffix")}`,
+        sources: []
+      };
+    }
+  }
+
   const inputSafety = classifySafety(request.patientInput);
   const latestReading = getLatestReading(request.state.readings);
   const medicationWithSideEffects = findMedicationWithSideEffects(request.state.medications);
@@ -49,7 +83,7 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
     const { reading, bloodPressureInsight, noteSafety, numericSafety } = recentClinicalReading;
 
     if (noteSafety.level === "escalate") {
-      return { kind: "hard_escalate", message: noteSafety.response, sources: [reading.id] };
+      return { kind: "hard_escalate", tier: "emergency", message: noteSafety.response, sources: [reading.id] };
     }
 
     if (bloodPressureInsight.escalation === "clinic") {
@@ -61,7 +95,7 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
     }
 
     if (numericSafety.level === "escalate") {
-      return { kind: "hard_escalate", message: numericSafety.response, sources: [reading.id] };
+      return { kind: "hard_escalate", tier: "emergency", message: numericSafety.response, sources: [reading.id] };
     }
 
     if (noteSafety.level === "blocked") {
@@ -73,7 +107,7 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
     const noteSafety = classifySafety(latestReading.note);
 
     if (noteSafety.level === "escalate") {
-      return { kind: "hard_escalate", message: noteSafety.response, sources: [latestReading.id] };
+      return { kind: "hard_escalate", tier: "emergency", message: noteSafety.response, sources: [latestReading.id] };
     }
 
     if (noteSafety.level === "blocked") {
@@ -82,12 +116,13 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
   }
 
   if (inputSafety.level === "escalate") {
-    return { kind: "hard_escalate", message: inputSafety.response, sources: [] };
+    return { kind: "hard_escalate", tier: "emergency", message: inputSafety.response, sources: [] };
   }
 
   if (medicationWithSideEffects && mentionsSideEffectConcern(request.patientInput)) {
     return {
       kind: "hard_escalate",
+      tier: "care_team",
       message: `${medicationWithSideEffects.name} is marked with active side effects. I cannot diagnose the cause, but I can help you contact your care team and share this symptom pattern with the latest readings.`,
       sources: [medicationWithSideEffects.id]
     };
@@ -109,6 +144,19 @@ export async function createSafeAiResponse(
   provider: HealthAiProvider
 ): Promise<HealthAiResponse> {
   const decision = decideSafety(request);
+  const language: Language = request.state.patient.language;
+
+  // A crisis short-circuits above everything else: the provider is never
+  // constructed or called, and the reply is the fixed human-authored crisis
+  // constant plus the 988/911/safety-plan actions.
+  if (decision.kind === "crisis_escalate") {
+    return {
+      content: tSafety(language, "crisisResponse"),
+      safety: "crisis",
+      sources: [],
+      actions: CRISIS_ACTIONS
+    };
+  }
 
   // Hard escalations are emergencies: the escalation is the whole answer and the
   // provider is never called, so we cannot generate a normal reply alongside it.
@@ -117,7 +165,7 @@ export async function createSafeAiResponse(
       content: decision.message,
       safety: "escalate",
       sources: decision.sources,
-      actions: CARE_TEAM_ACTIONS
+      actions: decision.tier === "emergency" ? EMERGENCY_ACTIONS : CARE_TEAM_ACTIONS
     };
   }
 

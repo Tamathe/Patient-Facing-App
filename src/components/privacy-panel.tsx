@@ -14,7 +14,8 @@ const actionLabelMap: Record<AuditEvent["action"], string> = {
   ai_generated: "AI response generated",
   shared: "Shared with care team",
   exported: "Data exported",
-  deleted: "Demo data deleted"
+  deleted: "Demo data deleted",
+  crisis_escalated: "Crisis resources shown"
 };
 
 type PrivacyPanelProps = {

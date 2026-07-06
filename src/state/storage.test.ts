@@ -380,4 +380,101 @@ describe("storage", () => {
 
     expect(loaded.carePlan.condition).toBe("diabetes");
   });
+
+  it("accepts a crisis ai message and crisis_escalated audit event", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        aiMessages: [
+          {
+            id: "message-crisis",
+            mode: "trouble",
+            role: "assistant",
+            content: "Please reach out now: call or text 988.",
+            createdAt: "2026-07-06T12:00:00.000Z",
+            safety: "crisis",
+            sources: [],
+            actions: ["crisis_call_988", "crisis_text_988", "call_emergency", "safety_plan"]
+          }
+        ],
+        auditEvents: [
+          {
+            id: "audit-crisis",
+            patientId: "patient-1",
+            action: "crisis_escalated",
+            label: "Crisis resources shown",
+            createdAt: "2026-07-06T12:00:00.000Z"
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.aiMessages).toHaveLength(1);
+    expect(loaded.aiMessages[0].safety).toBe("crisis");
+    expect(loaded.aiMessages[0].actions).toEqual([
+      "crisis_call_988",
+      "crisis_text_988",
+      "call_emergency",
+      "safety_plan"
+    ]);
+    expect(loaded.auditEvents[0].action).toBe("crisis_escalated");
+  });
+
+  it("filters unknown ai message action strings without resetting the state", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        patient: { ...demoState.patient, name: "Kept Patient", preferredName: "Kept" },
+        aiMessages: [
+          {
+            id: "message-mixed",
+            mode: "trouble",
+            role: "assistant",
+            content: "Here are your options.",
+            createdAt: "2026-07-06T12:00:00.000Z",
+            safety: "crisis",
+            sources: [],
+            actions: ["crisis_call_988", "totally_made_up", "draft_message"]
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Kept Patient");
+    expect(loaded.aiMessages[0].actions).toEqual(["crisis_call_988", "draft_message"]);
+  });
+
+  it("loads a pre-crisis persisted payload without data loss", () => {
+    const legacy = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Legacy Owner", preferredName: "Legacy" },
+      aiMessages: [
+        {
+          id: "message-legacy",
+          mode: "why",
+          role: "assistant",
+          content: "Lisinopril helps lower your blood pressure.",
+          createdAt: "2026-07-01T12:00:00.000Z",
+          safety: "allowed",
+          sources: ["med-1"],
+          actions: ["call_clinic", "draft_message"]
+        }
+      ]
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Legacy Owner");
+    expect(loaded.aiMessages).toHaveLength(1);
+    expect(loaded.aiMessages[0].actions).toEqual(["call_clinic", "draft_message"]);
+    expect(loaded.readings).toHaveLength(demoState.readings.length);
+    expect(loaded.doseEvents).toHaveLength(demoState.doseEvents.length);
+  });
 });
