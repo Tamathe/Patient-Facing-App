@@ -15,6 +15,7 @@ import type {
   MealLogEntry,
   Medication,
   MedicationBarrier,
+  MedicationFill,
   NutritionFacts,
   PatientProfile,
   MeasurementContext,
@@ -262,6 +263,19 @@ function isDoseEvent(value: unknown): value is DoseEvent {
   );
 }
 
+function isMedicationFill(value: unknown): value is MedicationFill {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "patientId") &&
+    hasString(value, "medicationId") &&
+    hasString(value, "medicationName") &&
+    hasString(value, "dateOfService") &&
+    hasNumber(value, "daysSupply") &&
+    isEvidenceStatus(value.source)
+  );
+}
+
 function isMedication(value: unknown): value is Medication {
   return (
     isObject(value) &&
@@ -426,10 +440,11 @@ function isPatient(value: unknown): value is PatientProfile {
   );
 }
 
-type PersistedAppState = Omit<AppState, "tasks" | "mealLog" | "doseEvents"> & {
+type PersistedAppState = Omit<AppState, "tasks" | "mealLog" | "doseEvents" | "medicationFills"> & {
   tasks: unknown;
   mealLog: unknown;
   doseEvents: unknown;
+  medicationFills: unknown;
 };
 
 function sanitizeTasks(tasks: unknown): TaskItem[] {
@@ -456,6 +471,17 @@ function sanitizeDoseEvents(doseEvents: unknown, patientId: string, medicationId
   return doseEvents.filter(
     (entry): entry is DoseEvent =>
       isDoseEvent(entry) && entry.patientId === patientId && medicationIds.has(entry.medicationId)
+  );
+}
+
+function sanitizeMedicationFills(fills: unknown, patientId: string, medicationIds: Set<string>): MedicationFill[] {
+  if (!Array.isArray(fills)) {
+    return [];
+  }
+
+  return fills.filter(
+    (entry): entry is MedicationFill =>
+      isMedicationFill(entry) && entry.patientId === patientId && medicationIds.has(entry.medicationId)
   );
 }
 
@@ -499,7 +525,11 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return Array.isArray(value.doseEvents) && value.doseEvents.every(isDoseEvent);
+  if (!Array.isArray(value.doseEvents) || !value.doseEvents.every(isDoseEvent)) {
+    return false;
+  }
+
+  return Array.isArray(value.medicationFills) && value.medicationFills.every(isMedicationFill);
 }
 
 export function loadStoredState(): AppState {
@@ -520,17 +550,22 @@ export function loadStoredState(): AppState {
     if (isObject(parsed) && parsed.doseEvents === undefined) {
       parsed.doseEvents = [];
     }
+    if (isObject(parsed) && parsed.medicationFills === undefined) {
+      parsed.medicationFills = [];
+    }
     if (isValidCoreAppState(parsed)) {
       const sanitizedTasks = sanitizeTasks(parsed.tasks);
       const sanitizedMealLog = sanitizeMealLog(parsed.mealLog, parsed.patient.id);
       const medicationIds = new Set(parsed.medications.map((medication) => medication.id));
       const sanitizedDoseEvents = sanitizeDoseEvents(parsed.doseEvents, parsed.patient.id, medicationIds);
+      const sanitizedMedicationFills = sanitizeMedicationFills(parsed.medicationFills, parsed.patient.id, medicationIds);
       const sanitizedAiMessages = sanitizeAiMessageActions(parsed.aiMessages);
       const sanitizedState: AppState = {
         ...parsed,
         tasks: sanitizedTasks,
         mealLog: sanitizedMealLog,
         doseEvents: sanitizedDoseEvents,
+        medicationFills: sanitizedMedicationFills,
         aiMessages: sanitizedAiMessages
       };
 
@@ -543,6 +578,7 @@ export function loadStoredState(): AppState {
         JSON.stringify(parsed.tasks) !== JSON.stringify(sanitizedState.tasks) ||
         JSON.stringify(parsed.mealLog) !== JSON.stringify(sanitizedState.mealLog) ||
         JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents) ||
+        JSON.stringify(parsed.medicationFills) !== JSON.stringify(sanitizedState.medicationFills) ||
         JSON.stringify(parsed.aiMessages) !== JSON.stringify(sanitizedState.aiMessages)
       ) {
         safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));

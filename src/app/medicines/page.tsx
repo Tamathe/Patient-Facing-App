@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/app-shell";
 import { MedicationCard } from "@/components/medication-card";
+import { PdcCard } from "@/components/pdc-card";
 import { useHealthState } from "@/state/store";
 import Link from "next/link";
 
@@ -38,6 +39,7 @@ export default function MedicinesPage() {
             />
           ))
         )}
+        <PdcCard state={state} onLogFill={(fill) => dispatch({ type: "logMedicationFill", fill })} />
       </div>
     </AppShell>
   );

@@ -44,6 +44,7 @@ export default function PrivacyPage() {
           clearStoredState();
           dispatch({ type: "deleteDemoData" });
         }}
+        onLoadBrentDemo={() => dispatch({ type: "resetDemo", patient: "brent" })}
       />
     </AppShell>
   );

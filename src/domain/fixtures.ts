@@ -104,7 +104,8 @@ export const demoState: AppState = {
       barrier: null,
       recordedAt: "2026-07-04T08:05:00.000Z"
     }
-  ]
+  ],
+  medicationFills: []
 };
 
 export const deletedDemoState: AppState = {
@@ -137,7 +138,8 @@ export const deletedDemoState: AppState = {
   aiMessages: [],
   auditEvents: [],
   mealLog: [],
-  doseEvents: []
+  doseEvents: [],
+  medicationFills: []
 };
 
 export const brentState: AppState = {
@@ -721,6 +723,44 @@ export const brentState: AppState = {
       status: "taken",
       barrier: null,
       recordedAt: "2026-07-04T08:00:00.000Z"
+    }
+  ],
+  medicationFills: [
+    {
+      id: "fill-brent-metformin-1",
+      patientId: "patient-brent",
+      medicationId: "med-metformin",
+      medicationName: "Metformin",
+      dateOfService: "2026-01-05",
+      daysSupply: 30,
+      source: "patient_reported"
+    },
+    {
+      id: "fill-brent-metformin-2",
+      patientId: "patient-brent",
+      medicationId: "med-metformin",
+      medicationName: "Metformin",
+      dateOfService: "2026-02-20",
+      daysSupply: 30,
+      source: "patient_reported"
+    },
+    {
+      id: "fill-brent-metformin-3",
+      patientId: "patient-brent",
+      medicationId: "med-metformin",
+      medicationName: "Metformin",
+      dateOfService: "2026-04-10",
+      daysSupply: 30,
+      source: "patient_reported"
+    },
+    {
+      id: "fill-brent-metformin-4",
+      patientId: "patient-brent",
+      medicationId: "med-metformin",
+      medicationName: "Metformin",
+      dateOfService: "2026-06-01",
+      daysSupply: 30,
+      source: "patient_reported"
     }
   ]
 };

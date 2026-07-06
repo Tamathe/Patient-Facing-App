@@ -450,6 +450,63 @@ describe("storage", () => {
     expect(loaded.aiMessages[0].actions).toEqual(["crisis_call_988", "draft_message"]);
   });
 
+  it("backfills a pre-fill payload with an empty medicationFills array", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Pre-Fill Patient", preferredName: "Pre" }
+    };
+    delete legacy.medicationFills;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Pre-Fill Patient");
+    expect(loaded.medicationFills).toEqual([]);
+    expect(loaded.doseEvents).toHaveLength(demoState.doseEvents.length);
+  });
+
+  it("keeps valid medication fills and drops foreign or unknown-medication fills", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        medicationFills: [
+          {
+            id: "fill-valid",
+            patientId: "patient-1",
+            medicationId: "med-1",
+            medicationName: "Lisinopril",
+            dateOfService: "2026-01-05",
+            daysSupply: 30,
+            source: "patient_reported"
+          },
+          {
+            id: "fill-foreign",
+            patientId: "another-patient",
+            medicationId: "med-1",
+            medicationName: "Lisinopril",
+            dateOfService: "2026-01-05",
+            daysSupply: 30,
+            source: "patient_reported"
+          },
+          {
+            id: "fill-unknown-med",
+            patientId: "patient-1",
+            medicationId: "med-does-not-exist",
+            medicationName: "Ghost",
+            dateOfService: "2026-01-05",
+            daysSupply: 30,
+            source: "patient_reported"
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.medicationFills.map((fill) => fill.id)).toEqual(["fill-valid"]);
+  });
+
   it("loads a pre-crisis persisted payload without data loss", () => {
     const legacy = {
       ...demoState,

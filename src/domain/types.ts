@@ -187,6 +187,16 @@ export type DoseEvent = {
   recordedAt: string;
 };
 
+export type MedicationFill = {
+  id: string;
+  patientId: string;
+  medicationId: string;
+  medicationName: string;
+  dateOfService: string;
+  daysSupply: number;
+  source: EvidenceStatus;
+};
+
 export type AppState = {
   patient: PatientProfile;
   carePlan: CarePlan;
@@ -199,4 +209,5 @@ export type AppState = {
   auditEvents: AuditEvent[];
   mealLog: MealLogEntry[];
   doseEvents: DoseEvent[];
+  medicationFills: MedicationFill[];
 };

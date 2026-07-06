@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoState } from "@/domain/fixtures";
+import { brentState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { healthReducer } from "./store";
 
@@ -160,6 +160,32 @@ describe("healthReducer", () => {
     expect(next.aiMessages.find((message) => message.id === "message-crisis")?.acknowledged).toBe(true);
     expect(next.auditEvents.at(-1)?.action).toBe("updated");
     expect(next.auditEvents.at(-1)?.label).toBe("Crisis resources acknowledged");
+  });
+
+  it("logs a medication refill and records a created audit event", () => {
+    const next = healthReducer(demoState, {
+      type: "logMedicationFill",
+      fill: {
+        id: "fill-1",
+        patientId: "patient-1",
+        medicationId: "med-1",
+        medicationName: "Lisinopril",
+        dateOfService: "2026-06-01",
+        daysSupply: 30,
+        source: "patient_reported"
+      }
+    });
+
+    expect(next.medicationFills).toHaveLength(1);
+    expect(next.medicationFills[0].id).toBe("fill-1");
+    expect(next.auditEvents.at(-1)?.action).toBe("created");
+    expect(next.auditEvents.at(-1)?.label).toBe("Medication refill logged");
+  });
+
+  it("loads the Brent fixture through resetDemo with a patient argument", () => {
+    const next = healthReducer(demoState, { type: "resetDemo", patient: "brent" });
+    expect(next).toEqual(brentState);
+    expect(healthReducer(brentState, { type: "resetDemo" })).toEqual(demoState);
   });
 
   it("records an exported event through addAuditEvent for privacy actions", () => {

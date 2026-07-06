@@ -9,7 +9,7 @@ import {
   type Dispatch,
   type ReactNode
 } from "react";
-import { deletedDemoState, demoState } from "@/domain/fixtures";
+import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import type {
   AiMessage,
@@ -20,7 +20,8 @@ import type {
   ExtractedFact,
   HomeReading,
   MealLogEntry,
-  MedicationBarrier
+  MedicationBarrier,
+  MedicationFill
 } from "@/domain/types";
 import { loadStoredState, saveStoredState } from "./storage";
 
@@ -35,7 +36,8 @@ export type HealthAction =
   | { type: "addMealLogEntry"; entry: MealLogEntry }
   | { type: "logDose"; event: DoseEvent }
   | { type: "undoDose"; medicationId: string; date: string }
-  | { type: "resetDemo" }
+  | { type: "logMedicationFill"; fill: MedicationFill }
+  | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
@@ -148,8 +150,15 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Medication dose entry removed")]
       };
     }
+    case "logMedicationFill": {
+      return {
+        ...state,
+        medicationFills: [...state.medicationFills, action.fill],
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Medication refill logged")]
+      };
+    }
     case "resetDemo":
-      return demoState;
+      return action.patient === "brent" ? brentState : demoState;
     case "deleteDemoData":
       return {
         ...deletedDemoState,

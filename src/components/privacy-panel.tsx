@@ -22,13 +22,14 @@ type PrivacyPanelProps = {
   state: AppState;
   onReset: () => void;
   onExport: () => void;
+  onLoadBrentDemo?: () => void;
 };
 
 function getDisplayLabel(event: AuditEvent): string {
   return event.label === event.action ? actionLabelMap[event.action] : event.label;
 }
 
-export function PrivacyPanel({ state, onReset, onExport }: PrivacyPanelProps) {
+export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo }: PrivacyPanelProps) {
   const eventsNewestFirst = [...state.auditEvents].sort((left, right) => {
     const leftDate = new Date(left.createdAt).getTime();
     const rightDate = new Date(right.createdAt).getTime();
@@ -78,6 +79,15 @@ export function PrivacyPanel({ state, onReset, onExport }: PrivacyPanelProps) {
           >
             Delete demo data
           </button>
+          {onLoadBrentDemo ? (
+            <button
+              className="rounded-control border border-care px-4 py-2 text-sm font-semibold text-care"
+              onClick={onLoadBrentDemo}
+              type="button"
+            >
+              Load Brent demo (blood pressure + diabetes)
+            </button>
+          ) : null}
         </div>
       </section>
       <section className="rounded-control border border-ink/10 bg-white p-4">
