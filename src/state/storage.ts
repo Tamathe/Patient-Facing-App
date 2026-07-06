@@ -1,4 +1,5 @@
 import { demoState } from "@/domain/fixtures";
+import type { AssessmentEvent, SeverityBand } from "@/domain/assessment";
 import type {
   AppState,
   AiMessage,
@@ -263,6 +264,31 @@ function isDoseEvent(value: unknown): value is DoseEvent {
   );
 }
 
+function isSeverityBand(value: unknown): value is SeverityBand {
+  return (
+    value === "minimal" ||
+    value === "mild" ||
+    value === "moderate" ||
+    value === "moderately_severe" ||
+    value === "severe"
+  );
+}
+
+function isAssessmentEvent(value: unknown): value is AssessmentEvent {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "patientId") &&
+    value.instrumentId === "phq9" &&
+    Array.isArray(value.itemResponses) &&
+    value.itemResponses.every((item) => typeof item === "number" && Number.isFinite(item) && item >= 0 && item <= 3) &&
+    hasNumber(value, "totalScore") &&
+    isSeverityBand(value.severityBand) &&
+    value.status === "patient_reported" &&
+    hasString(value, "recordedAt")
+  );
+}
+
 function isMedicationFill(value: unknown): value is MedicationFill {
   return (
     isObject(value) &&
@@ -315,7 +341,12 @@ function isTask(value: unknown): value is TaskItem {
     hasString(value, "body") &&
     hasString(value, "href") &&
     (value.priority === 1 || value.priority === 2 || value.priority === 3) &&
-    (value.kind === "reading" || value.kind === "medicine" || value.kind === "visit" || value.kind === "intake" || value.kind === "privacy") &&
+    (value.kind === "reading" ||
+      value.kind === "medicine" ||
+      value.kind === "visit" ||
+      value.kind === "intake" ||
+      value.kind === "privacy" ||
+      value.kind === "checkin") &&
     isTaskStatus(value.status)
   );
 }
@@ -401,7 +432,8 @@ function isAuditEvent(value: unknown): value is AuditEvent {
       value.action === "shared" ||
       value.action === "exported" ||
       value.action === "deleted" ||
-      value.action === "crisis_escalated") &&
+      value.action === "crisis_escalated" ||
+      value.action === "assessment_recorded") &&
     hasString(value, "createdAt")
   );
 }
@@ -440,11 +472,12 @@ function isPatient(value: unknown): value is PatientProfile {
   );
 }
 
-type PersistedAppState = Omit<AppState, "tasks" | "mealLog" | "doseEvents" | "medicationFills"> & {
+type PersistedAppState = Omit<AppState, "tasks" | "mealLog" | "doseEvents" | "medicationFills" | "assessmentEvents"> & {
   tasks: unknown;
   mealLog: unknown;
   doseEvents: unknown;
   medicationFills: unknown;
+  assessmentEvents: unknown;
 };
 
 function sanitizeTasks(tasks: unknown): TaskItem[] {
@@ -482,6 +515,16 @@ function sanitizeMedicationFills(fills: unknown, patientId: string, medicationId
   return fills.filter(
     (entry): entry is MedicationFill =>
       isMedicationFill(entry) && entry.patientId === patientId && medicationIds.has(entry.medicationId)
+  );
+}
+
+function sanitizeAssessmentEvents(events: unknown, patientId: string): AssessmentEvent[] {
+  if (!Array.isArray(events)) {
+    return [];
+  }
+
+  return events.filter(
+    (entry): entry is AssessmentEvent => isAssessmentEvent(entry) && entry.patientId === patientId
   );
 }
 
@@ -529,7 +572,11 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return Array.isArray(value.medicationFills) && value.medicationFills.every(isMedicationFill);
+  if (!Array.isArray(value.medicationFills) || !value.medicationFills.every(isMedicationFill)) {
+    return false;
+  }
+
+  return Array.isArray(value.assessmentEvents) && value.assessmentEvents.every(isAssessmentEvent);
 }
 
 export function loadStoredState(): AppState {
@@ -553,12 +600,16 @@ export function loadStoredState(): AppState {
     if (isObject(parsed) && parsed.medicationFills === undefined) {
       parsed.medicationFills = [];
     }
+    if (isObject(parsed) && parsed.assessmentEvents === undefined) {
+      parsed.assessmentEvents = [];
+    }
     if (isValidCoreAppState(parsed)) {
       const sanitizedTasks = sanitizeTasks(parsed.tasks);
       const sanitizedMealLog = sanitizeMealLog(parsed.mealLog, parsed.patient.id);
       const medicationIds = new Set(parsed.medications.map((medication) => medication.id));
       const sanitizedDoseEvents = sanitizeDoseEvents(parsed.doseEvents, parsed.patient.id, medicationIds);
       const sanitizedMedicationFills = sanitizeMedicationFills(parsed.medicationFills, parsed.patient.id, medicationIds);
+      const sanitizedAssessmentEvents = sanitizeAssessmentEvents(parsed.assessmentEvents, parsed.patient.id);
       const sanitizedAiMessages = sanitizeAiMessageActions(parsed.aiMessages);
       const sanitizedState: AppState = {
         ...parsed,
@@ -566,6 +617,7 @@ export function loadStoredState(): AppState {
         mealLog: sanitizedMealLog,
         doseEvents: sanitizedDoseEvents,
         medicationFills: sanitizedMedicationFills,
+        assessmentEvents: sanitizedAssessmentEvents,
         aiMessages: sanitizedAiMessages
       };
 
@@ -579,6 +631,7 @@ export function loadStoredState(): AppState {
         JSON.stringify(parsed.mealLog) !== JSON.stringify(sanitizedState.mealLog) ||
         JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents) ||
         JSON.stringify(parsed.medicationFills) !== JSON.stringify(sanitizedState.medicationFills) ||
+        JSON.stringify(parsed.assessmentEvents) !== JSON.stringify(sanitizedState.assessmentEvents) ||
         JSON.stringify(parsed.aiMessages) !== JSON.stringify(sanitizedState.aiMessages)
       ) {
         safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));

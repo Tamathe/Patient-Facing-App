@@ -11,6 +11,7 @@ import {
 } from "react";
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
+import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AiMessage,
   AppState,
@@ -37,6 +38,7 @@ export type HealthAction =
   | { type: "logDose"; event: DoseEvent }
   | { type: "undoDose"; medicationId: string; date: string }
   | { type: "logMedicationFill"; fill: MedicationFill }
+  | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -155,6 +157,16 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ...state,
         medicationFills: [...state.medicationFills, action.fill],
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Medication refill logged")]
+      };
+    }
+    case "addAssessmentEvent": {
+      return {
+        ...state,
+        assessmentEvents: [...state.assessmentEvents, action.event],
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "assessment_recorded", "Check-in recorded")
+        ]
       };
     }
     case "resetDemo":

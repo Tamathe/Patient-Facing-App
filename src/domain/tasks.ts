@@ -2,6 +2,17 @@ import type { AppState, HomeReading, TaskItem } from "./types";
 import { findRecentClinicalReading, type ClinicalReadingCandidate } from "./recent-clinical-reading";
 
 const MAX_TODAY_TASKS = 3;
+const CHECKIN_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
+
+function isCheckinDue(state: AppState): boolean {
+  if (state.assessmentEvents.length === 0) {
+    return true;
+  }
+  const latest = [...state.assessmentEvents].sort(
+    (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
+  )[0];
+  return Date.now() - new Date(latest.recordedAt).valueOf() > CHECKIN_INTERVAL_MS;
+}
 
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
@@ -70,6 +81,18 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       href: "/medicines",
       priority: 2,
       kind: "medicine",
+      status: "inferred"
+    });
+  }
+
+  if (isCheckinDue(state)) {
+    tasks.push({
+      id: "task-checkin",
+      title: "Take a quick mood check-in",
+      body: "A short, private check-in about how you have been feeling. It is optional and takes about a minute.",
+      href: "/checkin",
+      priority: 2,
+      kind: "checkin",
       status: "inferred"
     });
   }

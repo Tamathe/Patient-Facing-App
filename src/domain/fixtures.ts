@@ -105,7 +105,8 @@ export const demoState: AppState = {
       recordedAt: "2026-07-04T08:05:00.000Z"
     }
   ],
-  medicationFills: []
+  medicationFills: [],
+  assessmentEvents: []
 };
 
 export const deletedDemoState: AppState = {
@@ -139,7 +140,8 @@ export const deletedDemoState: AppState = {
   auditEvents: [],
   mealLog: [],
   doseEvents: [],
-  medicationFills: []
+  medicationFills: [],
+  assessmentEvents: []
 };
 
 export const brentState: AppState = {
@@ -762,5 +764,6 @@ export const brentState: AppState = {
       daysSupply: 30,
       source: "patient_reported"
     }
-  ]
+  ],
+  assessmentEvents: []
 };

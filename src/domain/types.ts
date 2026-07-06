@@ -1,3 +1,5 @@
+import type { AssessmentEvent } from "./assessment";
+
 export type EvidenceStatus = "confirmed" | "patient_reported" | "imported" | "inferred" | "needs_review";
 export type ThresholdSource = "clinician_authored" | "standard_education";
 
@@ -74,7 +76,7 @@ export type TaskItem = {
   body: string;
   href: string;
   priority: 1 | 2 | 3;
-  kind: "reading" | "medicine" | "visit" | "intake" | "privacy";
+  kind: "reading" | "medicine" | "visit" | "intake" | "privacy" | "checkin";
   status: "confirmed" | "inferred" | "needs_review";
 };
 
@@ -136,7 +138,15 @@ export type HealthBrief = {
 export type AuditEvent = {
   id: string;
   patientId: string;
-  action: "created" | "updated" | "ai_generated" | "shared" | "exported" | "deleted" | "crisis_escalated";
+  action:
+    | "created"
+    | "updated"
+    | "ai_generated"
+    | "shared"
+    | "exported"
+    | "deleted"
+    | "crisis_escalated"
+    | "assessment_recorded";
   label: string;
   createdAt: string;
 };
@@ -210,4 +220,5 @@ export type AppState = {
   mealLog: MealLogEntry[];
   doseEvents: DoseEvent[];
   medicationFills: MedicationFill[];
+  assessmentEvents: AssessmentEvent[];
 };

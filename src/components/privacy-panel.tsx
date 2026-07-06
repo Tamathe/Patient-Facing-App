@@ -15,7 +15,8 @@ const actionLabelMap: Record<AuditEvent["action"], string> = {
   shared: "Shared with care team",
   exported: "Data exported",
   deleted: "Demo data deleted",
-  crisis_escalated: "Crisis resources shown"
+  crisis_escalated: "Crisis resources shown",
+  assessment_recorded: "Check-in recorded"
 };
 
 type PrivacyPanelProps = {

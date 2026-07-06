@@ -1,9 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "./fixtures";
 import { buildTodayTasks } from "./tasks";
+import type { AssessmentEvent } from "./assessment";
 import type { HomeReading } from "./types";
 
 const NOW = new Date("2026-07-05T12:00:00.000Z");
+
+// A recent check-in keeps the periodic nudge from being due, so tests that
+// isolate reading-window behavior are not confounded by the check-in task.
+const recentCheckin: AssessmentEvent[] = [
+  {
+    id: "assessment-recent",
+    patientId: "patient-1",
+    instrumentId: "phq9",
+    itemResponses: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    totalScore: 0,
+    severityBand: "minimal",
+    status: "patient_reported",
+    recordedAt: "2026-07-04T12:00:00.000Z"
+  }
+];
 
 const dangerousReading: HomeReading = {
   id: "danger-reading",
@@ -147,6 +163,7 @@ describe("buildTodayTasks", () => {
   it("does not surface outdated readings outside the recent-reading window", () => {
     const tasks = buildTodayTasks({
       ...demoState,
+      assessmentEvents: recentCheckin,
       medications: [],
       carePlan: {
         ...demoState.carePlan,
@@ -170,6 +187,7 @@ describe("buildTodayTasks", () => {
   it("does not surface stale urgent or blocked readings outside the real-time 24-hour window", () => {
     const tasks = buildTodayTasks({
       ...demoState,
+      assessmentEvents: recentCheckin,
       medications: [],
       carePlan: {
         ...demoState.carePlan,
@@ -199,6 +217,7 @@ describe("buildTodayTasks", () => {
   it("does not let an outdated high reading influence Today interpretation of a normal recent reading", () => {
     const tasks = buildTodayTasks({
       ...demoState,
+      assessmentEvents: recentCheckin,
       medications: [],
       carePlan: {
         ...demoState.carePlan,
@@ -313,6 +332,7 @@ describe("buildTodayTasks", () => {
   it("adds a safe fallback when no immediate tasks exist", () => {
     const tasks = buildTodayTasks({
       ...demoState,
+      assessmentEvents: recentCheckin,
       medications: [],
       carePlan: {
         ...demoState.carePlan,
@@ -331,6 +351,31 @@ describe("buildTodayTasks", () => {
       id: "task-today-safe-state",
       title: "No urgent items to review today"
     });
+  });
+
+  it("adds a check-in nudge when no recent check-in exists", () => {
+    const tasks = buildTodayTasks({ ...demoState, readings: [] });
+
+    expect(tasks.some((task) => task.kind === "checkin")).toBe(true);
+  });
+
+  it("does not add a check-in nudge when one was recorded recently", () => {
+    const tasks = buildTodayTasks({ ...demoState, assessmentEvents: recentCheckin });
+
+    expect(tasks.some((task) => task.kind === "checkin")).toBe(false);
+  });
+
+  it("keeps the priority-1 clinical task in the top three when a check-in nudge competes (FR-14)", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [dangerousReading],
+      medications: [{ ...demoState.medications[0], activeBarriers: ["cost"] }]
+    });
+
+    expect(tasks).toHaveLength(3);
+    expect(tasks[0].priority).toBe(1);
+    expect(tasks.map((task) => task.id)).toContain("task-bp-clinical");
+    expect(tasks.some((task) => task.kind === "checkin")).toBe(true);
   });
 
   it("does not add a medicine task when medications are empty", () => {

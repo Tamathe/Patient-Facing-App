@@ -182,6 +182,25 @@ describe("healthReducer", () => {
     expect(next.auditEvents.at(-1)?.label).toBe("Medication refill logged");
   });
 
+  it("records a phq9 assessment event and audits assessment_recorded", () => {
+    const next = healthReducer(demoState, {
+      type: "addAssessmentEvent",
+      event: {
+        id: "assessment-1",
+        patientId: "patient-1",
+        instrumentId: "phq9",
+        itemResponses: [1, 1, 1, 1, 1, 0, 0, 0, 0],
+        totalScore: 5,
+        severityBand: "mild",
+        status: "patient_reported",
+        recordedAt: "2026-07-06T12:00:00.000Z"
+      }
+    });
+
+    expect(next.assessmentEvents).toHaveLength(1);
+    expect(next.auditEvents.at(-1)?.action).toBe("assessment_recorded");
+  });
+
   it("loads the Brent fixture through resetDemo with a patient argument", () => {
     const next = healthReducer(demoState, { type: "resetDemo", patient: "brent" });
     expect(next).toEqual(brentState);

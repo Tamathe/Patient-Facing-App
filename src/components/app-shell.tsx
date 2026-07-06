@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ClipboardList, HeartPulse, Home, LockKeyhole, MessageCircle, Pill, Stethoscope, Upload } from "lucide-react";
+import { Camera, ClipboardList, HeartPulse, Home, LockKeyhole, MessageCircle, NotebookPen, Pill, Stethoscope, Upload } from "lucide-react";
 import Link from "next/link";
 import React, { type ReactNode } from "react";
 
@@ -13,7 +13,8 @@ const navItems = [
   { href: "/food", label: "Food", icon: Camera },
   { href: "/intake", label: "Add Instructions", icon: Upload },
   { href: "/chat", label: "Coach", icon: MessageCircle },
-  { href: "/privacy", label: "Privacy", icon: LockKeyhole }
+  { href: "/privacy", label: "Privacy", icon: LockKeyhole },
+  { href: "/checkin", label: "Check-in", icon: NotebookPen }
 ];
 
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
@@ -32,7 +33,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
       </header>
       <main className="mx-auto max-w-5xl px-4 py-5 pb-40 sm:pb-28">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 border-t border-ink/10 bg-white">
-        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-1 px-2 py-2 sm:grid-cols-9">
+        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-1 px-2 py-2 sm:grid-cols-10">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (

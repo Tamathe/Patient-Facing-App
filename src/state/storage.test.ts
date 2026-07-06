@@ -507,6 +507,44 @@ describe("storage", () => {
     expect(loaded.medicationFills.map((fill) => fill.id)).toEqual(["fill-valid"]);
   });
 
+  it("accepts a phq9 assessment event and backfills a pre-assessment payload", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      assessmentEvents: [
+        {
+          id: "assessment-1",
+          patientId: "patient-1",
+          instrumentId: "phq9",
+          itemResponses: [0, 1, 2, 3, 0, 0, 0, 0, 0],
+          totalScore: 6,
+          severityBand: "mild",
+          status: "patient_reported",
+          recordedAt: "2026-07-06T12:00:00.000Z"
+        }
+      ]
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.assessmentEvents).toHaveLength(1);
+    expect(loaded.assessmentEvents[0].severityBand).toBe("mild");
+  });
+
+  it("backfills a payload with no assessmentEvents array", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Pre-Assessment", preferredName: "Pre" }
+    };
+    delete legacy.assessmentEvents;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Pre-Assessment");
+    expect(loaded.assessmentEvents).toEqual([]);
+  });
+
   it("loads a pre-crisis persisted payload without data loss", () => {
     const legacy = {
       ...demoState,
