@@ -3,6 +3,13 @@ import type { AssessmentEvent } from "./assessment";
 export type EvidenceStatus = "confirmed" | "patient_reported" | "imported" | "inferred" | "needs_review";
 export type ThresholdSource = "clinician_authored" | "standard_education";
 
+export type AccessibilityPreference =
+  | "read_aloud"
+  | "large_text"
+  | "screen_reader"
+  | "high_contrast"
+  | "keyboard_navigation";
+
 export type PatientProfile = {
   id: string;
   name: string;
@@ -11,6 +18,7 @@ export type PatientProfile = {
   primaryClinicName: string;
   primaryClinicPhone: string;
   county?: string;
+  accessibilityPreferences?: AccessibilityPreference[];
 };
 
 export type CareGoal = {

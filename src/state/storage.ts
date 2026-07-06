@@ -1,6 +1,7 @@
 import { demoState } from "@/domain/fixtures";
 import type { AssessmentEvent, SeverityBand } from "@/domain/assessment";
 import type {
+  AccessibilityPreference,
   AppState,
   AiMessage,
   AiMessageAction,
@@ -182,6 +183,16 @@ function isMeasurementContextArray(value: unknown): value is MeasurementContext[
 
 function isLanguage(value: unknown): value is PatientProfile["language"] {
   return value === "en" || value === "es";
+}
+
+function isAccessibilityPreference(value: unknown): value is AccessibilityPreference {
+  return (
+    value === "read_aloud" ||
+    value === "large_text" ||
+    value === "screen_reader" ||
+    value === "high_contrast" ||
+    value === "keyboard_navigation"
+  );
 }
 
 function isThresholdSource(value: unknown): value is CarePlan["thresholdSource"] {
@@ -469,7 +480,10 @@ function isPatient(value: unknown): value is PatientProfile {
     isLanguage(value.language) &&
     hasString(value, "primaryClinicName") &&
     hasString(value, "primaryClinicPhone") &&
-    (value.county === undefined || typeof value.county === "string")
+    (value.county === undefined || typeof value.county === "string") &&
+    (value.accessibilityPreferences === undefined ||
+      (Array.isArray(value.accessibilityPreferences) &&
+        value.accessibilityPreferences.every(isAccessibilityPreference)))
   );
 }
 

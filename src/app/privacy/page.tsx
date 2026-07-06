@@ -45,6 +45,7 @@ export default function PrivacyPage() {
           dispatch({ type: "deleteDemoData" });
         }}
         onLoadBrentDemo={() => dispatch({ type: "resetDemo", patient: "brent" })}
+        onUpdateAccessibility={(preferences) => dispatch({ type: "updateAccessibilityPreferences", preferences })}
       />
     </AppShell>
   );

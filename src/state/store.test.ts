@@ -207,6 +207,17 @@ describe("healthReducer", () => {
     expect(healthReducer(brentState, { type: "resetDemo" })).toEqual(demoState);
   });
 
+  it("updates accessibility preferences and audits the change", () => {
+    const next = healthReducer(demoState, {
+      type: "updateAccessibilityPreferences",
+      preferences: ["large_text", "high_contrast"]
+    });
+
+    expect(next.patient.accessibilityPreferences).toEqual(["large_text", "high_contrast"]);
+    expect(next.auditEvents.at(-1)?.action).toBe("updated");
+    expect(next.auditEvents.at(-1)?.label).toBe("Display and access preferences updated");
+  });
+
   it("records an exported event through addAuditEvent for privacy actions", () => {
     const exportedEvent = recordAuditEvent(demoState.patient.id, "exported", "Data exported");
     const next = healthReducer(demoState, {

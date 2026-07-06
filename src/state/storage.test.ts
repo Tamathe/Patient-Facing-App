@@ -545,6 +545,31 @@ describe("storage", () => {
     expect(loaded.assessmentEvents).toEqual([]);
   });
 
+  it("loads a patient without an accessibilityPreferences field cleanly", () => {
+    const legacyPatient: Record<string, unknown> = { ...demoState.patient };
+    delete legacyPatient.accessibilityPreferences;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, patient: legacyPatient }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.id).toBe("patient-1");
+    expect(loaded.patient.accessibilityPreferences).toBeUndefined();
+  });
+
+  it("keeps valid accessibility preferences on the patient profile", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        patient: { ...demoState.patient, accessibilityPreferences: ["high_contrast", "keyboard_navigation"] }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.accessibilityPreferences).toEqual(["high_contrast", "keyboard_navigation"]);
+  });
+
   it("loads a pre-crisis persisted payload without data loss", () => {
     const legacy = {
       ...demoState,

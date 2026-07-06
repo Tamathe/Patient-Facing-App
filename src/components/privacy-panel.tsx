@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { type AppState, type AuditEvent } from "@/domain/types";
+import { ACCESSIBILITY_PREFERENCE_LABELS, ACCESSIBILITY_PREFERENCES } from "@/domain/accessibility";
+import { type AccessibilityPreference, type AppState, type AuditEvent } from "@/domain/types";
 
 function formatLogTime(createdAt: string): string {
   const eventDate = new Date(createdAt);
@@ -24,13 +25,23 @@ type PrivacyPanelProps = {
   onReset: () => void;
   onExport: () => void;
   onLoadBrentDemo?: () => void;
+  onUpdateAccessibility?: (preferences: AccessibilityPreference[]) => void;
 };
 
 function getDisplayLabel(event: AuditEvent): string {
   return event.label === event.action ? actionLabelMap[event.action] : event.label;
 }
 
-export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo }: PrivacyPanelProps) {
+export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo, onUpdateAccessibility }: PrivacyPanelProps) {
+  const activePreferences = state.patient.accessibilityPreferences ?? [];
+
+  function togglePreference(preference: AccessibilityPreference) {
+    const next = activePreferences.includes(preference)
+      ? activePreferences.filter((item) => item !== preference)
+      : [...activePreferences, preference];
+    onUpdateAccessibility?.(next);
+  }
+
   const eventsNewestFirst = [...state.auditEvents].sort((left, right) => {
     const leftDate = new Date(left.createdAt).getTime();
     const rightDate = new Date(right.createdAt).getTime();
@@ -91,6 +102,24 @@ export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo }: Priv
           ) : null}
         </div>
       </section>
+      {onUpdateAccessibility ? (
+        <section className="rounded-control border border-ink/10 bg-white p-4">
+          <h2 className="text-lg font-semibold">Display &amp; access</h2>
+          <p className="mt-1 text-sm text-ink/70">Turn on the options that make this easier to use. They apply everywhere.</p>
+          <div className="mt-3 grid gap-2">
+            {ACCESSIBILITY_PREFERENCES.map((preference) => (
+              <label key={preference} className="flex min-h-12 items-center gap-2 text-sm capitalize">
+                <input
+                  checked={activePreferences.includes(preference)}
+                  onChange={() => togglePreference(preference)}
+                  type="checkbox"
+                />
+                {ACCESSIBILITY_PREFERENCE_LABELS[preference]}
+              </label>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <section className="rounded-control border border-ink/10 bg-white p-4">
         <h2 className="text-lg font-semibold">Access log</h2>
         {eventsNewestFirst.length === 0 ? (

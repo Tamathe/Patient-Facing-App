@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import { AccessibilityShell } from "@/components/accessibility-shell";
 import { HealthStateProvider } from "@/state/store";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <HealthStateProvider>{children}</HealthStateProvider>
+        <HealthStateProvider>
+          <AccessibilityShell>{children}</AccessibilityShell>
+        </HealthStateProvider>
       </body>
     </html>
   );

@@ -13,6 +13,7 @@ import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
+  AccessibilityPreference,
   AiMessage,
   AppState,
   AuditEvent,
@@ -39,6 +40,7 @@ export type HealthAction =
   | { type: "undoDose"; medicationId: string; date: string }
   | { type: "logMedicationFill"; fill: MedicationFill }
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
+  | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -166,6 +168,16 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         auditEvents: [
           ...state.auditEvents,
           recordAuditEvent(state.patient.id, "assessment_recorded", "Check-in recorded")
+        ]
+      };
+    }
+    case "updateAccessibilityPreferences": {
+      return {
+        ...state,
+        patient: { ...state.patient, accessibilityPreferences: action.preferences },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Display and access preferences updated")
         ]
       };
     }

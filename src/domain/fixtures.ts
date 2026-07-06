@@ -7,7 +7,8 @@ export const demoState: AppState = {
     preferredName: "Jordan",
     language: "en",
     primaryClinicName: "Bluegrass Primary Care",
-    primaryClinicPhone: "555-0142"
+    primaryClinicPhone: "555-0142",
+    accessibilityPreferences: ["large_text"]
   },
   carePlan: {
     id: "plan-1",
