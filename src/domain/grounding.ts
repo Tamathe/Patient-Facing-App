@@ -1,0 +1,280 @@
+export type SourceFactKind =
+  | "care_plan"
+  | "medication"
+  | "reading"
+  | "extracted_fact"
+  | "context_item"
+  | "goal";
+
+export type SourceFactConfidence =
+  | "confirmed"
+  | "patient_reported"
+  | "imported"
+  | "inferred"
+  | "needs_review";
+
+// A trimmed source fact: the grounding verifier only reads id/label/value, but
+// the provenance fields travel with each fact for future surfacing.
+export interface SourceFact {
+  id: string;
+  label: string;
+  value: string;
+  sourceKind: SourceFactKind;
+  sourceName: string;
+  confidence: SourceFactConfidence;
+  patientConfirmed: boolean;
+  effectiveDate: string;
+}
+
+export type GroundingFindingCode =
+  | "missing_citation"
+  | "unknown_citation"
+  | "numeric_mismatch"
+  | "unsupported_result_claim"
+  | "diagnosis_claim"
+  | "medication_change"
+  // Dormant: retained for API parity with the source module; never emitted here.
+  | "unsupported_claim";
+
+export interface GroundingFinding {
+  code: GroundingFindingCode;
+  severity: "block";
+  status: "blocked";
+  message: string;
+  reason: string;
+}
+
+export interface QuantitativeClaim {
+  kind: "a1c";
+  value: string;
+}
+
+export interface BloodPressureClaim {
+  systolic: string;
+  diastolic: string;
+}
+
+export interface GroundingVerificationInput {
+  answer: string;
+  sourceFacts: SourceFact[];
+  citationIds?: string[];
+}
+
+export interface GroundingVerificationResult {
+  allowed: boolean;
+  findings: GroundingFinding[];
+  blockedReasons: string[];
+  supportedSourceFactIds: string[];
+}
+
+// Clinical-adjacent triggers are intentionally conservative: generic words like
+// "medication" are excluded (only specific drug names count) so a legitimate
+// "I see multiple medications in your plan" answer is not treated as an
+// uncited clinical claim.
+const CLINICAL_ADJACENT_PATTERNS = [
+  /\ba1c\b/i,
+  /\bblood\s+sugar\b/i,
+  /\bblood\s+pressure\b/i,
+  /\bbp\b/i,
+  /\breadings?\b/i,
+  /\bcall\s+threshold\b/i,
+  /\b(?:lisinopril|amlodipine|metformin|insulin|losartan|hydrochlorothiazide|hctz)\b/i
+];
+
+const DIAGNOSIS_CLAIM_PATTERNS = [
+  /\byou\s+(?:definitely\s+)?have\s+(?:hypertension|high\s+blood\s+pressure|diabetes|kidney\s+disease)\b/i,
+  /\byou\s+do\s+not\s+have\s+(?:hypertension|high\s+blood\s+pressure|diabetes|kidney\s+disease)\b/i,
+  /\byou\s+are\s+diagnosed\s+with\b/i,
+  /\bi\s+diagnos(?:e|ed)\b/i
+];
+
+// Conservative medication-change shapes with local drug names. There is
+// deliberately NO "change the dose" variant: the mock why-mode answer embeds the
+// safety note "Do not stop or change the dose…", which must keep passing.
+const MEDICATION_CHANGE_PATTERNS = [
+  /\b(?:stop|start|change|lower|raise|increase|decrease)\s+(?:your\s+)?(?:lisinopril|amlodipine|metformin|insulin|medicine|medication|dose)\b/i,
+  /\byou\s+should\s+(?:stop|start|change|lower|raise|increase|decrease)\b/i,
+  /\btake\s+\d+(?:\.\d+)?\s*(?:mg|units?)\b/i
+];
+
+const NORMAL_RESULT_PATTERNS = [
+  /\b(?:reading|readings|blood\s+pressure|bp)\s+(?:came\s+back|is|are|was|were)\s+(?:normal|fine|healthy|in\s+range|great|perfect)\b/i,
+  /\bcame\s+back\s+normal\b/i
+];
+
+export function containsClinicalAdjacentClaim(answer: string): boolean {
+  return CLINICAL_ADJACENT_PATTERNS.some((pattern) => pattern.test(answer));
+}
+
+export function extractQuantitativeClaims(answer: string): QuantitativeClaim[] {
+  const claims: QuantitativeClaim[] = [];
+  const a1cPattern = /\bA1C\s+(?:is|of|was)\s+(\d+(?:\.\d+)?)%?/gi;
+
+  for (const match of answer.matchAll(a1cPattern)) {
+    const value = match[1];
+    if (value) {
+      claims.push({ kind: "a1c", value });
+    }
+  }
+
+  return claims;
+}
+
+export function extractBloodPressureClaims(answer: string): BloodPressureClaim[] {
+  const claims: BloodPressureClaim[] = [];
+  const bpPattern = /\b(?:blood\s+pressure|bp|reading)\s*(?:is|was|of|at)?\s*(\d{2,3})\s*(?:\/|over)\s*(\d{2,3})\b/gi;
+
+  for (const match of answer.matchAll(bpPattern)) {
+    if (match[1] && match[2]) {
+      claims.push({ systolic: match[1], diastolic: match[2] });
+    }
+  }
+
+  return claims;
+}
+
+function normalizeText(value: string): string {
+  return value.toLowerCase();
+}
+
+function hasCitedSupport(citedFacts: SourceFact[], pattern: RegExp): boolean {
+  return citedFacts.some((fact) => pattern.test(`${fact.label} ${fact.value}`));
+}
+
+function sourceA1cValues(citedFacts: SourceFact[]): number[] {
+  return citedFacts.flatMap((fact) => {
+    if (!/a1c/i.test(`${fact.label} ${fact.value}`)) return [];
+
+    const match = fact.value.match(/(\d+(?:\.\d+)?)/);
+    return match ? [Number(match[1])] : [];
+  });
+}
+
+function citedReadingPairs(citedFacts: SourceFact[]): Array<[number, number]> {
+  return citedFacts.flatMap((fact) => {
+    if (fact.sourceKind !== "reading") return [];
+    const match = fact.value.match(/\b(\d{2,3})\s*\/\s*(\d{2,3})\b/);
+    return match ? [[Number(match[1]), Number(match[2])] as [number, number]] : [];
+  });
+}
+
+function valuesMatch(left: number, right: number): boolean {
+  return Math.abs(left - right) < 0.05;
+}
+
+function finding(code: GroundingFindingCode, reason: string, message: string): GroundingFinding {
+  return {
+    code,
+    severity: "block",
+    status: "blocked",
+    reason,
+    message
+  };
+}
+
+export function verifyGrounding(input: GroundingVerificationInput): GroundingVerificationResult {
+  const citationIds = input.citationIds ?? input.sourceFacts.map((fact) => fact.id);
+  const citedFacts = input.sourceFacts.filter((fact) => citationIds.includes(fact.id));
+  const findings: GroundingFinding[] = [];
+  const answer = normalizeText(input.answer);
+
+  if (containsClinicalAdjacentClaim(input.answer) && citedFacts.length === 0) {
+    findings.push(
+      finding(
+        "missing_citation",
+        "clinical_adjacent_claim_without_sources",
+        "Clinical-adjacent claims require trusted source facts."
+      )
+    );
+  }
+
+  const missingCitationIds = citationIds.filter(
+    (citationId) => citationId.length > 0 && !input.sourceFacts.some((fact) => fact.id === citationId)
+  );
+  if (missingCitationIds.length > 0) {
+    findings.push(
+      finding(
+        "unknown_citation",
+        `unknown_citation:${missingCitationIds.join(",")}`,
+        `Unknown citation ids: ${missingCitationIds.join(", ")}`
+      )
+    );
+  }
+
+  if (DIAGNOSIS_CLAIM_PATTERNS.some((pattern) => pattern.test(input.answer))) {
+    findings.push(
+      finding("diagnosis_claim", "diagnosis_claim", "The coach cannot diagnose a condition.")
+    );
+  }
+
+  if (MEDICATION_CHANGE_PATTERNS.some((pattern) => pattern.test(input.answer))) {
+    findings.push(
+      finding(
+        "medication_change",
+        "medication_change_claim",
+        "The coach cannot recommend medication or dose changes."
+      )
+    );
+  }
+
+  if (NORMAL_RESULT_PATTERNS.some((pattern) => pattern.test(input.answer))) {
+    const hasNormalResultSupport = hasCitedSupport(citedFacts, /\bnormal\b|\bin\s+range\b|\bfine\b/i);
+    if (!hasNormalResultSupport) {
+      findings.push(
+        finding(
+          "unsupported_result_claim",
+          "unsupported_normal_result_claim",
+          "A normal-reading claim must be supported by a cited result fact."
+        )
+      );
+    }
+  }
+
+  for (const claim of extractQuantitativeClaims(input.answer)) {
+    const claimValue = Number(claim.value);
+    const sourceValues = sourceA1cValues(citedFacts);
+    if (!sourceValues.some((value) => valuesMatch(value, claimValue))) {
+      findings.push(
+        finding(
+          "numeric_mismatch",
+          `unsupported_numeric_claim:${claim.kind}:${claim.value}`,
+          `Claimed ${claim.kind} ${claim.value} does not match cited source facts.`
+        )
+      );
+    }
+  }
+
+  const readingPairs = citedReadingPairs(citedFacts);
+  for (const claim of extractBloodPressureClaims(input.answer)) {
+    const systolic = Number(claim.systolic);
+    const diastolic = Number(claim.diastolic);
+    const matched = readingPairs.some(([s, d]) => s === systolic && d === diastolic);
+    if (!matched) {
+      findings.push(
+        finding(
+          "numeric_mismatch",
+          `unsupported_numeric_claim:blood_pressure:${claim.systolic}/${claim.diastolic}`,
+          `Claimed blood pressure ${claim.systolic}/${claim.diastolic} does not match a cited reading.`
+        )
+      );
+    }
+  }
+
+  const claimsDiabetes = citedFacts.length > 0 && /type\s+2\s+diabetes|diabetes\s+diagnos/.test(answer);
+  if (claimsDiabetes && !hasCitedSupport(citedFacts, /diabetes|blood\s+sugar|a1c|metformin/i)) {
+    findings.push(
+      finding(
+        "missing_citation",
+        "unsupported_diabetes_claim",
+        "The diabetes claim is not supported by cited facts."
+      )
+    );
+  }
+
+  return {
+    allowed: findings.length === 0,
+    findings,
+    blockedReasons: findings.map((item) => item.reason),
+    supportedSourceFactIds: citedFacts.map((fact) => fact.id)
+  };
+}

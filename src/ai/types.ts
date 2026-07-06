@@ -14,6 +14,7 @@ export type HealthAiResponse = {
   sources: string[];
   banner?: string;
   actions?: AiMessageAction[];
+  grounding?: { allowed: boolean; blockedReasons: string[] };
 };
 
 export type LiveSessionStatus =

@@ -1,4 +1,4 @@
-import type { IdentifiedFood, Medication } from "@/domain/types";
+import type { HomeReading, IdentifiedFood, Medication } from "@/domain/types";
 import type {
   HealthAiProvider,
   HealthAiRequest,
@@ -30,6 +30,15 @@ function findAceInhibitor(medications: Medication[]): Medication | null {
       ACE_ARB_NAMES.some((name) => medication.name.toLowerCase().includes(name))
     ) ?? null
   );
+}
+
+function getLatestReadingId(readings: HomeReading[]): string | null {
+  if (readings.length === 0) {
+    return null;
+  }
+  return [...readings].sort(
+    (a, b) => new Date(b.measuredAt).valueOf() - new Date(a.measuredAt).valueOf()
+  )[0].id;
 }
 
 function buildFoodAnswer(food: IdentifiedFood | undefined, aceMedication: Medication | null): string {
@@ -70,10 +79,20 @@ export class MockHealthAiProvider implements HealthAiProvider {
     const medication = requestedMedication ?? (hasSingleMedication ? request.state.medications[0] : null);
 
     if (request.mode === "food") {
+      const content = buildFoodAnswer(request.identifiedFood, findAceInhibitor(request.state.medications));
+      const sources = [request.state.carePlan.id];
+      // The trend sentence cites the readings it summarizes, so grounding sees the
+      // reading behind "your recent readings are trending up".
+      if (/recent readings are trending up/i.test(content)) {
+        const latestReadingId = getLatestReadingId(request.state.readings);
+        if (latestReadingId) {
+          sources.push(latestReadingId);
+        }
+      }
       return {
-        content: buildFoodAnswer(request.identifiedFood, findAceInhibitor(request.state.medications)),
+        content,
         safety: "allowed",
-        sources: [request.state.carePlan.id]
+        sources
       };
     }
 

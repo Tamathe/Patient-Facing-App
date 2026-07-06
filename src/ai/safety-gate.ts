@@ -1,7 +1,9 @@
 import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { crisisTierForDomain } from "@/domain/crisis-red-flags";
+import { verifyGrounding } from "@/domain/grounding";
 import { findRecentClinicalReading } from "@/domain/recent-clinical-reading";
 import { tSafety, type Language } from "@/i18n/strings";
+import { collectSourceFacts } from "./grounding-facts";
 import { inferAiMode } from "./intent";
 import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./types";
 import type { AiMessageAction, HomeReading, Medication } from "@/domain/types";
@@ -175,6 +177,28 @@ export async function createSafeAiResponse(
   };
   const providerResponse = await provider.respond(effectiveRequest);
 
+  // Grounding runs on every model answer that would reach the patient (allowed AND
+  // soft paths). An answer we cannot confirm against the patient's own records
+  // degrades to "contact your care team" — never silence, never an ungrounded claim.
+  const grounding = verifyGrounding({
+    answer: providerResponse.content,
+    sourceFacts: collectSourceFacts(request.state),
+    citationIds: providerResponse.sources
+  });
+
+  if (!grounding.allowed) {
+    return {
+      content: tSafety(language, "groundingFallback"),
+      safety: "blocked",
+      sources: [],
+      banner: tSafety(language, "groundingFallbackBanner"),
+      actions: CARE_TEAM_ACTIONS,
+      grounding: { allowed: false, blockedReasons: grounding.blockedReasons }
+    };
+  }
+
+  const groundingField = { allowed: true, blockedReasons: [] as string[] };
+
   // Soft cases still answer the question, but carry the safety guidance as a prominent
   // banner plus actionable ways to reach the care team.
   if (decision.kind === "soft_escalate" || decision.kind === "soft_block") {
@@ -183,13 +207,14 @@ export async function createSafeAiResponse(
       safety: decision.kind === "soft_escalate" ? "escalate" : "blocked",
       sources: dedupe([...decision.sources, ...providerResponse.sources]),
       banner: decision.message,
-      actions: CARE_TEAM_ACTIONS
+      actions: CARE_TEAM_ACTIONS,
+      grounding: groundingField
     };
   }
 
   if (providerResponse.safety === "blocked" || providerResponse.safety === "escalate") {
-    return providerResponse;
+    return { ...providerResponse, grounding: groundingField };
   }
 
-  return { ...providerResponse, safety: "allowed" };
+  return { ...providerResponse, safety: "allowed", grounding: groundingField };
 }

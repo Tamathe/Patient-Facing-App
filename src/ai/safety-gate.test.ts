@@ -1,10 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { demoState } from "@/domain/fixtures";
+import { brentState, demoState } from "@/domain/fixtures";
 import { tSafety } from "@/i18n/strings";
+import { verifyGrounding } from "@/domain/grounding";
+import { collectSourceFacts } from "./grounding-facts";
 import { MockHealthAiProvider } from "./mock-provider";
-import { CRISIS_ACTIONS, EMERGENCY_ACTIONS, createSafeAiResponse } from "./safety-gate";
+import { CARE_TEAM_ACTIONS, CRISIS_ACTIONS, EMERGENCY_ACTIONS, createSafeAiResponse } from "./safety-gate";
 import type { AppState } from "@/domain/types";
-import type { HealthAiProvider } from "./types";
+import type { HealthAiProvider, HealthAiRequest } from "./types";
+
+const soupFood = {
+  id: "food-soup",
+  barcode: "051000012616",
+  name: "Chicken noodle soup, canned",
+  brand: null,
+  category: "Canned soup",
+  nutrition: {
+    servingSize: "1 cup (240 mL)",
+    calories: 180,
+    sodiumMg: 890,
+    potassiumMg: 200,
+    totalSugarsG: 3,
+    addedSugarsG: 1,
+    saturatedFatG: 1.5,
+    fiberG: 2,
+    proteinG: 9,
+    carbsG: 22
+  },
+  source: "barcode_off" as const
+};
 
 const dangerousReadingAtNow = {
   id: "reading-1",
@@ -697,4 +720,88 @@ describe("createSafeAiResponse", () => {
     expect(response.actions).toEqual(["call_clinic", "draft_message"]);
     expect(response.actions).not.toContain("call_emergency");
   });
+
+  it("replaces an ungrounded model answer with a localized care-team fallback", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "Your A1C is 9.9 now, so you should increase your dose.",
+        safety: "allowed" as const,
+        sources: []
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "ask", patientInput: "what do my numbers mean?", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("blocked");
+    expect(response.content).toBe(tSafety("en", "groundingFallback"));
+    expect(response.banner).toBe(tSafety("en", "groundingFallbackBanner"));
+    expect(response.actions).toEqual(CARE_TEAM_ACTIONS);
+    expect(response.sources).toEqual([]);
+    expect(response.grounding?.allowed).toBe(false);
+  });
+
+  it("runs grounding on the soft-block path too", async () => {
+    const stateWithBlockedNote: AppState = {
+      ...demoState,
+      readings: [
+        {
+          id: "reading-note-block",
+          patientId: "patient-1",
+          systolic: 128,
+          diastolic: 82,
+          pulse: 72,
+          measuredAt: "2026-07-05T11:00:00.000Z",
+          contexts: ["morning"],
+          note: "Should I increase my dose?"
+        }
+      ]
+    };
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({
+        content: "Your A1C is 9.9 now.",
+        safety: "allowed" as const,
+        sources: []
+      })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "ask", patientInput: "what is my target?", state: stateWithBlockedNote },
+      provider
+    );
+
+    expect(response.content).toBe(tSafety("en", "groundingFallback"));
+    expect(response.grounding?.allowed).toBe(false);
+  });
+});
+
+describe("grounding leaves every mock canned answer intact", () => {
+  const scenarios: Array<{ label: string; request: (state: AppState) => HealthAiRequest }> = [
+    { label: "why (named medication)", request: (state) => ({ mode: "why", patientInput: "why do I take lisinopril?", state }) },
+    { label: "why (unspecified across meds)", request: (state) => ({ mode: "why", patientInput: "why do I take my medicines?", state }) },
+    { label: "visit prep", request: (state) => ({ mode: "visit", patientInput: "help me prepare for my visit", state }) },
+    { label: "default explain", request: (state) => ({ mode: "explain", patientInput: "what can you help me with?", state }) },
+    {
+      label: "food with sodium trend",
+      request: (state) => ({ mode: "food", patientInput: "is this okay?", state, identifiedFood: soupFood })
+    }
+  ];
+
+  for (const fixture of [{ name: "demoState", state: demoState }, { name: "brentState", state: brentState }]) {
+    for (const scenario of scenarios) {
+      it(`passes ${scenario.name} × ${scenario.label}`, async () => {
+        const provider = new MockHealthAiProvider();
+        const response = await provider.respond(scenario.request(fixture.state));
+        const result = verifyGrounding({
+          answer: response.content,
+          sourceFacts: collectSourceFacts(fixture.state),
+          citationIds: response.sources
+        });
+
+        expect(result.allowed).toBe(true);
+      });
+    }
+  }
 });

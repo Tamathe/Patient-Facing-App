@@ -5,6 +5,7 @@ import { ConversationPanel } from "@/components/conversation-panel";
 import { MockHealthAiProvider } from "@/ai/mock-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
 import { buildCareTeamMessage } from "@/domain/care-team-message";
+import { recordAuditEvent } from "@/domain/audit";
 import { useRef } from "react";
 import type { AiMessage, AiMode } from "@/domain/types";
 import { useHealthState } from "@/state/store";
@@ -52,6 +53,14 @@ export default function ChatPage() {
     latestStateRef.current = stateAfterPatientMessage;
 
     const response = await createSafeAiResponse({ mode, patientInput, state: stateAfterPatientMessage }, provider);
+
+    if (response.grounding?.allowed === false) {
+      dispatch({
+        type: "addAuditEvent",
+        event: recordAuditEvent(state.patient.id, "ai_generated", "AI answer replaced by grounding fallback")
+      });
+    }
+
     const assistantMessage: AiMessage = {
       id: crypto.randomUUID(),
       mode,
