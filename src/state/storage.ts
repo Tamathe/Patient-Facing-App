@@ -12,6 +12,7 @@ import type {
   EvidenceStatus,
   ExtractedFact,
   FoodSource,
+  GlucoseReading,
   HomeReading,
   IdentifiedFood,
   MealLogEntry,
@@ -344,6 +345,18 @@ function isReading(value: unknown): value is HomeReading {
   );
 }
 
+function isGlucoseReading(value: unknown): value is GlucoseReading {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "patientId") &&
+    hasNumber(value, "valueMgDl") &&
+    hasString(value, "measuredAt") &&
+    hasString(value, "note") &&
+    isMeasurementContextArray(value.contexts)
+  );
+}
+
 function isTask(value: unknown): value is TaskItem {
   return (
     isObject(value) &&
@@ -465,6 +478,12 @@ function isCarePlan(value: unknown): value is CarePlan {
     isArrayOfStrings(value.dailyActions) &&
     (value.callThresholdSystolic === null || Number.isFinite(value.callThresholdSystolic)) &&
     (value.callThresholdDiastolic === null || Number.isFinite(value.callThresholdDiastolic)) &&
+    (value.callThresholdGlucoseLow === undefined ||
+      value.callThresholdGlucoseLow === null ||
+      Number.isFinite(value.callThresholdGlucoseLow)) &&
+    (value.callThresholdGlucoseHigh === undefined ||
+      value.callThresholdGlucoseHigh === null ||
+      Number.isFinite(value.callThresholdGlucoseHigh)) &&
     isThresholdSource(value.thresholdSource) &&
     isArrayOfStrings(value.warningSymptoms) &&
     hasString(value, "nextVisitReason")
@@ -487,12 +506,16 @@ function isPatient(value: unknown): value is PatientProfile {
   );
 }
 
-type PersistedAppState = Omit<AppState, "tasks" | "mealLog" | "doseEvents" | "medicationFills" | "assessmentEvents"> & {
+type PersistedAppState = Omit<
+  AppState,
+  "tasks" | "mealLog" | "doseEvents" | "medicationFills" | "assessmentEvents" | "glucoseReadings"
+> & {
   tasks: unknown;
   mealLog: unknown;
   doseEvents: unknown;
   medicationFills: unknown;
   assessmentEvents: unknown;
+  glucoseReadings: unknown;
 };
 
 function sanitizeTasks(tasks: unknown): TaskItem[] {
@@ -509,6 +532,16 @@ function sanitizeMealLog(mealLog: unknown, patientId: string): MealLogEntry[] {
   }
 
   return mealLog.filter((entry): entry is MealLogEntry => isMealLogEntry(entry) && entry.patientId === patientId);
+}
+
+function sanitizeGlucoseReadings(glucoseReadings: unknown, patientId: string): GlucoseReading[] {
+  if (!Array.isArray(glucoseReadings)) {
+    return [];
+  }
+
+  return glucoseReadings.filter(
+    (entry): entry is GlucoseReading => isGlucoseReading(entry) && entry.patientId === patientId
+  );
 }
 
 function sanitizeDoseEvents(doseEvents: unknown, patientId: string, medicationIds: Set<string>): DoseEvent[] {
@@ -583,6 +616,10 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
+  if (!Array.isArray(value.glucoseReadings) || !value.glucoseReadings.every(isGlucoseReading)) {
+    return false;
+  }
+
   if (!Array.isArray(value.doseEvents) || !value.doseEvents.every(isDoseEvent)) {
     return false;
   }
@@ -618,9 +655,13 @@ export function loadStoredState(): AppState {
     if (isObject(parsed) && parsed.assessmentEvents === undefined) {
       parsed.assessmentEvents = [];
     }
+    if (isObject(parsed) && parsed.glucoseReadings === undefined) {
+      parsed.glucoseReadings = [];
+    }
     if (isValidCoreAppState(parsed)) {
       const sanitizedTasks = sanitizeTasks(parsed.tasks);
       const sanitizedMealLog = sanitizeMealLog(parsed.mealLog, parsed.patient.id);
+      const sanitizedGlucoseReadings = sanitizeGlucoseReadings(parsed.glucoseReadings, parsed.patient.id);
       const medicationIds = new Set(parsed.medications.map((medication) => medication.id));
       const sanitizedDoseEvents = sanitizeDoseEvents(parsed.doseEvents, parsed.patient.id, medicationIds);
       const sanitizedMedicationFills = sanitizeMedicationFills(parsed.medicationFills, parsed.patient.id, medicationIds);
@@ -630,6 +671,7 @@ export function loadStoredState(): AppState {
         ...parsed,
         tasks: sanitizedTasks,
         mealLog: sanitizedMealLog,
+        glucoseReadings: sanitizedGlucoseReadings,
         doseEvents: sanitizedDoseEvents,
         medicationFills: sanitizedMedicationFills,
         assessmentEvents: sanitizedAssessmentEvents,
@@ -644,6 +686,7 @@ export function loadStoredState(): AppState {
       if (
         JSON.stringify(parsed.tasks) !== JSON.stringify(sanitizedState.tasks) ||
         JSON.stringify(parsed.mealLog) !== JSON.stringify(sanitizedState.mealLog) ||
+        JSON.stringify(parsed.glucoseReadings) !== JSON.stringify(sanitizedState.glucoseReadings) ||
         JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents) ||
         JSON.stringify(parsed.medicationFills) !== JSON.stringify(sanitizedState.medicationFills) ||
         JSON.stringify(parsed.assessmentEvents) !== JSON.stringify(sanitizedState.assessmentEvents) ||

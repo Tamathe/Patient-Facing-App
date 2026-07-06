@@ -38,6 +38,8 @@ export type CarePlan = {
   dailyActions: string[];
   callThresholdSystolic: number | null;
   callThresholdDiastolic: number | null;
+  callThresholdGlucoseLow?: number | null;
+  callThresholdGlucoseHigh?: number | null;
   thresholdSource: ThresholdSource;
   warningSymptoms: string[];
   nextVisitReason: string;
@@ -74,6 +76,15 @@ export type HomeReading = {
   systolic: number;
   diastolic: number;
   pulse: number | null;
+  measuredAt: string;
+  contexts: MeasurementContext[];
+  note: string;
+};
+
+export type GlucoseReading = {
+  id: string;
+  patientId: string;
+  valueMgDl: number;
   measuredAt: string;
   contexts: MeasurementContext[];
   note: string;
@@ -194,6 +205,20 @@ export type MealLogEntry = {
   assistantSummary: string;
 };
 
+// A condition-tailored recipe suggested from what the camera sees in the pantry.
+export type PantryRecipe = {
+  title: string;
+  whyItFits: string;
+  haveItems: string[];
+  buyItems: string[];
+  watchOut: string | null;
+};
+
+export type PantryResult = {
+  detectedItems: string[];
+  recipes: PantryRecipe[];
+};
+
 export type DoseStatus = "taken" | "skipped";
 
 export type DoseEvent = {
@@ -221,6 +246,7 @@ export type AppState = {
   carePlan: CarePlan;
   medications: Medication[];
   readings: HomeReading[];
+  glucoseReadings: GlucoseReading[];
   tasks: TaskItem[];
   contextItems: CareContextItem[];
   extractedFacts: ExtractedFact[];

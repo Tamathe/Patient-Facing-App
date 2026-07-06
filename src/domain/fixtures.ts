@@ -80,6 +80,7 @@ export const demoState: AppState = {
       note: ""
     }
   ],
+  glucoseReadings: [],
   tasks: [],
   contextItems: [],
   extractedFacts: [],
@@ -134,6 +135,7 @@ export const deletedDemoState: AppState = {
   },
   medications: [],
   readings: [],
+  glucoseReadings: [],
   tasks: [],
   contextItems: [],
   extractedFacts: [],
@@ -186,6 +188,8 @@ export const brentState: AppState = {
     ],
     callThresholdSystolic: 160,
     callThresholdDiastolic: 100,
+    callThresholdGlucoseLow: 54,
+    callThresholdGlucoseHigh: 300,
     thresholdSource: "clinician_authored",
     warningSymptoms: ["chest pain", "shortness of breath", "weakness on one side", "new confusion", "severe headache"],
     nextVisitReason: "Review two weeks of morning blood pressure readings, the medication cost barrier, and follow up on the 8.0% A1c and metformin."
@@ -358,6 +362,56 @@ export const brentState: AppState = {
       measuredAt: "2026-07-04T07:10:00.000Z",
       contexts: ["morning", "before_medicine"],
       note: "Higher this morning. Still under my call line."
+    }
+  ],
+  glucoseReadings: [
+    {
+      id: "glucose-brent-1",
+      patientId: "patient-brent",
+      valueMgDl: 168,
+      measuredAt: "2026-06-29T07:05:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: "Fasting."
+    },
+    {
+      id: "glucose-brent-2",
+      patientId: "patient-brent",
+      valueMgDl: 172,
+      measuredAt: "2026-06-30T07:00:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: ""
+    },
+    {
+      id: "glucose-brent-3",
+      patientId: "patient-brent",
+      valueMgDl: 165,
+      measuredAt: "2026-07-01T07:15:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: ""
+    },
+    {
+      id: "glucose-brent-4",
+      patientId: "patient-brent",
+      valueMgDl: 158,
+      measuredAt: "2026-07-02T07:05:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: "Cut out the evening soda."
+    },
+    {
+      id: "glucose-brent-5",
+      patientId: "patient-brent",
+      valueMgDl: 149,
+      measuredAt: "2026-07-03T07:10:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: ""
+    },
+    {
+      id: "glucose-brent-6",
+      patientId: "patient-brent",
+      valueMgDl: 152,
+      measuredAt: "2026-07-04T07:05:00.000Z",
+      contexts: ["morning", "before_medicine"],
+      note: ""
     }
   ],
   tasks: [],

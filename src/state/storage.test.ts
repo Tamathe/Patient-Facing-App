@@ -345,6 +345,80 @@ describe("storage", () => {
     expect(loaded.patient.id).toBe("patient-1");
   });
 
+  const validGlucose = {
+    id: "glucose-1",
+    patientId: "patient-1",
+    valueMgDl: 120,
+    measuredAt: "2026-07-05T07:00:00.000Z",
+    contexts: ["morning"],
+    note: ""
+  };
+
+  it("backfills a legacy payload with an empty glucoseReadings array without resetting", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Pre-Glucose Patient", preferredName: "Pre" }
+    };
+    delete legacy.glucoseReadings;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Pre-Glucose Patient");
+    expect(loaded.glucoseReadings).toEqual([]);
+  });
+
+  it("keeps a valid glucose reading", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, glucoseReadings: [validGlucose] }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.glucoseReadings).toHaveLength(1);
+    expect(loaded.glucoseReadings[0].valueMgDl).toBe(120);
+  });
+
+  it("drops malformed glucose readings while keeping the rest of the state", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, glucoseReadings: [validGlucose, {}] }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.glucoseReadings).toHaveLength(1);
+    expect(loaded.glucoseReadings[0].id).toBe("glucose-1");
+    expect(loaded.patient.id).toBe("patient-1");
+  });
+
+  it("drops a foreign-patient glucose reading from the persisted state", () => {
+    const foreign = { ...validGlucose, id: "glucose-foreign", patientId: "another-patient" };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...demoState, glucoseReadings: [validGlucose, foreign] })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.glucoseReadings).toHaveLength(1);
+    expect(loaded.glucoseReadings[0].id).toBe("glucose-1");
+
+    const persisted = JSON.parse(window.localStorage.getItem(STORAGE_KEY) as string);
+    expect(persisted.glucoseReadings).toHaveLength(1);
+    expect(persisted.glucoseReadings[0].id).toBe("glucose-1");
+  });
+
+  it("keeps optional glucose call thresholds on the care plan", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        carePlan: { ...demoState.carePlan, callThresholdGlucoseLow: 54, callThresholdGlucoseHigh: 300 }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.carePlan.callThresholdGlucoseLow).toBe(54);
+    expect(loaded.carePlan.callThresholdGlucoseHigh).toBe(300);
+  });
+
   it("accepts food-mode ai messages", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
