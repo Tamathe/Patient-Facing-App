@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React, { useState } from "react";
-import type { BpTrend } from "@/domain/adherence";
+import type { TrendSummary } from "@/domain/adherence";
 import { barrierLabel } from "@/domain/labels";
 import type { DoseEvent, Medication, MedicationBarrier } from "@/domain/types";
 
@@ -21,7 +21,7 @@ type DoseCardProps = {
   medication: Medication;
   todayDose: DoseEvent | undefined;
   streak: number;
-  trend: BpTrend | null;
+  trend: TrendSummary | null;
   onTake: () => void;
   onSkip: (barrier: MedicationBarrier) => void;
   onUndo: () => void;
