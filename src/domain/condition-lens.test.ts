@@ -32,9 +32,19 @@ describe("selectLenses", () => {
   it("merges multiple lenses into a new lens that keeps each condition's focus", () => {
     const merged = selectLenses(["hypertension", "diabetes"]);
     expect(merged).not.toBe(hypertensionLens);
-    expect(merged.nutrientRules.some((rule) => rule.nutrient === "sodiumMg")).toBe(true);
     expect(merged.personaFocus).toContain("sodium");
     expect(merged.personaFocus.toLowerCase()).toContain("carbohydrate");
+  });
+
+  it("unions hypertension and diabetes nutrient rules and dedupes shared nutrients", () => {
+    const merged = selectLenses(["hypertension", "diabetes"]);
+    const nutrients = merged.nutrientRules.map((rule) => rule.nutrient);
+    expect(nutrients).toContain("sodiumMg"); // hypertension-only
+    expect(nutrients).toContain("carbsG"); // diabetes-only
+    expect(nutrients.filter((nutrient) => nutrient === "addedSugarsG")).toHaveLength(1); // shared, deduped
+    expect(merged.medDietRules.map((rule) => rule.id)).toEqual(
+      expect.arrayContaining(["ace_arb_potassium", "metformin_gi"])
+    );
   });
 });
 
@@ -45,9 +55,13 @@ describe("lens configuration", () => {
     expect(hypertensionLens.medDietRules[0].id).toBe("ace_arb_potassium");
   });
 
-  it("keeps stubs valid but empty", () => {
-    expect(diabetesLens.personaFocus.length).toBeGreaterThan(0);
-    expect(diabetesLens.nutrientRules).toHaveLength(0);
+  it("authors diabetes with carbs first, a fiber encourage rule, and a metformin rule", () => {
+    expect(diabetesLens.nutrientRules[0].nutrient).toBe("carbsG");
+    expect(diabetesLens.nutrientRules.some((rule) => rule.nutrient === "fiberG" && rule.direction === "encourage")).toBe(true);
+    expect(diabetesLens.medDietRules.map((rule) => rule.id)).toContain("metformin_gi");
+  });
+
+  it("keeps the obesity stub valid but empty", () => {
     expect(obesityLens.personaFocus.length).toBeGreaterThan(0);
     expect(obesityLens.nutrientRules).toHaveLength(0);
   });

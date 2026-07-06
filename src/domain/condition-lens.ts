@@ -121,9 +121,61 @@ export const hypertensionLens: ConditionLens = {
 export const diabetesLens: ConditionLens = {
   condition: "diabetes",
   personaFocus:
-    "Focus on carbohydrates, added sugars, and portion size, and encourage fiber. Keep guidance practical and plain.",
-  nutrientRules: [],
-  medDietRules: [],
+    "Focus on carbohydrates and added sugars first, watch portion size, and encourage fiber. Prefer whole foods and small consistent swaps rather than big changes. Keep guidance practical and plain.",
+  nutrientRules: [
+    {
+      nutrient: "carbsG",
+      dailyLimit: 200,
+      unit: "g",
+      direction: "limit",
+      cautionAtPercent: 20,
+      warningAtPercent: 40,
+      encourageAtPercent: null,
+      flagKey: "flagCarbs"
+    },
+    {
+      nutrient: "addedSugarsG",
+      dailyLimit: 25,
+      unit: "g",
+      direction: "limit",
+      cautionAtPercent: 30,
+      warningAtPercent: 60,
+      encourageAtPercent: null,
+      flagKey: "flagAddedSugars"
+    },
+    {
+      nutrient: "saturatedFatG",
+      dailyLimit: 13,
+      unit: "g",
+      direction: "limit",
+      cautionAtPercent: 25,
+      warningAtPercent: 50,
+      encourageAtPercent: null,
+      flagKey: "flagSaturatedFat"
+    },
+    {
+      nutrient: "fiberG",
+      dailyLimit: 28,
+      unit: "g",
+      direction: "encourage",
+      cautionAtPercent: 0,
+      warningAtPercent: null,
+      encourageAtPercent: 10,
+      flagKey: "flagFiberGood"
+    }
+  ],
+  medDietRules: [
+    {
+      id: "metformin_gi",
+      medicationNames: ["metformin", "glucophage"],
+      productPattern: /alcohol|beer|wine|liquor|whisk(?:e)?y|vodka/i,
+      nutrientTrigger: null,
+      patternFlagKey: "flagMetforminAlcohol",
+      nutrientFlagKey: "flagMetforminAlcohol",
+      modelGuidance:
+        "The patient takes metformin. Remind them to take it with food to reduce stomach upset, and to limit alcohol. Do not tell them to change their dose."
+    }
+  ],
   betterOptionGuidance: hypertensionLens.betterOptionGuidance
 };
 

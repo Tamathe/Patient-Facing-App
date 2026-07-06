@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hypertensionLens } from "./condition-lens";
+import { diabetesLens, hypertensionLens } from "./condition-lens";
 import {
   activeMedDietRules,
   bpTrendFlag,
@@ -167,5 +167,39 @@ describe("activeMedDietRules", () => {
   it("matches the ACE rule by medication name", () => {
     expect(activeMedDietRules([medication("Lisinopril")], hypertensionLens.medDietRules)).toHaveLength(1);
     expect(activeMedDietRules([medication("Amlodipine")], hypertensionLens.medDietRules)).toHaveLength(0);
+  });
+});
+
+describe("diabetes lens flags", () => {
+  it("flags carbs over the caution threshold", () => {
+    const flags = computeFoodFlags(
+      food({ nutrition: nutrition({ carbsG: 65 }) }),
+      diabetesLens,
+      { medications: [], readings: [] },
+      "en"
+    );
+    const carbFlag = flags.find((flag) => flag.id === "nutrient-carbsG");
+    expect(carbFlag).toBeDefined();
+    expect(carbFlag?.text).toContain("65 g carbs");
+  });
+
+  it("encourages fiber", () => {
+    const flags = computeFoodFlags(
+      food({ nutrition: nutrition({ fiberG: 6 }) }),
+      diabetesLens,
+      { medications: [], readings: [] },
+      "en"
+    );
+    expect(flags.some((flag) => flag.id === "nutrient-fiberG")).toBe(true);
+  });
+
+  it("fires the metformin rule for an alcohol product", () => {
+    const flags = computeFoodFlags(
+      food({ name: "Red wine", nutrition: null }),
+      diabetesLens,
+      { medications: [medication("Metformin")], readings: [] },
+      "en"
+    );
+    expect(flags.some((flag) => flag.id === "med-metformin_gi-pattern")).toBe(true);
   });
 });

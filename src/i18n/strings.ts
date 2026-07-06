@@ -33,10 +33,12 @@ export type FoodLensStringKey =
   | "flagSodium"
   | "flagSaturatedFat"
   | "flagAddedSugars"
+  | "flagCarbs"
   | "flagPotassiumGood"
   | "flagFiberGood"
   | "flagPotassiumMed"
   | "flagSaltSubstituteMed"
+  | "flagMetforminAlcohol"
   | "flagBpTrend"
   | "pantryButton"
   | "pantryScanning"
@@ -83,10 +85,12 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     flagSodium: "{amount} mg sodium — {percent}% of your {limit} mg daily limit",
     flagSaturatedFat: "{amount} g saturated fat — {percent}% of your {limit} g daily limit",
     flagAddedSugars: "{amount} g added sugars — {percent}% of your {limit} g daily limit",
+    flagCarbs: "{amount} g carbs — {percent}% of your {limit} g daily reference",
     flagPotassiumGood: "{amount} mg potassium — good for blood pressure",
     flagFiberGood: "{amount} g fiber — good for your heart",
     flagPotassiumMed: "High in potassium — check with your care team first because you take {med}",
     flagSaltSubstituteMed: "This is a salt substitute — check with your care team first because you take {med}",
+    flagMetforminAlcohol: "Alcohol with {med} can upset your stomach and affect your blood sugar — go easy and ask your care team",
     flagBpTrend: "Your recent readings are trending up — extra reason to go easy on salt this week",
     pantryButton: "Find recipes in my pantry",
     pantryScanning: "Reading your pantry…",
@@ -132,10 +136,12 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     flagSodium: "{amount} mg de sodio — {percent}% de tu límite diario de {limit} mg",
     flagSaturatedFat: "{amount} g de grasa saturada — {percent}% de tu límite diario de {limit} g",
     flagAddedSugars: "{amount} g de azúcares añadidos — {percent}% de tu límite diario de {limit} g",
+    flagCarbs: "{amount} g de carbohidratos — {percent}% de tu referencia diaria de {limit} g",
     flagPotassiumGood: "{amount} mg de potasio — bueno para la presión arterial",
     flagFiberGood: "{amount} g de fibra — bueno para tu corazón",
     flagPotassiumMed: "Alto en potasio — consulta primero con tu equipo de salud porque tomas {med}",
     flagSaltSubstituteMed: "Esto es un sustituto de sal — consulta primero con tu equipo de salud porque tomas {med}",
+    flagMetforminAlcohol: "El alcohol con {med} puede molestar tu estómago y afectar tu azúcar — ve con calma y consulta a tu equipo de salud",
     flagBpTrend: "Tus lecturas recientes están subiendo — una razón más para cuidar la sal esta semana",
     pantryButton: "Buscar recetas en mi despensa",
     pantryScanning: "Leyendo tu despensa…",
