@@ -1,5 +1,6 @@
 import type { AppState, HomeReading, TaskItem } from "./types";
 import { findRecentClinicalReading, type ClinicalReadingCandidate } from "./recent-clinical-reading";
+import { tHome } from "@/i18n/home-strings";
 
 const MAX_TODAY_TASKS = 3;
 const CHECKIN_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -16,6 +17,7 @@ function isCheckinDue(state: AppState): boolean {
 
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
+  const lang = state.patient.language;
   const recentClinicalReading = getRecentClinicalReading(state.readings, state.carePlan);
 
   if (recentClinicalReading !== undefined) {
@@ -27,19 +29,19 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
     tasks.push({
       id: "task-bp-clinical",
       title: isUrgentSymptom
-        ? "Seek urgent help now"
+        ? tHome(lang, "taskBpClinicalUrgentTitle")
         : isBlockedNote
-          ? "Review this note with your care team"
-          : "Share this reading with your care team",
+          ? tHome(lang, "taskBpClinicalBlockedTitle")
+          : tHome(lang, "taskBpClinicalShareTitle"),
       body: isUrgentSymptom
         ? recentClinicalReading.noteSafety.response
         : isBlockedNote
-          ? "You mentioned a medication change in this reading. Message your care team before making any medication adjustments."
+          ? tHome(lang, "taskBpClinicalBlockedBody")
         : isCarePlanThreshold
           ? isClinicianThreshold
-            ? "This met a threshold in your clinician-authored care plan. Share this reading today."
-            : "This met a standard-home blood pressure threshold. Share this reading and check with your care team."
-          : "This reading suggests a same-day review with your care team.",
+            ? tHome(lang, "taskBpClinicalClinicianBody")
+            : tHome(lang, "taskBpClinicalStandardBody")
+          : tHome(lang, "taskBpClinicalSameDayBody"),
       href: "/chat",
       priority: 1,
       kind: "reading",
@@ -54,8 +56,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   } else if (state.readings.length === 0) {
     tasks.push({
       id: "task-bp-first",
-      title: "Check blood pressure",
-      body: "Log your first home reading so your plan can start building a pattern.",
+      title: tHome(lang, "taskBpFirstTitle"),
+      body: tHome(lang, "taskBpFirstBody"),
       href: "/numbers",
       priority: 1,
       kind: "reading",
@@ -66,8 +68,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   if (state.medications.length > 0 && state.medications.some((medication) => medication.activeBarriers.length > 0)) {
     tasks.push({
       id: "task-med-barrier",
-      title: "Share what got in the way",
-      body: "Your medicine list has a barrier marked. Turn it into a clear question for your care team.",
+      title: tHome(lang, "taskMedBarrierTitle"),
+      body: tHome(lang, "taskMedBarrierBody"),
       href: "/chat",
       priority: 2,
       kind: "medicine",
@@ -76,8 +78,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   } else if (state.medications.length > 0) {
     tasks.push({
       id: "task-med-purpose",
-      title: "Review why your medicine matters",
-      body: "A quick explanation can make daily medicine feel less random.",
+      title: tHome(lang, "taskMedPurposeTitle"),
+      body: tHome(lang, "taskMedPurposeBody"),
       href: "/medicines",
       priority: 2,
       kind: "medicine",
@@ -88,8 +90,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   if (isCheckinDue(state)) {
     tasks.push({
       id: "task-checkin",
-      title: "Take a quick mood check-in",
-      body: "A short, private check-in about how you have been feeling. It is optional and takes about a minute.",
+      title: tHome(lang, "taskCheckinTitle"),
+      body: tHome(lang, "taskCheckinBody"),
       href: "/checkin",
       priority: 2,
       kind: "checkin",
@@ -101,7 +103,7 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   if (visitReason.length > 0) {
     tasks.push({
       id: "task-visit-brief",
-      title: "Prepare for your next visit",
+      title: tHome(lang, "taskVisitTitle"),
       body: visitReason,
       href: "/visits",
       priority: 3,
@@ -113,8 +115,8 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
   if (tasks.length === 0) {
     tasks.push({
       id: "task-today-safe-state",
-      title: "No urgent items to review today",
-      body: "You have no urgent home signals right now. Keep logging your blood pressure on your normal schedule.",
+      title: tHome(lang, "taskSafeStateTitle"),
+      body: tHome(lang, "taskSafeStateBody"),
       href: "/numbers",
       priority: 3,
       kind: "reading",

@@ -71,13 +71,18 @@ describe("decideFrontDoor — constrained classifier stage", () => {
   });
 });
 
-describe("decideFrontDoor — Spanish gate", () => {
-  it("skips the English lexicon for Spanish patients and always reaches the Coach", () => {
-    expect(decideFrontDoor("show my medicines", es).kind).toBe("coach");
-    expect(decideFrontDoor("food", es).kind).toBe("coach");
+describe("decideFrontDoor — Spanish", () => {
+  it("routes Spanish commands deterministically for Spanish patients", () => {
+    expect(decideFrontDoor("muéstrame mis medicinas", es)).toMatchObject({ kind: "navigate", href: "/medicines" });
+    expect(decideFrontDoor("registré mi presión", es)).toMatchObject({ kind: "navigate", href: "/numbers" });
+    expect(decideFrontDoor("comida", es)).toMatchObject({ kind: "navigate", href: "/food" });
   });
 
-  it("still routes a Spanish patient's crisis text to the Coach", () => {
-    expect(decideFrontDoor("I want to die", es).kind).toBe("coach");
+  it("does not match the English lexicon for a Spanish patient", () => {
+    expect(decideFrontDoor("show my medicines", es).kind).toBe("coach");
+  });
+
+  it("still routes crisis text to the Coach for a Spanish patient", () => {
+    expect(decideFrontDoor("I want to die", es)).toMatchObject({ kind: "coach", reason: "safety" });
   });
 });

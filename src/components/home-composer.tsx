@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { decideFrontDoor } from "@/domain/front-door";
 import { CLASSIFIER_HREFS } from "@/domain/route-classifier";
 import { classifyRouteRemote } from "@/ai/route-classifier-client";
+import { tHome } from "@/i18n/home-strings";
 import { useHealthState } from "@/state/store";
 
 // Minimal shim for the browser Web Speech API (the webkit-prefixed variant is
@@ -105,12 +106,12 @@ export function HomeComposer() {
   return (
     <form onSubmit={submit} className="flex items-center gap-2 rounded-control border border-ink/15 bg-white p-2">
       <label className="sr-only" htmlFor="home-composer-input">
-        Tell me what you need
+        {tHome(state.patient.language, "composerLabel")}
       </label>
       <input
         id="home-composer-input"
         className="min-h-11 flex-1 rounded-control px-3 py-2 text-sm"
-        placeholder="Tell me what you need…"
+        placeholder={tHome(state.patient.language, "composerPlaceholder")}
         value={input}
         onChange={(event) => setInput(event.target.value)}
       />
@@ -118,14 +119,14 @@ export function HomeComposer() {
         <button
           type="button"
           onClick={toggleVoice}
-          aria-label={listening ? "Stop listening" : "Speak to the assistant"}
+          aria-label={listening ? tHome(state.patient.language, "composerStop") : tHome(state.patient.language, "composerSpeak")}
           aria-pressed={listening}
           className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${listening ? "bg-pulse text-white" : "bg-calm text-care"}`}
         >
           <Mic aria-hidden="true" className="h-5 w-5" />
         </button>
       ) : null}
-      <button type="submit" aria-label="Send" className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-care text-white">
+      <button type="submit" aria-label={tHome(state.patient.language, "composerSend")} className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-care text-white">
         <Send aria-hidden="true" className="h-5 w-5" />
       </button>
     </form>

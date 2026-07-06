@@ -398,4 +398,17 @@ describe("buildTodayTasks", () => {
 
     expect(tasks.map((task) => task.kind)).not.toContain("visit");
   });
+
+  it("localizes task copy for a Spanish patient", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      patient: { ...demoState.patient, language: "es" },
+      readings: [],
+      medications: [],
+      assessmentEvents: recentCheckin,
+      carePlan: { ...demoState.carePlan, nextVisitReason: "" }
+    });
+
+    expect(tasks.map((task) => task.title)).toContain("Toma tu presión arterial");
+  });
 });

@@ -79,4 +79,13 @@ describe("TodayGreeting", () => {
     expect(screen.getByText(/good morning, jordan/i)).toBeInTheDocument();
     expect(screen.getByText("Nothing urgent right now")).toBeInTheDocument();
   });
+
+  it("renders the home surfaces in Spanish for a Spanish patient", () => {
+    render(<TodayGreeting patientName="Jordan" tasks={[clinical, visit, checkin]} language="es" now={morning} />);
+
+    expect(screen.getByText(/buenos días, jordan/i)).toBeInTheDocument();
+    expect(screen.getByText("1 cosa necesita tu atención")).toBeInTheDocument();
+    expect(screen.getByText("Comunícate con tu equipo de salud hoy")).toBeInTheDocument();
+    expect(screen.getAllByText("urgente")).toHaveLength(1);
+  });
 });

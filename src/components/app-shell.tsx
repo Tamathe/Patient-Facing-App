@@ -4,6 +4,7 @@ import { Home, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import React, { type ReactNode } from "react";
 import { UrgentHelp } from "./urgent-help";
+import { tHome } from "@/i18n/home-strings";
 import { useHealthState } from "@/state/store";
 
 // The tab bar collapsed from 11 flat peers to a chat-first Home plus a single
@@ -11,8 +12,8 @@ import { useHealthState } from "@/state/store";
 // /menu (see menu-grid.tsx); crisis help stays one tap away via the persistent
 // UrgentHelp affordance in the header, on every screen.
 const navItems = [
-  { href: "/today", label: "Home", icon: Home },
-  { href: "/menu", label: "All my health", icon: LayoutGrid }
+  { href: "/today", labelKey: "navHome" as const, icon: Home },
+  { href: "/menu", labelKey: "navMenu" as const, icon: LayoutGrid }
 ];
 
 export function AppShell({ title, children }: { title: string; children: ReactNode }) {
@@ -43,7 +44,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                 href={item.href}
               >
                 <Icon aria-hidden="true" className="mb-1 h-5 w-5" />
-                {item.label}
+                {tHome(state.patient.language, item.labelKey)}
               </Link>
             );
           })}

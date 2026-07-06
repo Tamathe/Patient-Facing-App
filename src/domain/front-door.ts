@@ -1,6 +1,7 @@
 import { classifyCrisis, classifySafety } from "./safety";
 import { screenSocialEmergency } from "./social-screen";
 import { CLASSIFIER_HREFS, mockRouteClassifier, type RouteClassifier } from "./route-classifier";
+import type { Language } from "@/i18n/strings";
 import type { AppState } from "./types";
 
 export type FrontDoorRoute =
@@ -48,13 +49,43 @@ const NAV_LEXICON: NavRule[] = [
 
 const NAV_VERB = /\b(show|open|see|view|go to|take me to|where'?s|where is|bring up|pull up)\b/;
 
+// Spanish equivalents. The es verb/nav lexicon is deterministic like the English
+// one; fuzzier es phrasings fall through to the multilingual live LLM classifier
+// (the English-synonym mock is skipped for es).
+const VERB_RULES_ES: NavRule[] = [
+  { test: /\b(registr|anot|apunt|guard|agreg)\w*\b.*\b(presi[oó]n|lectura|lecturas|sist[oó]lica)\b/, href: "/numbers", label: "Registrar una lectura de presión" },
+  { test: /\b(tom[eé]|tomad|tom[oó]|registr)\w*\b.*\b(medicina|medicamento|medicinas|medicamentos|pastilla|pastillas|p[ií]ldora|dosis)\b/, href: "/medicines", label: "Tus medicinas" }
+];
+
+const NAV_LEXICON_ES: NavRule[] = [
+  { test: /\b(n[uú]meros|presi[oó]n|lecturas?)\b/, href: "/numbers", label: "Mis Números" },
+  { test: /\b(medicinas?|medicamentos?|pastillas?|dosis)\b/, href: "/medicines", label: "Mis Medicinas" },
+  { test: /\bplan\b/, href: "/plan", label: "Mi Plan" },
+  { test: /\b(visitas?|citas?)\b/, href: "/visits", label: "Mis Visitas" },
+  { test: /\b(comidas?|comer)\b/, href: "/food", label: "Comida" },
+  { test: /\b(chequeo|[aá]nimo)\b/, href: "/checkin", label: "Chequeo" },
+  { test: /\b(apoyo|recursos?|renta|servicios)\b/, href: "/support", label: "Apoyo" },
+  { test: /\b(privacidad|mis datos)\b/, href: "/privacy", label: "Privacidad" },
+  { test: /\binstrucciones\b/, href: "/intake", label: "Agregar Instrucciones" }
+];
+
+const NAV_VERB_ES = /\b(mostrar|mu[eé]strame|abrir|abre|ver|ir a|ll[eé]vame a|d[oó]nde est[aá]|d[oó]nde)\b/;
+
+type Lexicon = { verbRules: NavRule[]; navLexicon: NavRule[]; navVerb: RegExp; useMock: boolean };
+
+const LEXICONS: Record<Language, Lexicon> = {
+  en: { verbRules: VERB_RULES, navLexicon: NAV_LEXICON, navVerb: NAV_VERB, useMock: true },
+  es: { verbRules: VERB_RULES_ES, navLexicon: NAV_LEXICON_ES, navVerb: NAV_VERB_ES, useMock: false }
+};
+
 // Deterministic, safety-first front-door router. Order is load-bearing: any
 // utterance that trips crisis / urgent-symptom / dangerous-reading / med-change
 // / social-emergency screening is handed to the Coach (which re-runs the full
 // safety gate and shows crisis UI) and can NEVER be routed to a feature screen.
-// Only a "clean" utterance is eligible for the English verb/nav lexicon;
-// non-English patients skip the lexicon (gated behind translation) and reach the
-// Coach, where the answer path is bilingual. No LLM is involved.
+// A "clean" utterance is eligible for that language's verb/nav lexicon; write
+// verbs land on the real form (no silent write). The English-synonym mock
+// classifier runs only for English; Spanish defers fuzzier phrasings to the
+// multilingual live LLM classifier in the caller. No LLM is involved here.
 export function decideFrontDoor(
   utterance: string,
   state: AppState,
@@ -66,34 +97,35 @@ export function decideFrontDoor(
     return { kind: "coach", ask: text, reason: "safety" };
   }
 
-  if (state.patient.language === "en") {
-    const lower = text.toLowerCase();
+  const lex = LEXICONS[state.patient.language];
+  const lower = text.toLowerCase();
 
-    for (const rule of VERB_RULES) {
+  for (const rule of lex.verbRules) {
+    if (rule.test.test(lower)) {
+      return { kind: "navigate", href: rule.href, label: rule.label };
+    }
+  }
+
+  const isShort = lower.split(/\s+/).filter(Boolean).length <= 3;
+  if (lex.navVerb.test(lower) || isShort) {
+    for (const rule of lex.navLexicon) {
       if (rule.test.test(lower)) {
         return { kind: "navigate", href: rule.href, label: rule.label };
       }
     }
+  }
 
-    const isShort = lower.split(/\s+/).filter(Boolean).length <= 3;
-    if (NAV_VERB.test(lower) || isShort) {
-      for (const rule of NAV_LEXICON) {
-        if (rule.test.test(lower)) {
-          return { kind: "navigate", href: rule.href, label: rule.label };
-        }
-      }
-    }
-
-    // Final stage: the constrained classifier catches fuzzier phrasings the
-    // lexicon missed. It can only navigate or defer — never write — and we act
-    // on it only above the confidence floor; everything else reaches the Coach.
+  // Final deterministic stage: the constrained mock classifier catches fuzzier
+  // English phrasings the lexicon missed. It can only navigate or defer — never
+  // write — and we act on it only above the confidence floor.
+  if (lex.useMock) {
     const decision = classifier.classify(text, CLASSIFIER_HREFS);
     if (decision.kind === "navigate" && decision.confidence >= CLASSIFIER_CONFIDENCE_FLOOR) {
       return { kind: "navigate", href: decision.href, label: ROUTE_LABELS[decision.href] ?? decision.href };
     }
   }
 
-  // Deterministic + mock stages found no route; the caller may refine this with
-  // the live LLM classifier (safety has already cleared), else it reaches the Coach.
+  // No deterministic route; the caller may refine with the live LLM classifier
+  // (safety has already cleared), else it reaches the Coach.
   return { kind: "coach", ask: text, reason: "no_match" };
 }

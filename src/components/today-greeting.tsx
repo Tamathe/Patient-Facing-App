@@ -4,6 +4,8 @@ import { Activity, AlertTriangle, ArrowRight, LockKeyhole, MessageCircle, Notebo
 import Link from "next/link";
 import React from "react";
 import clsx from "clsx";
+import { tHome } from "@/i18n/home-strings";
+import type { Language } from "@/i18n/strings";
 import type { TaskItem } from "@/domain/types";
 
 export type ChipTone = "urgent" | "active" | "suggested";
@@ -28,35 +30,33 @@ const kindIcon: Record<TaskItem["kind"], LucideIcon> = {
   privacy: LockKeyhole
 };
 
-const toneLabel: Record<ChipTone, string> = {
-  urgent: "Reach your care team today",
-  active: "Ready when you are",
-  suggested: "Suggested for you"
-};
-
-function greetingForHour(hour: number): string {
-  if (hour < 12) {
-    return "Good morning";
-  }
-  if (hour < 18) {
-    return "Good afternoon";
-  }
-  return "Good evening";
+function toneLabel(tone: ChipTone, language: Language): string {
+  return tHome(language, tone === "urgent" ? "toneUrgent" : tone === "active" ? "toneActive" : "toneSuggested");
 }
 
-function statusSummary(tasks: TaskItem[]): string {
+function greetingForHour(hour: number, language: Language): string {
+  if (hour < 12) {
+    return tHome(language, "greetingMorning");
+  }
+  if (hour < 18) {
+    return tHome(language, "greetingAfternoon");
+  }
+  return tHome(language, "greetingEvening");
+}
+
+function statusSummary(tasks: TaskItem[], language: Language): string {
   const urgent = tasks.filter((task) => chipTone(task) === "urgent").length;
   if (urgent > 0) {
-    return urgent === 1 ? "1 thing needs your attention" : `${urgent} things need your attention`;
+    return urgent === 1 ? tHome(language, "statusNeedsAttentionOne") : tHome(language, "statusNeedsAttentionMany", { count: urgent });
   }
   const active = tasks.filter((task) => chipTone(task) === "active").length;
   if (active > 0) {
-    return active === 1 ? "1 thing to do today" : `${active} things to do today`;
+    return active === 1 ? tHome(language, "statusToDoOne") : tHome(language, "statusToDoMany", { count: active });
   }
-  return "Nothing urgent right now";
+  return tHome(language, "statusClear");
 }
 
-function TaskChip({ task }: { task: TaskItem }) {
+function TaskChip({ task, language }: { task: TaskItem; language: Language }) {
   const tone = chipTone(task);
   const Icon = tone === "urgent" ? AlertTriangle : kindIcon[task.kind];
   // A chip that lands on the Coach carries its task id so the chat reconstructs
@@ -81,18 +81,18 @@ function TaskChip({ task }: { task: TaskItem }) {
         <span className="flex items-center gap-2">
           <span className={clsx("font-semibold", tone === "urgent" && "text-pulse")}>{task.title}</span>
           {tone === "urgent" ? (
-            <span className="rounded-full border border-pulse px-2 py-0.5 text-[11px] font-medium text-pulse">urgent</span>
+            <span className="rounded-full border border-pulse px-2 py-0.5 text-[11px] font-medium text-pulse">{tHome(language, "chipUrgentBadge")}</span>
           ) : null}
         </span>
         <span className="mt-1 block text-sm leading-6 text-ink/75">{task.body}</span>
-        <span className={clsx("mt-2 block text-xs font-medium", tone === "urgent" ? "text-pulse" : "text-ink/60")}>{toneLabel[tone]}</span>
+        <span className={clsx("mt-2 block text-xs font-medium", tone === "urgent" ? "text-pulse" : "text-ink/60")}>{toneLabel(tone, language)}</span>
       </span>
       <ArrowRight aria-hidden="true" className={clsx("mt-1 h-5 w-5 flex-none", tone === "urgent" ? "text-pulse" : "text-care")} />
     </Link>
   );
 }
 
-export function TodayGreeting({ patientName, tasks, now }: { patientName: string; tasks: TaskItem[]; now?: Date }) {
+export function TodayGreeting({ patientName, tasks, language = "en", now }: { patientName: string; tasks: TaskItem[]; language?: Language; now?: Date }) {
   // Resolve the time-of-day greeting on the client only. Rendering it during SSR
   // compares the server clock (UTC on Vercel) against the patient's local clock
   // at hydration and mismatches across hour boundaries. Tests pass `now`
@@ -103,25 +103,25 @@ export function TodayGreeting({ patientName, tasks, now }: { patientName: string
       setResolvedNow(new Date());
     }
   }, [now]);
-  const greeting = resolvedNow ? `${greetingForHour(resolvedNow.getHours())}, ${patientName}` : `Hello, ${patientName}`;
+  const greeting = resolvedNow
+    ? `${greetingForHour(resolvedNow.getHours(), language)}, ${patientName}`
+    : `${tHome(language, "greetingHello")}, ${patientName}`;
 
   return (
     <section className="space-y-4">
       <div>
         <p className="text-sm font-medium text-care">{greeting}</p>
-        <h2 className="mt-1 text-2xl font-semibold">{statusSummary(tasks)}</h2>
+        <h2 className="mt-1 text-2xl font-semibold">{statusSummary(tasks, language)}</h2>
       </div>
       <div className="flex items-start gap-2">
         <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-calm text-care" aria-hidden="true">
           <MessageCircle className="h-4 w-4" />
         </span>
-        <p className="rounded-control rounded-tl-none bg-calm px-3 py-2 text-sm leading-6 text-ink">
-          Here is what matters at home today. Tap one to get started.
-        </p>
+        <p className="rounded-control rounded-tl-none bg-calm px-3 py-2 text-sm leading-6 text-ink">{tHome(language, "assistantBubble")}</p>
       </div>
       <div className="grid gap-3">
         {tasks.map((task) => (
-          <TaskChip key={task.id} task={task} />
+          <TaskChip key={task.id} task={task} language={language} />
         ))}
       </div>
     </section>
