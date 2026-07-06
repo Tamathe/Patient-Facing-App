@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/app-shell";
 import { DoseCard } from "@/components/dose-card";
+import { HomeComposer } from "@/components/home-composer";
 import { TodayGreeting } from "@/components/today-greeting";
 import { getAdherenceStreak, getDoseForDate, summarizeBpTrend, toDateKey } from "@/domain/adherence";
 import { buildTodayTasks } from "@/domain/tasks";
@@ -41,6 +42,7 @@ export default function TodayPage() {
     <AppShell title="Today">
       <div className="space-y-4">
         <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} language={state.patient.language} />
+        {state.patient.language === "en" ? <HomeComposer /> : null}
         {primaryMedication ? (
           <DoseCard
             medication={primaryMedication}

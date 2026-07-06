@@ -91,15 +91,21 @@ export default function ChatPage() {
     if (prefillHandled.current) {
       return;
     }
-    const taskId = new URLSearchParams(window.location.search).get("taskId");
-    if (!taskId) {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("taskId");
+    const ask = params.get("ask");
+    if (!taskId && !ask) {
       return;
     }
     prefillHandled.current = true;
     window.history.replaceState(null, "", window.location.pathname);
-    const prefill = prefilledMessageForTask(taskId, latestStateRef.current);
-    if (prefill) {
-      void handleSubmit(prefill.mode, prefill.input);
+    if (taskId) {
+      const prefill = prefilledMessageForTask(taskId, latestStateRef.current);
+      if (prefill) {
+        void handleSubmit(prefill.mode, prefill.input);
+      }
+    } else if (ask) {
+      void handleSubmit("explain", ask);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
