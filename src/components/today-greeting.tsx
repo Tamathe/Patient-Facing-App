@@ -4,8 +4,6 @@ import { Activity, AlertTriangle, ArrowRight, LockKeyhole, MessageCircle, Notebo
 import Link from "next/link";
 import React from "react";
 import clsx from "clsx";
-import { UrgentHelp } from "./urgent-help";
-import type { Language } from "@/i18n/strings";
 import type { TaskItem } from "@/domain/types";
 
 export type ChipTone = "urgent" | "active" | "suggested";
@@ -94,7 +92,7 @@ function TaskChip({ task }: { task: TaskItem }) {
   );
 }
 
-export function TodayGreeting({ patientName, tasks, language = "en", now }: { patientName: string; tasks: TaskItem[]; language?: Language; now?: Date }) {
+export function TodayGreeting({ patientName, tasks, now }: { patientName: string; tasks: TaskItem[]; now?: Date }) {
   // Resolve the time-of-day greeting on the client only. Rendering it during SSR
   // compares the server clock (UTC on Vercel) against the patient's local clock
   // at hydration and mismatches across hour boundaries. Tests pass `now`
@@ -109,7 +107,6 @@ export function TodayGreeting({ patientName, tasks, language = "en", now }: { pa
 
   return (
     <section className="space-y-4">
-      <UrgentHelp language={language} />
       <div>
         <p className="text-sm font-medium text-care">{greeting}</p>
         <h2 className="mt-1 text-2xl font-semibold">{statusSummary(tasks)}</h2>

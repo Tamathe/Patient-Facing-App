@@ -28,7 +28,7 @@ test("scans a food, asks a typed question, logs the meal, and persists it", asyn
   await stubFoodLens(page);
 
   await page.goto("/today");
-  await page.getByRole("link", { name: "Food", exact: true }).click();
+  await page.goto("/food");
   await expect(page.getByRole("heading", { name: "Food Lens" })).toBeVisible();
 
   await expect(page.getByRole("heading", { name: /Chicken Noodle Soup/ })).toBeVisible();
@@ -49,7 +49,7 @@ test("scans a food, asks a typed question, logs the meal, and persists it", asyn
   await page.reload();
   await expect(page.getByRole("listitem").filter({ hasText: "Campbell's Condensed Chicken Noodle Soup" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Coach", exact: true }).click();
+  await page.goto("/chat");
   await expect(page.getByText(/Chicken Noodle Soup/).first()).toBeVisible();
 });
 
@@ -103,7 +103,7 @@ test("keeps existing state when migrating a pre-mealLog save", async ({ page }) 
   await page.goto("/numbers");
   await expect(page.getByText("137/86")).toBeVisible();
 
-  await page.getByRole("link", { name: "Food", exact: true }).click();
+  await page.goto("/food");
   await page.getByRole("button", { name: "Start" }).click();
   await page.getByLabel("Ask about this food…").fill("Is this okay?");
   await page.getByRole("button", { name: "Ask" }).click();

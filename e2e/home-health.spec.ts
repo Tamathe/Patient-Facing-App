@@ -11,7 +11,8 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   await page.goto("/today");
   await expect(page.getByRole("heading", { name: "Today", level: 1 })).toBeVisible();
 
-  await page.getByRole("link", { name: "My Numbers" }).click();
+  await page.getByRole("link", { name: "All my health" }).click();
+  await page.getByRole("link", { name: /^My Numbers/ }).click();
   await expect(page.getByRole("heading", { name: "My Numbers" })).toBeVisible();
   await page.getByLabel("Top number").fill("151");
   await page.getByLabel("Bottom number").fill("92");
@@ -20,19 +21,22 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   await page.getByRole("button", { name: "Save reading" }).click();
   await expect(page.getByText("Rest quietly for 5 minutes")).toBeVisible();
 
-  await page.getByRole("link", { name: "My Medicines" }).click();
+  await page.getByRole("link", { name: "All my health" }).click();
+  await page.getByRole("link", { name: /^My Medicines/ }).click();
   await expect(page.getByRole("heading", { name: "My Medicines" })).toBeVisible();
   await page.getByLabel("It costs too much").check();
   await expect(page.getByRole("checkbox", { name: "It costs too much" })).toBeChecked();
 
-  await page.getByRole("link", { name: "Coach" }).click();
+  await page.getByRole("link", { name: "All my health" }).click();
+  await page.getByRole("link", { name: /^Coach/ }).click();
   await expect(page.getByRole("heading", { name: "Coach" })).toBeVisible();
   await page.getByRole("button", { name: "Why does this matter?" }).click();
   await page.getByLabel("Message").fill("Why am I taking lisinopril?");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText(/Lisinopril is listed in your medicines as/i)).toBeVisible();
 
-  await page.getByRole("link", { name: "My Visits" }).click();
+  await page.getByRole("link", { name: "All my health" }).click();
+  await page.getByRole("link", { name: /^My Visits/ }).click();
   await expect(page.getByRole("heading", { name: "My Health Brief" })).toBeVisible();
 
   const readingsSection = page.getByRole("heading", { name: "Recent home readings" });
@@ -42,6 +46,26 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   const medicationSection = page.getByRole("heading", { name: "Medicines and barriers" });
   await expect(medicationSection).toBeVisible();
   await expect(medicationSection.locator("..").locator("..").getByText(/Barriers:|It costs too much|cost/i)).toBeVisible();
+});
+
+test("the collapsed nav reaches a feature through the All my health menu", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/today");
+  await page.getByRole("link", { name: "All my health" }).click();
+  await expect(page.getByRole("heading", { name: "All my health" })).toBeVisible();
+
+  await page.getByRole("link", { name: /^My Numbers/ }).click();
+  await expect(page.getByRole("heading", { name: "My Numbers" })).toBeVisible();
+});
+
+test("the home composer routes a spoken-style command to the right screen", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/today");
+  await page.getByPlaceholder("Tell me what you need…").fill("show my medicines");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByRole("heading", { name: "My Medicines" })).toBeVisible();
 });
 
 test("a typed crisis turn shows 988/911 deep links and locks the composer", async ({ page }) => {
@@ -66,7 +90,9 @@ test("a positive PHQ-9 item 9 routes to the crisis surface", async ({ page }) =>
   await page.goto("/checkin");
   await page.getByRole("button", { name: /start the check-in/i }).click();
 
-  const groups = page.getByRole("group");
+  // Scope to the question area: the persistent UrgentHelp disclosure in the
+  // header is a <details>, whose implicit role is also "group".
+  const groups = page.getByRole("main").getByRole("group");
   const count = await groups.count();
   for (let index = 0; index < count; index += 1) {
     const group = groups.nth(index);

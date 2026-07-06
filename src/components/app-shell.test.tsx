@@ -1,22 +1,34 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { AppShell } from "./app-shell";
 
+vi.mock("@/state/store", async () => {
+  const { demoState } = await vi.importActual<typeof import("@/domain/fixtures")>("@/domain/fixtures");
+  return { useHealthState: () => ({ state: demoState, dispatch: () => {} }) };
+});
+
 describe("AppShell", () => {
-  it("renders primary patient-owned navigation", () => {
+  it("collapses navigation to Home and the All my health menu", () => {
     render(
       <AppShell title="Today">
         <p>Body</p>
       </AppShell>
     );
 
-    const main = screen.getByRole("main");
-    expect(main).toHaveClass("pb-40", "sm:pb-28");
-    expect(screen.getByRole("link", { name: "Today" })).toHaveAttribute("href", "/today");
-    expect(screen.getByRole("link", { name: "My Plan" })).toHaveAttribute("href", "/plan");
-    expect(screen.getByRole("link", { name: "My Numbers" })).toHaveAttribute("href", "/numbers");
-    expect(screen.getByRole("link", { name: "My Medicines" })).toHaveAttribute("href", "/medicines");
+    expect(screen.getByRole("link", { name: /home/i })).toHaveAttribute("href", "/today");
+    expect(screen.getByRole("link", { name: /all my health/i })).toHaveAttribute("href", "/menu");
+  });
+
+  it("keeps a persistent, offline-safe crisis affordance on every screen", () => {
+    render(
+      <AppShell title="Today">
+        <p>Body</p>
+      </AppShell>
+    );
+
+    expect(screen.getByRole("link", { name: /988 — crisis lifeline/i })).toHaveAttribute("href", "tel:988");
+    expect(screen.getByRole("link", { name: /911/i })).toHaveAttribute("href", "tel:911");
   });
 
   it("renders the page body content in the main region", () => {
@@ -26,6 +38,7 @@ describe("AppShell", () => {
       </AppShell>
     );
 
+    expect(screen.getByRole("main")).toBeInTheDocument();
     expect(screen.getByText("My temporary page copy")).toBeInTheDocument();
   });
 });
