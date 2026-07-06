@@ -151,7 +151,8 @@ export const brentState: AppState = {
     preferredName: "Brent",
     language: "en",
     primaryClinicName: "Elkhorn Creek Family Medicine",
-    primaryClinicPhone: "555-0173"
+    primaryClinicPhone: "555-0173",
+    county: "Perry"
   },
   carePlan: {
     id: "plan-brent",

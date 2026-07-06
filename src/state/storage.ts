@@ -468,7 +468,8 @@ function isPatient(value: unknown): value is PatientProfile {
     hasString(value, "preferredName") &&
     isLanguage(value.language) &&
     hasString(value, "primaryClinicName") &&
-    hasString(value, "primaryClinicPhone")
+    hasString(value, "primaryClinicPhone") &&
+    (value.county === undefined || typeof value.county === "string")
   );
 }
 

@@ -1,5 +1,6 @@
 import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { crisisTierForDomain } from "@/domain/crisis-red-flags";
+import { screenSocialEmergency } from "@/domain/social-screen";
 import { verifyGrounding } from "@/domain/grounding";
 import { findRecentClinicalReading } from "@/domain/recent-clinical-reading";
 import { tSafety, type Language } from "@/i18n/strings";
@@ -71,6 +72,17 @@ function decideSafety(request: HealthAiRequest): SafetyDecision {
         sources: []
       };
     }
+  }
+
+  // A material emergency (no food today, hungry children, out of insulin) escalates
+  // to the emergency tier with explicit 911 + 211 guidance, right after crisis.
+  if (screenSocialEmergency(request.patientInput)) {
+    return {
+      kind: "hard_escalate",
+      tier: "emergency",
+      message: tSafety(language, "socialEmergencyResponse"),
+      sources: []
+    };
   }
 
   const inputSafety = classifySafety(request.patientInput);

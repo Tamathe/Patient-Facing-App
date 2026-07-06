@@ -10,6 +10,7 @@ export type PatientProfile = {
   language: "en" | "es";
   primaryClinicName: string;
   primaryClinicPhone: string;
+  county?: string;
 };
 
 export type CareGoal = {

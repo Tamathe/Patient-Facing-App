@@ -142,7 +142,8 @@ export type SafetyStringKey =
   | "emergencyResponseSuffix"
   | "groundingFallback"
   | "groundingFallbackBanner"
-  | "voiceInterceptNotice";
+  | "voiceInterceptNotice"
+  | "socialEmergencyResponse";
 
 export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = {
   en: {
@@ -160,7 +161,9 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
     groundingFallback:
       "I could not confirm that answer against your own records, so I do not want to guess. Please contact your care team and they can help with this directly.",
     groundingFallbackBanner: "This answer was replaced because it was not backed by your records.",
-    voiceInterceptNotice: "I paused here for your safety."
+    voiceInterceptNotice: "I paused here for your safety.",
+    socialEmergencyResponse:
+      "It sounds like you may be without something you need today, like food or medicine. If this is an emergency, call 911. You can also dial 211 any time to reach someone who can help connect you with food, housing, or utility support right now."
   },
   es: {
     crisisResponse:
@@ -177,7 +180,9 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
     groundingFallback:
       "No pude confirmar esa respuesta con tus propios registros, así que no quiero adivinar. Por favor, comunícate con tu equipo de salud y ellos pueden ayudarte con esto directamente.",
     groundingFallbackBanner: "Esta respuesta fue reemplazada porque no estaba respaldada por tus registros.",
-    voiceInterceptNotice: "Hice una pausa aquí por tu seguridad."
+    voiceInterceptNotice: "Hice una pausa aquí por tu seguridad.",
+    socialEmergencyResponse:
+      "Parece que hoy podrías estar sin algo que necesitas, como comida o medicina. Si esto es una emergencia, llama al 911. También puedes llamar al 211 en cualquier momento para comunicarte con alguien que pueda ayudarte a conectar con apoyo de comida, vivienda o servicios ahora mismo."
   }
 };
 

@@ -705,6 +705,23 @@ describe("createSafeAiResponse", () => {
     expect(response.actions).toContain("call_emergency");
   });
 
+  it("escalates a material emergency with 911/211 guidance and emergency actions", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "unused", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "I have no food today and the kids are hungry", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.content).toContain("911");
+    expect(response.content).toContain("211");
+    expect(response.actions).toContain("call_emergency");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("keeps a side-effect escalation on the care-team tier", async () => {
     const stateWithSideEffects: AppState = {
       ...demoState,
