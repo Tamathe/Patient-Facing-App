@@ -55,9 +55,14 @@ describe("TodayGreeting", () => {
   it("renders tappable chips that link to each task destination", () => {
     render(<TodayGreeting patientName="Jordan" tasks={[clinical, visit, checkin]} now={morning} />);
 
-    expect(screen.getByRole("link", { name: /seek urgent help now/i })).toHaveAttribute("href", "/chat");
     expect(screen.getByRole("link", { name: /prepare for your next visit/i })).toHaveAttribute("href", "/visits");
     expect(screen.getByRole("link", { name: /mood check-in/i })).toHaveAttribute("href", "/checkin");
+  });
+
+  it("deep-links a Coach-bound chip with its task id so the chat reconstructs the prefilled turn", () => {
+    render(<TodayGreeting patientName="Jordan" tasks={[clinical, visit, checkin]} now={morning} />);
+
+    expect(screen.getByRole("link", { name: /seek urgent help now/i })).toHaveAttribute("href", "/chat?taskId=task-bp-clinical");
   });
 
   it("marks only the clinical escalation as urgent, never as a friendly suggestion", () => {

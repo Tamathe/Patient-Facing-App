@@ -40,7 +40,7 @@ export default function TodayPage() {
   return (
     <AppShell title="Today">
       <div className="space-y-4">
-        <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} />
+        <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} language={state.patient.language} />
         {primaryMedication ? (
           <DoseCard
             medication={primaryMedication}

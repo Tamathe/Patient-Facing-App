@@ -143,7 +143,8 @@ export type SafetyStringKey =
   | "groundingFallback"
   | "groundingFallbackBanner"
   | "voiceInterceptNotice"
-  | "socialEmergencyResponse";
+  | "socialEmergencyResponse"
+  | "urgentHelpSummary";
 
 export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = {
   en: {
@@ -163,7 +164,8 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
     groundingFallbackBanner: "This answer was replaced because it was not backed by your records.",
     voiceInterceptNotice: "I paused here for your safety.",
     socialEmergencyResponse:
-      "It sounds like you may be without something you need today, like food or medicine. If this is an emergency, call 911. You can also dial 211 any time to reach someone who can help connect you with food, housing, or utility support right now."
+      "It sounds like you may be without something you need today, like food or medicine. If this is an emergency, call 911. You can also dial 211 any time to reach someone who can help connect you with food, housing, or utility support right now.",
+    urgentHelpSummary: "Feeling unsafe right now? Get help"
   },
   es: {
     crisisResponse:
@@ -182,7 +184,8 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
     groundingFallbackBanner: "Esta respuesta fue reemplazada porque no estaba respaldada por tus registros.",
     voiceInterceptNotice: "Hice una pausa aquí por tu seguridad.",
     socialEmergencyResponse:
-      "Parece que hoy podrías estar sin algo que necesitas, como comida o medicina. Si esto es una emergencia, llama al 911. También puedes llamar al 211 en cualquier momento para comunicarte con alguien que pueda ayudarte a conectar con apoyo de comida, vivienda o servicios ahora mismo."
+      "Parece que hoy podrías estar sin algo que necesitas, como comida o medicina. Si esto es una emergencia, llama al 911. También puedes llamar al 211 en cualquier momento para comunicarte con alguien que pueda ayudarte a conectar con apoyo de comida, vivienda o servicios ahora mismo.",
+    urgentHelpSummary: "¿Te sientes inseguro ahora? Busca ayuda"
   }
 };
 

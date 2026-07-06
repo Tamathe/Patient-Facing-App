@@ -4,6 +4,8 @@ import { Activity, AlertTriangle, ArrowRight, LockKeyhole, MessageCircle, Notebo
 import Link from "next/link";
 import React from "react";
 import clsx from "clsx";
+import { UrgentHelp } from "./urgent-help";
+import type { Language } from "@/i18n/strings";
 import type { TaskItem } from "@/domain/types";
 
 export type ChipTone = "urgent" | "active" | "suggested";
@@ -59,9 +61,13 @@ function statusSummary(tasks: TaskItem[]): string {
 function TaskChip({ task }: { task: TaskItem }) {
   const tone = chipTone(task);
   const Icon = tone === "urgent" ? AlertTriangle : kindIcon[task.kind];
+  // A chip that lands on the Coach carries its task id so the chat reconstructs
+  // the exact prefilled, safety-screened turn — the same path a tapped
+  // notification uses. Chips that land on a feature screen navigate plainly.
+  const href = task.href === "/chat" ? `/chat?taskId=${task.id}` : task.href;
   return (
     <Link
-      href={task.href}
+      href={href}
       className={clsx(
         "flex min-h-14 items-start gap-3 rounded-control border p-4 transition-colors",
         tone === "urgent" && "border-pulse bg-pulse/5 hover:bg-pulse/10",
@@ -88,7 +94,7 @@ function TaskChip({ task }: { task: TaskItem }) {
   );
 }
 
-export function TodayGreeting({ patientName, tasks, now }: { patientName: string; tasks: TaskItem[]; now?: Date }) {
+export function TodayGreeting({ patientName, tasks, language = "en", now }: { patientName: string; tasks: TaskItem[]; language?: Language; now?: Date }) {
   // Resolve the time-of-day greeting on the client only. Rendering it during SSR
   // compares the server clock (UTC on Vercel) against the patient's local clock
   // at hydration and mismatches across hour boundaries. Tests pass `now`
@@ -103,6 +109,7 @@ export function TodayGreeting({ patientName, tasks, now }: { patientName: string
 
   return (
     <section className="space-y-4">
+      <UrgentHelp language={language} />
       <div>
         <p className="text-sm font-medium text-care">{greeting}</p>
         <h2 className="mt-1 text-2xl font-semibold">{statusSummary(tasks)}</h2>
