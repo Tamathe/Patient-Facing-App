@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "crisis:gate": "node scripts/crisis-gate.mjs",
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {

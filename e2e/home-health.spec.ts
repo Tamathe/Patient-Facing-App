@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { brentState } from "../src/domain/fixtures";
+
+const STORAGE_KEY = "home-health-ai-ownership-state";
 
 test("patient logs BP, captures a barrier, asks coach, and views Health Brief", async ({ page }) => {
   await page.addInitScript(() => {
@@ -39,4 +42,74 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   const medicationSection = page.getByRole("heading", { name: "Medicines and barriers" });
   await expect(medicationSection).toBeVisible();
   await expect(medicationSection.locator("..").locator("..").getByText(/Barriers:|It costs too much|cost/i)).toBeVisible();
+});
+
+test("a typed crisis turn shows 988/911 deep links and locks the composer", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/chat");
+  await page.getByLabel("Message").fill("I want to die");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
+  await expect(page.getByRole("link", { name: /Text 988/ })).toHaveAttribute("href", "sms:988");
+  await expect(page.getByRole("link", { name: /Call 911/ })).toHaveAttribute("href", "tel:911");
+
+  await expect(page.getByLabel("Message")).toBeDisabled();
+  await page.getByRole("button", { name: /seen this/i }).click();
+  await expect(page.getByLabel("Message")).not.toBeDisabled();
+});
+
+test("a positive PHQ-9 item 9 routes to the crisis surface", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/checkin");
+  await page.getByRole("button", { name: /start the check-in/i }).click();
+
+  const groups = page.getByRole("group");
+  const count = await groups.count();
+  for (let index = 0; index < count; index += 1) {
+    const group = groups.nth(index);
+    const optionName = index === count - 1 ? "Several days" : "Not at all";
+    await group.getByRole("radio", { name: optionName }).check();
+  }
+
+  // The sticky bottom nav overlays the bottom-of-page submit on the mobile
+  // viewport; dispatch the click straight to the (real, enabled) submit button.
+  await page.getByRole("button", { name: "Submit" }).dispatchEvent("click");
+  await expect(page.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
+});
+
+test("the support screen surfaces county-first local resources", async ({ page }) => {
+  await page.addInitScript(
+    ([key, state]) => window.localStorage.setItem(key as string, JSON.stringify(state)),
+    [STORAGE_KEY, brentState] as const
+  );
+
+  await page.goto("/support");
+  const foodGroup = page.getByRole("group").filter({ hasText: "food would run out" });
+  await foodGroup.getByRole("radio", { name: "Yes" }).check();
+  await page.getByRole("button", { name: /See support/ }).dispatchEvent("click");
+
+  await expect(page.getByText("Perry County food resources")).toBeVisible();
+});
+
+test("the PDC coverage card appears on medicines for the Brent demo", async ({ page }) => {
+  await page.addInitScript(
+    ([key, state]) => window.localStorage.setItem(key as string, JSON.stringify(state)),
+    [STORAGE_KEY, brentState] as const
+  );
+
+  await page.goto("/medicines");
+  await expect(page.getByRole("heading", { name: "Diabetes medicine coverage" })).toBeVisible();
+  await expect(page.getByText(/estimate from refills you logged/)).toBeVisible();
+});
+
+test("loading the Brent demo from the privacy page is reachable", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/privacy");
+  await expect(page.getByRole("button", { name: /Load Brent demo/ })).toBeVisible();
+  await page.getByRole("button", { name: /Load Brent demo/ }).click();
+  await expect(page.getByText(/Recorded a skipped metformin dose/i)).toBeVisible();
 });
