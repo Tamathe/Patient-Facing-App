@@ -8,6 +8,7 @@ const CLIENT_SECRETS_URL = "https://api.openai.com/v1/realtime/client_secrets";
 type TokenRequestBody = {
   patientId?: string;
   crisisOpen?: boolean;
+  passcode?: string;
 };
 
 async function readBody(request: Request): Promise<TokenRequestBody> {
@@ -41,6 +42,14 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (!apiKey) {
     return Response.json({ mode: "mock", reason: "no_api_key" });
+  }
+
+  // Demo cost gate: on a public deployment, only mint a real OpenAI session when
+  // the request carries the shared passcode. Without it, fall back to mock (typed)
+  // so a stray visitor cannot spend credits. Skipped entirely when DEMO_PASSCODE is unset.
+  const requiredPasscode = process.env.DEMO_PASSCODE;
+  if (requiredPasscode && body.passcode !== requiredPasscode) {
+    return Response.json({ mode: "mock", reason: "locked" });
   }
 
   try {

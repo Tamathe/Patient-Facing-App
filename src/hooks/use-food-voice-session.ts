@@ -141,12 +141,16 @@ export function useFoodVoiceSession(args: {
     }
 
     setStatus("connecting");
+    const passcode =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("k") ?? undefined
+        : undefined;
     let token: TokenResponse;
     try {
       const response = await fetch("/api/realtime/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patientId: stateBeforeStart.patient.id, crisisOpen: false })
+        body: JSON.stringify({ patientId: stateBeforeStart.patient.id, crisisOpen: false, passcode })
       });
       token = (await response.json()) as TokenResponse;
     } catch {
