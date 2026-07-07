@@ -1,11 +1,101 @@
-import type { AppState, HealthBrief } from "./types";
+import { summarizeGlucoseTrend } from "./adherence";
+import { activeConditions, selectLenses } from "./condition-lens";
+import { summarizeFoodGlucoseLink } from "./glucose-correlation";
+import { computeTimeInRange } from "./glucose-range";
+import { getPdcToDate } from "./medication-fills";
+import { screeningLens, screeningLensLine } from "./screening-status";
+import type { AppState, EvidenceStatus, HealthBrief } from "./types";
 
 type HealthBriefBuildOptions = {
   generatedAt?: string;
 };
 
+type BriefSection = HealthBrief["sections"][number];
+
+function humanizeBarrier(barrier: string): string {
+  return barrier.replace(/_/g, " ");
+}
+
+// The recent blood-sugar picture: latest value, time-in-range over the trailing
+// window, and the plain-language trend. Omitted entirely when there are no
+// glucose readings so a hypertension-only brief is unchanged.
+function bloodSugarSection(state: AppState): BriefSection | null {
+  const readings = state.glucoseReadings;
+  if (readings.length === 0) {
+    return null;
+  }
+  const latest = readings[readings.length - 1];
+  const items = [`Latest: ${latest.valueMgDl} mg/dL on ${latest.measuredAt.slice(0, 10)}.`];
+  const timeInRange = computeTimeInRange(readings);
+  if (timeInRange) {
+    items.push(
+      `${timeInRange.inRange} of your last ${timeInRange.total} blood-sugar readings were in the ${timeInRange.low}–${timeInRange.high} range (${timeInRange.percentInRange}%). This is general education, not a diagnosis.`
+    );
+  }
+  const trend = summarizeGlucoseTrend(readings);
+  if (trend) {
+    items.push(trend.message);
+  }
+  return { title: "Recent blood sugar", items, status: "patient_reported" };
+}
+
+// The deterministic food<->glucose observation, when the patient's own logs
+// carry enough paired data. Omitted when null (below the sample or delta floor).
+function foodPatternSection(state: AppState): BriefSection | null {
+  const lens = selectLenses(activeConditions(state.carePlan));
+  const insight = summarizeFoodGlucoseLink(state.mealLog, state.glucoseReadings, lens);
+  if (!insight) {
+    return null;
+  }
+  return { title: "Food & blood-sugar pattern", items: [insight.message], status: "inferred" };
+}
+
+// Provider-legible adherence: refill-based diabetes coverage (the honest PDC
+// estimate the app already computes) plus what the patient logged. Omitted when
+// there is neither refill history nor a logged dose.
+function adherenceSection(state: AppState, asOf: Date): BriefSection | null {
+  const items: string[] = [];
+  const pdc = getPdcToDate(state, asOf);
+  if (pdc && pdc.eligible) {
+    items.push(
+      `Diabetes medicine coverage: about ${pdc.pdcPercent}% of days covered so far this year (goal ${pdc.thresholdPercent}%+). Estimated from the refills you logged.`
+    );
+  }
+  const doseEvents = state.doseEvents;
+  if (doseEvents.length > 0) {
+    const taken = doseEvents.filter((event) => event.status === "taken").length;
+    items.push(`From the doses you logged, ${taken} of ${doseEvents.length} were marked taken.`);
+    const barriers = [
+      ...new Set(
+        doseEvents
+          .filter((event) => event.status === "skipped" && event.barrier !== null)
+          .map((event) => humanizeBarrier(event.barrier as string))
+      )
+    ];
+    if (barriers.length > 0) {
+      items.push(`Reasons noted for missed doses: ${barriers.join(", ")}.`);
+    }
+  }
+  if (items.length === 0) {
+    return null;
+  }
+  return { title: "Taking my medicines", items, status: "patient_reported" };
+}
+
+// One honest line on where the diabetic eye-screening loop stands, reusing the
+// condition-lens helper (grounding-safe, en/es). Null when diabetes is not
+// active or there is nothing to say.
+function eyeScreeningSection(state: AppState, asOf: Date): BriefSection | null {
+  const lens = screeningLens(state, asOf);
+  if (!lens) {
+    return null;
+  }
+  return { title: "Eye screening", items: [screeningLensLine(lens, state.patient.language)], status: "inferred" };
+}
+
 export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptions = {}): HealthBrief {
   const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const asOf = options.generatedAt ? new Date(options.generatedAt) : new Date();
   const recentReadings = state.readings.slice(-7).map(
     (reading) =>
       `${reading.systolic}/${reading.diastolic}${reading.pulse ? ` pulse ${reading.pulse}` : ""}`
@@ -26,9 +116,16 @@ export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptio
     carePlan.callThresholdDiastolic !== null ? `${carePlan.callThresholdDiastolic} diastolic` : null
   ].filter(Boolean) as string[];
   const hasCarePlanThresholds = callThresholdParts.length > 0;
+  const glucoseLow = carePlan.callThresholdGlucoseLow ?? null;
+  const glucoseHigh = carePlan.callThresholdGlucoseHigh ?? null;
+  const glucoseThresholdParts = [
+    glucoseLow !== null ? `at or below ${glucoseLow}` : null,
+    glucoseHigh !== null ? `at or above ${glucoseHigh}` : null
+  ].filter(Boolean) as string[];
+  const hasGlucoseThresholds = glucoseThresholdParts.length > 0;
   const hasWarningSymptoms = carePlan.warningSymptoms.length > 0;
-  const hasUrgentGuidance = hasCarePlanThresholds || hasWarningSymptoms;
-  const urgencySectionStatus = hasUrgentGuidance
+  const hasUrgentGuidance = hasCarePlanThresholds || hasGlucoseThresholds || hasWarningSymptoms;
+  const urgencySectionStatus: EvidenceStatus = hasUrgentGuidance
     ? carePlan.thresholdSource === "clinician_authored"
       ? "confirmed"
       : "inferred"
@@ -46,6 +143,11 @@ export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptio
             : []
         ),
         ...(
+          hasGlucoseThresholds
+            ? [`Call the team if your blood sugar is ${glucoseThresholdParts.join(" or ")} mg/dL.`]
+            : []
+        ),
+        ...(
           hasWarningSymptoms ? [`Seek urgent care right away for: ${carePlan.warningSymptoms.join(", ")}.`] : []
         )
       ]
@@ -54,45 +156,51 @@ export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptio
         "Please review these urgent thresholds with your care team."
       ];
 
+  const sections: Array<BriefSection | null> = [
+    {
+      title: "What I am working on",
+      items: [state.carePlan.plainLanguageSummary],
+      status: "confirmed"
+    },
+    {
+      title: "Recent home readings",
+      items: recentReadings.length > 0 ? recentReadings : ["No home readings logged yet."],
+      status: recentReadings.length > 0 ? "patient_reported" : "needs_review"
+    },
+    bloodSugarSection(state),
+    foodPatternSection(state),
+    {
+      title: "When to call my care team",
+      items: urgencyItems,
+      status: urgencySectionStatus
+    },
+    {
+      title: "Medicines and barriers",
+      items: medicineItems,
+      status: hasMedicines ? "patient_reported" : "needs_review"
+    },
+    adherenceSection(state, asOf),
+    eyeScreeningSection(state, asOf),
+    {
+      title: "Confirmed instructions",
+      items: confirmedInstructions.length > 0 ? confirmedInstructions : ["No uploaded instructions confirmed yet."],
+      status: confirmedInstructions.length > 0 ? "confirmed" : "needs_review"
+    },
+    {
+      title: "Questions for my care team",
+      items: [
+        "What should I do if readings stay above my call threshold?",
+        "Are any medicine side effects expected or concerning?",
+        "What number pattern should make me call sooner?"
+      ],
+      status: "inferred"
+    }
+  ];
+
   return {
     id: "brief-current",
     patientId: state.patient.id,
     generatedAt,
-    sections: [
-      {
-        title: "What I am working on",
-        items: [state.carePlan.plainLanguageSummary],
-        status: "confirmed"
-      },
-      {
-        title: "Recent home readings",
-        items: recentReadings.length > 0 ? recentReadings : ["No home readings logged yet."],
-        status: recentReadings.length > 0 ? "patient_reported" : "needs_review"
-      },
-      {
-        title: "When to call my care team",
-        items: urgencyItems,
-        status: urgencySectionStatus
-      },
-      {
-        title: "Medicines and barriers",
-        items: medicineItems,
-        status: hasMedicines ? "patient_reported" : "needs_review"
-      },
-      {
-        title: "Confirmed instructions",
-        items: confirmedInstructions.length > 0 ? confirmedInstructions : ["No uploaded instructions confirmed yet."],
-        status: confirmedInstructions.length > 0 ? "confirmed" : "needs_review"
-      },
-      {
-        title: "Questions for my care team",
-        items: [
-          "What should I do if readings stay above my call threshold?",
-          "Are any medicine side effects expected or concerning?",
-          "What number pattern should make me call sooner?"
-        ],
-        status: "inferred"
-      }
-    ]
+    sections: sections.filter((section): section is BriefSection => section !== null)
   };
 }
