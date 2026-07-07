@@ -305,4 +305,78 @@ describe("healthReducer", () => {
 
     expect(next.screeningGaps[0].status).toBe("scheduled");
   });
+
+  const scheduledState = () => ({
+    ...demoState,
+    screeningGaps: [
+      {
+        ...demoState.screeningGaps[0],
+        status: "scheduled" as const,
+        scheduledSiteId: "site_fqhc_mobile",
+        scheduledFor: "Tuesday 2:40 PM"
+      }
+    ]
+  });
+
+  it("screeningResultConfirmed imports an abnormal result and parks the gap in referral", () => {
+    const next = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+
+    expect(next.screeningResults).toHaveLength(1);
+    expect(next.screeningResults[0]).toMatchObject({
+      gapId: "gap-demo-dr",
+      outcome: "abnormal",
+      grade: "moderate_npdr",
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+    expect(next.screeningGaps[0].status).toBe("referral");
+    expect(next.auditEvents.at(-1)?.action).toBe("screening_result_confirmed");
+  });
+
+  it("screeningResultConfirmed closes the gap on a normal result", () => {
+    const next = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "no_dr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-no-dr.svg"
+    });
+
+    expect(next.screeningResults[0].outcome).toBe("normal");
+    expect(next.screeningGaps[0].status).toBe("closed");
+  });
+
+  it("screeningResultConfirmed loops an ungradable result into the repeat flow", () => {
+    const next = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: null, dmePresent: null, ungradable: true },
+      source: "photo_report",
+      reportRef: "report-ungradable.svg"
+    });
+
+    expect(next.screeningResults[0].outcome).toBe("ungradable");
+    expect(next.screeningGaps[0].status).toBe("repeat");
+  });
+
+  it("screeningResultConfirmed refuses to import without a scheduled gap or with a refusal", () => {
+    const noSchedule = healthReducer(demoState, {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "no_dr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-no-dr.svg"
+    });
+    expect(noSchedule).toBe(demoState);
+
+    const refused = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: null, dmePresent: null, ungradable: false, refusal: "unreadable" },
+      source: "photo_report",
+      reportRef: "IMG_1.jpg"
+    });
+    expect(refused.screeningResults).toHaveLength(0);
+  });
 });

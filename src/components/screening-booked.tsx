@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarCheck2, Car } from "lucide-react";
+import Link from "next/link";
+import { CalendarCheck2, Camera, Car } from "lucide-react";
 import { ResourceReferral } from "@/components/resource-referral";
 import { findKentuckyResources, type KentuckySdohResource } from "@/domain/sdoh-resources";
 import { tScreening, type Language } from "@/i18n/strings";
@@ -40,6 +41,14 @@ export function ScreeningBooked({
         <h3 className="font-semibold">{tScreening(language, "whatToExpectTitle")}</h3>
         <p className="mt-1 text-sm leading-6 text-ink/80">{tScreening(language, "whatToExpectBody")}</p>
       </div>
+
+      <Link
+        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-control bg-care px-4 py-3 text-base font-semibold text-white hover:opacity-90"
+        href="/screening/result"
+      >
+        <Camera aria-hidden="true" className="h-5 w-5" />
+        {tScreening(language, "bookedSnapCta")}
+      </Link>
 
       <div className="rounded-control border border-ink/10 bg-white p-4">
         <h3 className="flex items-center gap-2 font-semibold">

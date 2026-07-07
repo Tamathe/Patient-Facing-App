@@ -76,3 +76,23 @@ export function recallDateFrom(confirmedAt: string, months = 12): string {
   date.setUTCMonth(date.getUTCMonth() + months);
   return date.toISOString();
 }
+
+// Selects the LOCKED plain-language copy branch for a read report. DME wins
+// over the grade branch, mirroring the tier rule.
+export function gradeStringKey(
+  extraction: Pick<DrReportExtraction, "grade" | "dmePresent" | "ungradable">
+): "gradeNoDr" | "gradeMild" | "gradeModerateSevere" | "gradeDmePdr" | "gradeUngradable" {
+  if (extraction.ungradable || extraction.grade === null) {
+    return "gradeUngradable";
+  }
+  if (extraction.dmePresent === true || extraction.grade === "pdr") {
+    return "gradeDmePdr";
+  }
+  if (extraction.grade === "moderate_npdr" || extraction.grade === "severe_npdr") {
+    return "gradeModerateSevere";
+  }
+  if (extraction.grade === "mild_npdr") {
+    return "gradeMild";
+  }
+  return "gradeNoDr";
+}

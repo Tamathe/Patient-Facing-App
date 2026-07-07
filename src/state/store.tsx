@@ -12,7 +12,8 @@ import {
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
-import { canTransition, transition } from "@/domain/screening-gap";
+import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
+import { outcomeForGrade } from "@/domain/dr-triage";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -22,12 +23,15 @@ import type {
   CareContextItem,
   Condition,
   DoseEvent,
+  DrReportExtraction,
   ExtractedFact,
   GlucoseReading,
   HomeReading,
   MealLogEntry,
   MedicationBarrier,
-  MedicationFill
+  MedicationFill,
+  ResultCaptureSource,
+  ScreeningResult
 } from "@/domain/types";
 import { loadStoredState, saveStoredState } from "./storage";
 
@@ -48,6 +52,12 @@ export type HealthAction =
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
   | { type: "completeOnboarding"; conditions: Condition[] }
   | { type: "bookScreening"; gapId: string; siteId: string; siteName: string; when: string }
+  | {
+      type: "screeningResultConfirmed";
+      extraction: Pick<DrReportExtraction, "grade" | "dmePresent" | "ungradable" | "refusal">;
+      source: ResultCaptureSource;
+      reportRef: string;
+    }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -229,6 +239,37 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
             state.patient.id,
             "screening_scheduled",
             `Eye screening booked — ${action.siteName}, ${action.when}`
+          )
+        ]
+      };
+    }
+    case "screeningResultConfirmed": {
+      const gap = state.screeningGaps.find((candidate) => candidate.status === "scheduled");
+      if (!gap || action.extraction.refusal !== undefined) {
+        return state;
+      }
+      const outcome = outcomeForGrade(action.extraction);
+      const result: ScreeningResult = {
+        id: crypto.randomUUID(),
+        gapId: gap.id,
+        outcome,
+        grade: action.extraction.grade,
+        dmePresent: action.extraction.dmePresent,
+        source: action.source,
+        reportRef: action.reportRef,
+        confirmedAt: new Date().toISOString()
+      };
+      const finalGap = transition(transition(gap, "completed"), outcomeToStatus(outcome));
+      return {
+        ...state,
+        screeningGaps: state.screeningGaps.map((candidate) => (candidate.id === finalGap.id ? finalGap : candidate)),
+        screeningResults: [...state.screeningResults, result],
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(
+            state.patient.id,
+            "screening_result_confirmed",
+            `Screening result confirmed from your report (${outcome})`
           )
         ]
       };

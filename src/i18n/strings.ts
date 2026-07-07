@@ -296,7 +296,36 @@ export type ScreeningStringKey =
   | "tileEyeCheckTitle"
   | "tileEyeCheckBody"
   | "tileEyeCheckCta"
-  | "allCaughtUp";
+  | "allCaughtUp"
+  | "bookedSnapCta"
+  | "resultPageTitle"
+  | "captureBoundary"
+  | "captureIntroTitle"
+  | "captureIntroBody"
+  | "captureStart"
+  | "capturePhotoLabel"
+  | "captureTypeInstead"
+  | "captureDemoTitle"
+  | "captureDemoHint"
+  | "captureTypedLabel"
+  | "captureTypedPlaceholder"
+  | "captureTypedSubmit"
+  | "reviewTitle"
+  | "reviewDmeYes"
+  | "reviewDmeNo"
+  | "reviewDmeUnknown"
+  | "reviewFieldsTitle"
+  | "confirmRight"
+  | "confirmWrong"
+  | "refusalUnreadable"
+  | "refusalRetinalPhoto"
+  | "refusalNotAReport"
+  | "refusalTryAgain"
+  | "provenancePhoto"
+  | "provenanceTyped"
+  | "resultTitle"
+  | "resultNeedBooking"
+  | "resultNeedBookingCta";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -362,7 +391,39 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     tileEyeCheckTitle: "Eye check due",
     tileEyeCheckBody: "It's been {months} months since your last diabetes eye photo. A new one takes about 10 minutes, close to home.",
     tileEyeCheckCta: "See times near me",
-    allCaughtUp: "No eye screening is due right now. We'll remind you when your next one comes up."
+    allCaughtUp: "No eye screening is due right now. We'll remind you when your next one comes up.",
+    bookedSnapCta: "I had my screening — read my report",
+    resultPageTitle: "Your screening report",
+    captureBoundary: "I read the printed report only — I can't check your eyes or give a diagnosis.",
+    captureIntroTitle: "Photograph the printed report",
+    captureIntroBody:
+      "After your screening, the camera prints a one-page report. Photograph that sheet in good light with all four corners in the frame — the app reads the sheet and you confirm every word before anything is saved.",
+    captureStart: "Read my report",
+    capturePhotoLabel: "Photo of the printed report",
+    captureTypeInstead: "Type it instead",
+    captureDemoTitle: "Or pick a demo report",
+    captureDemoHint: "Bundled sample sheets for the walkthrough — watermarked, not medical documents.",
+    captureTypedLabel: "What does the report say?",
+    captureTypedPlaceholder: "e.g. \"moderate, no macular edema\" or \"ungradable\"",
+    captureTypedSubmit: "Read my entry",
+    reviewTitle: "Here's what I read from your report:",
+    reviewDmeYes: "Macular edema (DME): the report marks it present.",
+    reviewDmeNo: "Macular edema (DME): not detected.",
+    reviewDmeUnknown: "Macular edema (DME): not stated.",
+    reviewFieldsTitle: "Lines I read from the sheet",
+    confirmRight: "That's right",
+    confirmWrong: "That's not right",
+    refusalUnreadable:
+      "I couldn't read that clearly, so I won't guess. Try a straighter photo in better light, or type what the report says.",
+    refusalRetinalPhoto:
+      "I can only read the printed report, not eye photos. Photograph the report sheet the camera printed for you.",
+    refusalNotAReport: "That doesn't look like a screening report. Photograph the printed report sheet, or type what it says.",
+    refusalTryAgain: "Try again",
+    provenancePhoto: "From your report photo — confirmed by you",
+    provenanceTyped: "From your typed entry — confirmed by you",
+    resultTitle: "Your result",
+    resultNeedBooking: "Book your screening first — then bring the printed report back here.",
+    resultNeedBookingCta: "Find a screening"
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -427,7 +488,39 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     tileEyeCheckTitle: "Chequeo de ojos pendiente",
     tileEyeCheckBody: "Han pasado {months} meses desde tu última foto de ojos por la diabetes. Una nueva toma unos 10 minutos, cerca de casa.",
     tileEyeCheckCta: "Ver horarios cerca de mí",
-    allCaughtUp: "No tienes ningún examen de ojos pendiente por ahora. Te recordaremos cuando toque el próximo."
+    allCaughtUp: "No tienes ningún examen de ojos pendiente por ahora. Te recordaremos cuando toque el próximo.",
+    bookedSnapCta: "Ya me hice el examen — leer mi reporte",
+    resultPageTitle: "Tu reporte del examen",
+    captureBoundary: "Solo leo el reporte impreso — no puedo revisar tus ojos ni dar un diagnóstico.",
+    captureIntroTitle: "Fotografía el reporte impreso",
+    captureIntroBody:
+      "Después de tu examen, la cámara imprime un reporte de una página. Fotografía esa hoja con buena luz y las cuatro esquinas en el cuadro — la app lee la hoja y tú confirmas cada palabra antes de guardar nada.",
+    captureStart: "Leer mi reporte",
+    capturePhotoLabel: "Foto del reporte impreso",
+    captureTypeInstead: "Escribirlo en su lugar",
+    captureDemoTitle: "O elige un reporte de demostración",
+    captureDemoHint: "Hojas de muestra incluidas para el recorrido — con marca de agua, no son documentos médicos.",
+    captureTypedLabel: "¿Qué dice el reporte?",
+    captureTypedPlaceholder: "p. ej. \"moderate, no macular edema\" o \"ungradable\"",
+    captureTypedSubmit: "Leer mi texto",
+    reviewTitle: "Esto es lo que leí de tu reporte:",
+    reviewDmeYes: "Edema macular (DME): el reporte lo marca presente.",
+    reviewDmeNo: "Edema macular (DME): no detectado.",
+    reviewDmeUnknown: "Edema macular (DME): no indicado.",
+    reviewFieldsTitle: "Líneas que leí de la hoja",
+    confirmRight: "Así es",
+    confirmWrong: "No es correcto",
+    refusalUnreadable:
+      "No pude leerlo con claridad, así que no voy a adivinar. Intenta una foto más derecha con mejor luz, o escribe lo que dice el reporte.",
+    refusalRetinalPhoto:
+      "Solo puedo leer el reporte impreso, no fotos de ojos. Fotografía la hoja del reporte que imprimió la cámara.",
+    refusalNotAReport: "Eso no parece un reporte de examen. Fotografía la hoja impresa del reporte, o escribe lo que dice.",
+    refusalTryAgain: "Intentar de nuevo",
+    provenancePhoto: "De la foto de tu reporte — confirmado por ti",
+    provenanceTyped: "De tu texto escrito — confirmado por ti",
+    resultTitle: "Tu resultado",
+    resultNeedBooking: "Primero reserva tu examen — luego trae aquí el reporte impreso.",
+    resultNeedBookingCta: "Buscar un examen"
   }
 };
 
