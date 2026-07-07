@@ -1,9 +1,13 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell";
+import { GlucoseInsights } from "@/components/glucose-insights";
 import { GlucoseLogForm } from "@/components/glucose-log-form";
 import { interpretGlucose } from "@/domain/blood-glucose";
 import { summarizeGlucoseTrend } from "@/domain/adherence";
+import { activeConditions, selectLenses } from "@/domain/condition-lens";
+import { summarizeFoodGlucoseLink } from "@/domain/glucose-correlation";
+import { computeTimeInRange } from "@/domain/glucose-range";
 import type { GlucoseReading } from "@/domain/types";
 import { useHealthState } from "@/state/store";
 
@@ -12,6 +16,12 @@ export default function GlucosePage() {
   const latest = state.glucoseReadings.at(-1);
   const insight = latest ? interpretGlucose(latest, state.glucoseReadings.slice(0, -1), state.carePlan) : null;
   const trend = summarizeGlucoseTrend(state.glucoseReadings);
+  const timeInRange = computeTimeInRange(state.glucoseReadings);
+  const foodInsight = summarizeFoodGlucoseLink(
+    state.mealLog,
+    state.glucoseReadings,
+    selectLenses(activeConditions(state.carePlan))
+  );
 
   return (
     <AppShell title="My Blood Sugar">
@@ -49,6 +59,7 @@ export default function GlucosePage() {
             <p className="mt-2 text-sm leading-6">{trend.message}</p>
           </section>
         ) : null}
+        <GlucoseInsights timeInRange={timeInRange} foodInsight={foodInsight} />
         <section className="grid gap-2">
           <h2 className="text-lg font-semibold">Recent readings</h2>
           {state.glucoseReadings.slice(-5).reverse().map((reading) => (
