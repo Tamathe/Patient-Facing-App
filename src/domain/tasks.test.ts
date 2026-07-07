@@ -411,4 +411,49 @@ describe("buildTodayTasks", () => {
 
     expect(tasks.map((task) => task.title)).toContain("Toma tu presión arterial");
   });
+
+  it("shows a booked eye screening as a confirmed appointment chip", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: recentCheckin,
+      screeningGaps: [
+        {
+          ...demoState.screeningGaps[0],
+          status: "scheduled",
+          scheduledSiteId: "site_fqhc_mobile",
+          scheduledFor: "Tuesday 2:40 PM"
+        }
+      ]
+    });
+
+    const chip = tasks.find((task) => task.id === "task-screening-booked");
+    expect(chip).toBeDefined();
+    expect(chip?.title).toBe("Eye screening — Perry County FQHC Mobile Camera, Tuesday 2:40 PM");
+    expect(chip?.status).toBe("confirmed");
+  });
+
+  it("surfaces a quiet recall chip when the annual rescreen is due within 60 days", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: recentCheckin,
+      screeningGaps: [{ ...demoState.screeningGaps[0], status: "closed" }],
+      recallReminders: [{ id: "recall-1", dueAt: "2026-08-04T12:00:00.000Z", reason: "annual_rescreen" }]
+    });
+
+    const chip = tasks.find((task) => task.id === "task-screening-recall");
+    expect(chip).toBeDefined();
+    expect(chip?.status).toBe("inferred");
+    expect(chip?.body).toContain("August 2026");
+  });
+
+  it("stays quiet about a recall that is still far away", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: recentCheckin,
+      screeningGaps: [{ ...demoState.screeningGaps[0], status: "closed" }],
+      recallReminders: [{ id: "recall-1", dueAt: "2027-07-05T12:00:00.000Z", reason: "annual_rescreen" }]
+    });
+
+    expect(tasks.find((task) => task.id === "task-screening-recall")).toBeUndefined();
+  });
 });

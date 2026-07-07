@@ -13,7 +13,8 @@ import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
-import { outcomeForGrade, tierForResult } from "@/domain/dr-triage";
+import { outcomeForGrade, recallDateFrom, recallReasonFor, tierForResult } from "@/domain/dr-triage";
+import { backdatedSentAt, escalationDue } from "@/domain/referral-followup";
 import { nearestDestinationOfKind } from "@/domain/screening-sites";
 import { tScreening } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
@@ -60,6 +61,9 @@ export type HealthAction =
       source: ResultCaptureSource;
       reportRef: string;
     }
+  | { type: "checkReferralFollowup" }
+  | { type: "backdateReferral"; referralId: string; days: number }
+  | { type: "markClinicConfirmed"; referralId: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -295,12 +299,95 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         );
       }
 
+      // A normal confirm schedules the annual recall (mild keeps its
+      // chronic-care emphasis via the reason).
+      const recallReminders = [...state.recallReminders];
+      const recallReason = outcome === "normal" ? recallReasonFor(result.grade) : null;
+      if (recallReason) {
+        recallReminders.push({ id: crypto.randomUUID(), dueAt: recallDateFrom(confirmedAt), reason: recallReason });
+        auditEvents.push(recordAuditEvent(state.patient.id, "recall_scheduled", "Annual eye-screening recall scheduled"));
+      }
+
       return {
         ...state,
         screeningGaps: state.screeningGaps.map((candidate) => (candidate.id === finalGap.id ? finalGap : candidate)),
         screeningResults: [...state.screeningResults, result],
         referrals,
+        recallReminders,
         auditEvents
+      };
+    }
+    case "checkReferralFollowup": {
+      const now = new Date();
+      const dueIds = new Set(
+        state.referrals.filter((referral) => escalationDue(referral, now)).map((referral) => referral.id)
+      );
+      if (dueIds.size === 0) {
+        return state;
+      }
+      const language = state.patient.language;
+      return {
+        ...state,
+        referrals: state.referrals.map((referral) =>
+          dueIds.has(referral.id)
+            ? {
+                ...referral,
+                stageHistory: [
+                  ...referral.stageHistory,
+                  { stage: "stalled", at: now.toISOString(), note: tScreening(language, "stageNoteStalled") }
+                ]
+              }
+            : referral
+        ),
+        auditEvents: [
+          ...state.auditEvents,
+          ...[...dueIds].map(() =>
+            recordAuditEvent(state.patient.id, "referral_escalated", "Referral silence escalated to your care team")
+          )
+        ]
+      };
+    }
+    case "backdateReferral": {
+      const referral = state.referrals.find((candidate) => candidate.id === action.referralId);
+      if (!referral) {
+        return state;
+      }
+      return {
+        ...state,
+        referrals: state.referrals.map((candidate) =>
+          candidate.id === action.referralId
+            ? { ...candidate, sentAt: backdatedSentAt(candidate.sentAt, action.days) }
+            : candidate
+        ),
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", `Demo control: referral backdated ${action.days} days`)
+        ]
+      };
+    }
+    case "markClinicConfirmed": {
+      const referral = state.referrals.find((candidate) => candidate.id === action.referralId);
+      if (!referral || referral.stageHistory.some((entry) => entry.stage === "clinic_confirmed")) {
+        return state;
+      }
+      const language = state.patient.language;
+      return {
+        ...state,
+        referrals: state.referrals.map((candidate) =>
+          candidate.id === action.referralId
+            ? {
+                ...candidate,
+                stageHistory: [
+                  ...candidate.stageHistory,
+                  { stage: "clinic_confirmed", at: new Date().toISOString(), note: tScreening(language, "stageNoteConfirmed") }
+                ]
+              }
+            : candidate
+        ),
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Referral confirmed — the clinic called")
+        ]
       };
     }
     case "resetDemo":
@@ -324,6 +411,12 @@ const HealthStateContext = createContext<HealthStateContextValue | null>(null);
 
 export function HealthStateProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(healthReducer, demoState, loadStoredState);
+
+  // Silence escalation runs on every app load; the reducer is a strict no-op
+  // (same state reference) when nothing is due, so this never dirties storage.
+  useEffect(() => {
+    dispatch({ type: "checkReferralFollowup" });
+  }, []);
 
   useEffect(() => {
     saveStoredState(state);

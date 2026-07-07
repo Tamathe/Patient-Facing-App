@@ -73,7 +73,9 @@ export type HomeStringKey =
   | "menuScreeningLabel"
   | "menuScreeningDesc"
   | "taskScreeningBookedTitle"
-  | "taskScreeningBookedBody";
+  | "taskScreeningBookedBody"
+  | "taskRecallTitle"
+  | "taskRecallBody";
 
 export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
   en: {
@@ -146,7 +148,9 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuScreeningLabel: "Eye Check",
     menuScreeningDesc: "Find and book your diabetes eye screening",
     taskScreeningBookedTitle: "Eye screening — {site}, {when}",
-    taskScreeningBookedBody: "About 10 minutes. Usually no dilation. Bring the printed report back to the app afterward."
+    taskScreeningBookedBody: "About 10 minutes. Usually no dilation. Bring the printed report back to the app afterward.",
+    taskRecallTitle: "Eye check coming up",
+    taskRecallBody: "Your yearly diabetes eye photo is due around {monthYear}. Booking early keeps it easy."
   },
   es: {
     greetingMorning: "Buenos días",
@@ -219,7 +223,9 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuScreeningLabel: "Chequeo de Ojos",
     menuScreeningDesc: "Encuentra y reserva tu examen de ojos por la diabetes",
     taskScreeningBookedTitle: "Examen de ojos — {site}, {when}",
-    taskScreeningBookedBody: "Unos 10 minutos. Normalmente sin dilatación. Después, trae el reporte impreso a la app."
+    taskScreeningBookedBody: "Unos 10 minutos. Normalmente sin dilatación. Después, trae el reporte impreso a la app.",
+    taskRecallTitle: "Se acerca tu chequeo de ojos",
+    taskRecallBody: "Tu foto anual de ojos por la diabetes toca alrededor de {monthYear}. Reservar temprano lo hace fácil."
   }
 };
 

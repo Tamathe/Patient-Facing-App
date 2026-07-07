@@ -353,7 +353,14 @@ export type ScreeningStringKey =
   | "packetFootnote"
   | "packetPrint"
   | "careTeamDraftTitle"
-  | "careTeamDraftHint";
+  | "careTeamDraftHint"
+  | "stageNoteStalled"
+  | "stageNoteConfirmed"
+  | "simulateDays"
+  | "clinicCalledCta"
+  | "recallLine"
+  | "recallMildEmphasis"
+  | "rebookNow";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -480,7 +487,14 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     packetFootnote: "A real referral would also include: insurance card copy, PCP signature, image files.",
     packetPrint: "Print",
     careTeamDraftTitle: "Message for your care team",
-    careTeamDraftHint: "Ready to copy or show at your clinic — nothing is sent by the app."
+    careTeamDraftHint: "Ready to copy or show at your clinic — nothing is sent by the app.",
+    stageNoteStalled: "No confirmation call inside the expected window",
+    stageNoteConfirmed: "You told us the clinic called",
+    simulateDays: "Demo: simulate {days} days passing",
+    clinicCalledCta: "They called me — it's confirmed",
+    recallLine: "We'll remind you in {monthYear}.",
+    recallMildEmphasis: "Because early changes were seen, steady daily care matters even more this year.",
+    rebookNow: "Rebook now"
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -606,7 +620,14 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     packetFootnote: "Un referido real también incluiría: copia de la tarjeta del seguro, firma del médico primario, archivos de imágenes.",
     packetPrint: "Imprimir",
     careTeamDraftTitle: "Mensaje para tu equipo de salud",
-    careTeamDraftHint: "Listo para copiar o mostrar en tu clínica — la app no envía nada."
+    careTeamDraftHint: "Listo para copiar o mostrar en tu clínica — la app no envía nada.",
+    stageNoteStalled: "Sin llamada de confirmación dentro del plazo esperado",
+    stageNoteConfirmed: "Nos dijiste que la clínica llamó",
+    simulateDays: "Demo: simular que pasan {days} días",
+    clinicCalledCta: "Ya me llamaron — está confirmado",
+    recallLine: "Te recordaremos en {monthYear}.",
+    recallMildEmphasis: "Como se vieron cambios tempranos, el cuidado diario constante importa aún más este año.",
+    rebookNow: "Reservar de nuevo ahora"
   }
 };
 

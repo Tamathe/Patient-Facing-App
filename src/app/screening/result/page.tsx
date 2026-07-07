@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Copy } from "lucide-react";
+import { AlertTriangle, CalendarClock, Copy, PhoneIncoming, TimerReset } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { ReferralPacketView } from "@/components/referral-packet-view";
-import { ReferralStatusCard } from "@/components/referral-status-card";
+import { ReferralStatusCard, referralHasStage } from "@/components/referral-status-card";
 import { ScreeningResultCapture } from "@/components/screening-result-capture";
 import { ScreeningResultView } from "@/components/screening-result-view";
 import { extractReportViaLiveRoute } from "@/ai/screening-extract-provider";
 import { buildReferralCareTeamMessage } from "@/domain/care-team-message";
+import { escalationThresholdDays } from "@/domain/dr-triage";
 import { getDestinationById } from "@/domain/screening-sites";
 import type { AppState, DrReportExtraction, Referral, ResultCaptureSource, ScreeningResult } from "@/domain/types";
 import { tScreening, type Language } from "@/i18n/strings";
-import { useHealthState } from "@/state/store";
+import { useHealthState, type HealthAction } from "@/state/store";
+import type { Dispatch } from "react";
 
 function CareTeamDraftCard({ language, message }: { language: Language; message: string }) {
   const [copied, setCopied] = useState(false);
@@ -42,12 +44,14 @@ function ReferralSection({
   state,
   result,
   referral,
-  language
+  language,
+  dispatch
 }: {
   state: AppState;
   result: ScreeningResult;
   referral: Referral;
   language: Language;
+  dispatch: Dispatch<HealthAction>;
 }) {
   const [packetOpen, setPacketOpen] = useState(false);
   const destination = getDestinationById(referral.destinationId);
@@ -55,6 +59,10 @@ function ReferralSection({
     return null;
   }
   const gap = state.screeningGaps.find((candidate) => candidate.id === result.gapId);
+  const stalled = referralHasStage(referral, "stalled");
+  const confirmed = referralHasStage(referral, "clinic_confirmed");
+  const scheduled = referralHasStage(referral, "scheduled");
+  const thresholdDays = escalationThresholdDays(referral.tier) ?? 5;
 
   return (
     <div className="space-y-4">
@@ -68,16 +76,46 @@ function ReferralSection({
         </section>
       ) : null}
 
-      <ReferralStatusCard destination={destination} language={language} referral={referral} />
+      <ReferralStatusCard destination={destination} language={language} referral={referral}>
+        {!confirmed && !scheduled ? (
+          <div className="mt-4 space-y-2">
+            <button
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
+              onClick={() => {
+                dispatch({ type: "markClinicConfirmed", referralId: referral.id });
+              }}
+              type="button"
+            >
+              <PhoneIncoming aria-hidden="true" className="h-4 w-4" />
+              {tScreening(language, "clinicCalledCta")}
+            </button>
+            {!stalled ? (
+              <button
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-control border border-ink/15 px-4 py-2 text-sm font-semibold text-ink/70 hover:border-care"
+                onClick={() => {
+                  // Demo control: backdate sentAt past the threshold, then run
+                  // the same followup check the app runs on load.
+                  dispatch({ type: "backdateReferral", referralId: referral.id, days: thresholdDays + 1 });
+                  dispatch({ type: "checkReferralFollowup" });
+                }}
+                type="button"
+              >
+                <TimerReset aria-hidden="true" className="h-4 w-4" />
+                {tScreening(language, "simulateDays", { days: thresholdDays })}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </ReferralStatusCard>
 
-      {referral.tier === "retina_urgent" ? (
+      {referral.tier === "retina_urgent" || (stalled && !confirmed) ? (
         <CareTeamDraftCard
           language={language}
           message={buildReferralCareTeamMessage(state, {
             destinationName: destination.name,
-            tier: referral.tier,
+            tier: referral.tier === "retina_urgent" ? "retina_urgent" : "optometry_routine",
             sentAt: referral.sentAt,
-            reason: "urgent"
+            reason: stalled && !confirmed ? "stalled" : "urgent"
           })}
         />
       ) : null}
@@ -104,10 +142,38 @@ function ReferralSection({
   );
 }
 
+function RecallSection({ state, result, language }: { state: AppState; result: ScreeningResult; language: Language }) {
+  const recall = state.recallReminders.at(-1);
+  if (result.outcome !== "normal" || !recall) {
+    return null;
+  }
+  const monthYear = new Date(recall.dueAt).toLocaleDateString(language === "es" ? "es-US" : "en-US", {
+    month: "long",
+    year: "numeric"
+  });
+  return (
+    <section className="rounded-control border border-care/30 bg-calm p-4">
+      <p className="flex items-center gap-2 text-sm font-medium leading-6 text-ink">
+        <CalendarClock aria-hidden="true" className="h-4 w-4 flex-none text-care" />
+        {tScreening(language, "recallLine", { monthYear })}
+      </p>
+      {recall.reason === "annual_rescreen_mild" ? (
+        <p className="mt-1 text-sm leading-6 text-ink/75">{tScreening(language, "recallMildEmphasis")}</p>
+      ) : null}
+    </section>
+  );
+}
+
 export default function ScreeningResultPage() {
   const { state, dispatch } = useHealthState();
   const router = useRouter();
   const language = state.patient.language;
+
+  // The silence check also runs when the patient looks at their result — the
+  // two moments the app is guaranteed to be awake.
+  useEffect(() => {
+    dispatch({ type: "checkReferralFollowup" });
+  }, [dispatch]);
 
   const scheduledGap = state.screeningGaps.find((gap) => gap.status === "scheduled");
   const latestResult = state.screeningResults.at(-1);
@@ -132,7 +198,18 @@ export default function ScreeningResultPage() {
         />
       ) : latestResult ? (
         <ScreeningResultView language={language} result={latestResult}>
-          {referral ? <ReferralSection language={language} referral={referral} result={latestResult} state={state} /> : null}
+          <RecallSection language={language} result={latestResult} state={state} />
+          {latestResult.outcome === "ungradable" ? (
+            <Link
+              className="flex min-h-14 w-full items-center justify-center rounded-control bg-care px-4 py-3 text-base font-semibold text-white hover:opacity-90"
+              href="/screening"
+            >
+              {tScreening(language, "rebookNow")}
+            </Link>
+          ) : null}
+          {referral ? (
+            <ReferralSection dispatch={dispatch} language={language} referral={referral} result={latestResult} state={state} />
+          ) : null}
         </ScreeningResultView>
       ) : (
         <section className="rounded-control border border-ink/10 bg-white p-4">

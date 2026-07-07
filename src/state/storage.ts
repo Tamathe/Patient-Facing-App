@@ -576,7 +576,9 @@ function isAuditEvent(value: unknown): value is AuditEvent {
       value.action === "assessment_recorded" ||
       value.action === "screening_scheduled" ||
       value.action === "screening_result_confirmed" ||
-      value.action === "referral_placed") &&
+      value.action === "referral_placed" ||
+      value.action === "referral_escalated" ||
+      value.action === "recall_scheduled") &&
     hasString(value, "createdAt")
   );
 }

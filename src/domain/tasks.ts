@@ -88,6 +88,30 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
     });
   }
 
+  // A recall due within 60 days surfaces quietly — a suggestion, not an alarm.
+  const RECALL_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
+  const dueRecall = state.recallReminders.find(
+    (reminder) => new Date(reminder.dueAt).valueOf() - Date.now() <= RECALL_WINDOW_MS
+  );
+  const hasOpenScreeningWork = state.screeningGaps.some(
+    (gap) => gap.status === "overdue" || gap.status === "engaged" || gap.status === "scheduled" || gap.status === "repeat"
+  );
+  if (dueRecall && !hasOpenScreeningWork) {
+    const monthYear = new Date(dueRecall.dueAt).toLocaleDateString(lang === "es" ? "es-US" : "en-US", {
+      month: "long",
+      year: "numeric"
+    });
+    tasks.push({
+      id: "task-screening-recall",
+      title: tHome(lang, "taskRecallTitle"),
+      body: tHome(lang, "taskRecallBody", { monthYear }),
+      href: "/screening",
+      priority: 3,
+      kind: "visit",
+      status: "inferred"
+    });
+  }
+
   // A booked eye screening shows up as a confirmed appointment chip until the
   // result comes back (the gap machine owns that lifecycle).
   const scheduledScreening = state.screeningGaps.find((gap) => gap.status === "scheduled");

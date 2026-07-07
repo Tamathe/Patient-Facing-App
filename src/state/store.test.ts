@@ -385,6 +385,82 @@ describe("healthReducer", () => {
     expect(next.screeningGaps[0].status).toBe("repeat");
   });
 
+  it("screeningResultConfirmed schedules the annual recall on normal results", () => {
+    const noDr = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "no_dr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-no-dr.svg"
+    });
+    expect(noDr.recallReminders).toHaveLength(1);
+    expect(noDr.recallReminders[0].reason).toBe("annual_rescreen");
+    const confirmedAt = new Date(noDr.screeningResults[0].confirmedAt);
+    const dueAt = new Date(noDr.recallReminders[0].dueAt);
+    expect(dueAt.getUTCFullYear()).toBe(confirmedAt.getUTCFullYear() + 1);
+    expect(dueAt.getUTCMonth()).toBe(confirmedAt.getUTCMonth());
+    expect(noDr.auditEvents.at(-1)?.action).toBe("recall_scheduled");
+
+    const mild = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "mild_npdr", dmePresent: false, ungradable: false },
+      source: "typed_entry",
+      reportRef: "typed-entry"
+    });
+    expect(mild.recallReminders[0].reason).toBe("annual_rescreen_mild");
+
+    const abnormal = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+    expect(abnormal.recallReminders).toHaveLength(0);
+  });
+
+  it("checkReferralFollowup marks a silent referral stalled exactly once", () => {
+    const withReferral = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+    const referralId = withReferral.referrals[0].id;
+
+    // Nothing due yet: strict no-op, same state reference.
+    expect(healthReducer(withReferral, { type: "checkReferralFollowup" })).toBe(withReferral);
+
+    const backdated = healthReducer(withReferral, { type: "backdateReferral", referralId, days: 6 });
+    expect(new Date(backdated.referrals[0].sentAt).valueOf()).toBeLessThan(
+      new Date(withReferral.referrals[0].sentAt).valueOf()
+    );
+
+    const escalated = healthReducer(backdated, { type: "checkReferralFollowup" });
+    expect(escalated.referrals[0].stageHistory.at(-1)?.stage).toBe("stalled");
+    expect(escalated.auditEvents.at(-1)?.action).toBe("referral_escalated");
+
+    // Idempotent: a second check adds nothing.
+    expect(healthReducer(escalated, { type: "checkReferralFollowup" })).toBe(escalated);
+  });
+
+  it("markClinicConfirmed appends the stage once and keeps the stalled history honest", () => {
+    const withReferral = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "pdr", dmePresent: true, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-pdr-dme.svg"
+    });
+    const referralId = withReferral.referrals[0].id;
+    const backdated = healthReducer(withReferral, { type: "backdateReferral", referralId, days: 3 });
+    const stalled = healthReducer(backdated, { type: "checkReferralFollowup" });
+
+    const confirmed = healthReducer(stalled, { type: "markClinicConfirmed", referralId });
+    const stages = confirmed.referrals[0].stageHistory.map((entry) => entry.stage);
+    expect(stages).toEqual(["drafted", "sent", "stalled", "clinic_confirmed"]);
+
+    // Confirming again is a no-op.
+    expect(healthReducer(confirmed, { type: "markClinicConfirmed", referralId })).toBe(confirmed);
+  });
+
   it("screeningResultConfirmed refuses to import without a scheduled gap or with a refusal", () => {
     const noSchedule = healthReducer(demoState, {
       type: "screeningResultConfirmed",
