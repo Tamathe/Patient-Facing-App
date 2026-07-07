@@ -8,7 +8,7 @@ logistics, nudge disclosure lint, find/plan/result UX) was folded into the base
 app as `/screening` in this sprint. Everything below is the *unported* half —
 concepts worth keeping as ideas, with pointers into the archive.
 
-**Archive: `github.com/Tamathe/RHTP@<final sha — filled at P8 retirement>`**
+**Archive: `github.com/Tamathe/RHTP@9687c42a8686253b34de6fc54eae9bbf7e0c6a3d`** (final snapshot, pushed at retirement — includes the previously-uncommitted DR-finder working tree).
 
 ## Navigator hub views
 
