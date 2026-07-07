@@ -7,10 +7,16 @@ diabetes).
 
 - Helps a patient understand a hypertension/diabetes care plan.
 - Logs home blood pressure and blood sugar readings.
+- Summarizes blood-sugar **time-in-range** and surfaces a plain-language
+  **food↔blood-sugar pattern** from the patient's own logs (discrete readings
+  summarized — no CGM, no device, no causal claim).
 - Explains medicines in plain language.
 - Captures medication barriers without blame.
 - Provides guided AI coaching with safety boundaries.
-- Generates a visit-ready Health Brief.
+- Generates a visit-ready Health Brief the patient carries to their doctor. For
+  a diabetic it also carries blood-sugar time-in-range, refill-based medicine
+  coverage, an eye-screening summary, and the food↔blood-sugar pattern — all
+  derived on-device (no provider dashboard, no backend).
 - Carries a diabetic patient through the eye-screening loop (`/screening`):
   "you're due" nudge → find & book the nearest camera → photograph the printed
   result → confirmed import → correctly-tiered referral → silence escalation →

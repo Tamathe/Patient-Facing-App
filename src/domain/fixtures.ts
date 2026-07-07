@@ -428,6 +428,54 @@ export const brentState: AppState = {
       measuredAt: "2026-07-04T07:05:00.000Z",
       contexts: ["morning", "before_medicine"],
       note: ""
+    },
+    {
+      id: "glucose-brent-pm-pancakes",
+      patientId: "patient-brent",
+      valueMgDl: 214,
+      measuredAt: "2026-07-01T09:00:00.000Z",
+      contexts: ["after_medicine"],
+      note: "About an hour after pancakes and syrup."
+    },
+    {
+      id: "glucose-brent-pm-eggs",
+      patientId: "patient-brent",
+      valueMgDl: 150,
+      measuredAt: "2026-07-01T13:15:00.000Z",
+      contexts: ["after_medicine"],
+      note: "About an hour after eggs."
+    },
+    {
+      id: "glucose-brent-pm-rice",
+      patientId: "patient-brent",
+      valueMgDl: 208,
+      measuredAt: "2026-07-02T19:30:00.000Z",
+      contexts: ["after_medicine"],
+      note: "After a big rice dinner."
+    },
+    {
+      id: "glucose-brent-pm-salad",
+      patientId: "patient-brent",
+      valueMgDl: 145,
+      measuredAt: "2026-07-02T13:30:00.000Z",
+      contexts: ["after_medicine"],
+      note: ""
+    },
+    {
+      id: "glucose-brent-pm-soda",
+      patientId: "patient-brent",
+      valueMgDl: 220,
+      measuredAt: "2026-07-03T13:30:00.000Z",
+      contexts: ["after_medicine"],
+      note: "About an hour after a regular soda."
+    },
+    {
+      id: "glucose-brent-pm-chicken",
+      patientId: "patient-brent",
+      valueMgDl: 152,
+      measuredAt: "2026-07-04T19:00:00.000Z",
+      contexts: ["after_medicine"],
+      note: "After grilled chicken and greens."
     }
   ],
   tasks: [],
@@ -633,6 +681,174 @@ export const brentState: AppState = {
       ],
       assistantSummary:
         "One cup of this canned soup has 890 mg of sodium — over half a day's salt. Too much salt can push blood pressure up. Try a low-sodium version, or use half the seasoning packet and add water."
+    },
+    {
+      id: "meal-brent-pancakes",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-01T08:00:00.000Z",
+      food: {
+        id: "food-brent-pancakes",
+        barcode: null,
+        name: "Pancakes with syrup",
+        brand: null,
+        category: "Breakfast",
+        nutrition: {
+          servingSize: "3 pancakes with syrup",
+          calories: 350,
+          sodiumMg: 550,
+          potassiumMg: 200,
+          totalSugarsG: 18,
+          addedSugarsG: 12,
+          saturatedFatG: 3,
+          fiberG: 2,
+          proteinG: 8,
+          carbsG: 55
+        },
+        source: "vision_estimate"
+      },
+      flags: ["55 g carbs — 28% of your 200 g daily limit"],
+      assistantSummary:
+        "Pancakes with syrup are high in fast carbs, which tend to push blood sugar up. If you enjoy them, a smaller stack with some protein on the side is gentler."
+    },
+    {
+      id: "meal-brent-eggs",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-01T12:15:00.000Z",
+      food: {
+        id: "food-brent-eggs",
+        barcode: null,
+        name: "Scrambled eggs",
+        brand: null,
+        category: "Eggs",
+        nutrition: {
+          servingSize: "2 eggs",
+          calories: 180,
+          sodiumMg: 380,
+          potassiumMg: 140,
+          totalSugarsG: 1,
+          addedSugarsG: 0,
+          saturatedFatG: 3,
+          fiberG: 0,
+          proteinG: 12,
+          carbsG: 6
+        },
+        source: "vision_estimate"
+      },
+      flags: [],
+      assistantSummary:
+        "Eggs are low in carbs and a good source of protein — an easy choice that keeps blood sugar steadier."
+    },
+    {
+      id: "meal-brent-rice",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-02T18:30:00.000Z",
+      food: {
+        id: "food-brent-rice",
+        barcode: null,
+        name: "White rice, large bowl",
+        brand: null,
+        category: "Grains",
+        nutrition: {
+          servingSize: "1.5 cups cooked",
+          calories: 300,
+          sodiumMg: 400,
+          potassiumMg: 55,
+          totalSugarsG: 0,
+          addedSugarsG: 0,
+          saturatedFatG: 0.5,
+          fiberG: 1,
+          proteinG: 6,
+          carbsG: 50
+        },
+        source: "vision_estimate"
+      },
+      flags: ["50 g carbs — 25% of your 200 g daily limit"],
+      assistantSummary:
+        "A big bowl of white rice is a lot of fast carbs at once. Half the rice with more vegetables, or brown rice, keeps the same meal gentler on your blood sugar."
+    },
+    {
+      id: "meal-brent-salad",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-02T12:30:00.000Z",
+      food: {
+        id: "food-brent-salad",
+        barcode: null,
+        name: "Garden salad with chicken",
+        brand: null,
+        category: "Salads",
+        nutrition: {
+          servingSize: "1 bowl",
+          calories: 260,
+          sodiumMg: 300,
+          potassiumMg: 400,
+          totalSugarsG: 5,
+          addedSugarsG: 0,
+          saturatedFatG: 2,
+          fiberG: 5,
+          proteinG: 20,
+          carbsG: 15
+        },
+        source: "vision_estimate"
+      },
+      flags: ["5 g fiber — good for your heart"],
+      assistantSummary:
+        "A salad with lean protein is low in carbs and high in fiber — a steady choice for blood sugar."
+    },
+    {
+      id: "meal-brent-soda",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-03T12:30:00.000Z",
+      food: {
+        id: "food-brent-soda",
+        barcode: "049000050110",
+        name: "Regular soda (can)",
+        brand: null,
+        category: "Soft drinks",
+        nutrition: {
+          servingSize: "1 can (355 mL)",
+          calories: 150,
+          sodiumMg: 40,
+          potassiumMg: 0,
+          totalSugarsG: 39,
+          addedSugarsG: 39,
+          saturatedFatG: 0,
+          fiberG: 0,
+          proteinG: 0,
+          carbsG: 60
+        },
+        source: "barcode_off"
+      },
+      flags: ["39 g added sugars — 156% of your 25 g daily limit"],
+      assistantSummary:
+        "A regular soda is fast sugar with nothing to slow it down, so blood sugar climbs quickly. Water or unsweetened tea is the easier everyday swap."
+    },
+    {
+      id: "meal-brent-chicken",
+      patientId: "patient-brent",
+      loggedAt: "2026-07-04T18:00:00.000Z",
+      food: {
+        id: "food-brent-chicken",
+        barcode: null,
+        name: "Grilled chicken and greens",
+        brand: null,
+        category: "Dinner",
+        nutrition: {
+          servingSize: "1 plate",
+          calories: 320,
+          sodiumMg: 350,
+          potassiumMg: 500,
+          totalSugarsG: 3,
+          addedSugarsG: 0,
+          saturatedFatG: 4,
+          fiberG: 4,
+          proteinG: 35,
+          carbsG: 12
+        },
+        source: "vision_estimate"
+      },
+      flags: ["4 g fiber — good for your heart"],
+      assistantSummary:
+        "Grilled chicken with greens is low in carbs and filling — the kind of dinner that keeps blood sugar steadier overnight."
     }
   ],
   doseEvents: [
