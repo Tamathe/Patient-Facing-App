@@ -13,6 +13,7 @@ import { PantryProvider, PANTRY_REQUEST_TEXT } from "@/ai/pantry-provider";
 import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { computeFoodFlags, type FoodFlag } from "@/domain/food-flags";
 import { buildMealLogEntry } from "@/domain/meal-log";
+import { parsePortionServings, scaleNutrition } from "@/domain/portion";
 import { foodLookupResponseSchema, mealLogEntrySchema } from "@/domain/schemas";
 import { t } from "@/i18n/strings";
 import { useFoodCamera } from "@/hooks/use-food-camera";
@@ -26,10 +27,28 @@ export default function FoodPage() {
   const { state, dispatch } = useHealthState();
   const language = state.patient.language;
   const lens = useMemo(() => selectLenses(activeConditions(state.carePlan)), [state.carePlan]);
+  const foodMessages = useMemo(() => state.aiMessages.filter((message) => message.mode === "food"), [state.aiMessages]);
+  const latestPatientUtterance = useMemo(() => {
+    for (let index = foodMessages.length - 1; index >= 0; index -= 1) {
+      const message = foodMessages[index];
+      if (message.role === "patient") {
+        return message.content;
+      }
+    }
+    return "";
+  }, [foodMessages]);
 
   const camera = useFoodCamera();
   const [identifiedFood, setIdentifiedFood] = useState<IdentifiedFood | null>(null);
+  const [portionServings, setPortionServings] = useState(1);
   const [logged, setLogged] = useState(false);
+  const identifiedFoodId = identifiedFood?.id ?? null;
+  const scaledFood = useMemo<IdentifiedFood | null>(() => {
+    if (!identifiedFood?.nutrition) {
+      return identifiedFood;
+    }
+    return { ...identifiedFood, nutrition: scaleNutrition(identifiedFood.nutrition, portionServings) };
+  }, [identifiedFood, portionServings]);
 
   const { activeBarcode } = useBarcodeScan({
     videoRef: camera.videoRef,
@@ -38,15 +57,16 @@ export default function FoodPage() {
   });
 
   const flags = useMemo<FoodFlag[]>(
-    () => computeFoodFlags(identifiedFood, lens, { medications: state.medications, readings: state.readings }, language),
-    [identifiedFood, lens, state.medications, state.readings, language]
+    () => computeFoodFlags(scaledFood, lens, { medications: state.medications, readings: state.readings }, language),
+    [scaledFood, lens, state.medications, state.readings, language]
   );
 
   const foodRef = useRef<IdentifiedFood | null>(null);
-  foodRef.current = identifiedFood;
+  foodRef.current = scaledFood;
   const flagsRef = useRef<FoodFlag[]>([]);
   flagsRef.current = flags;
   const lastAssistantRef = useRef<string | null>(null);
+  const lastPortionFoodIdRef = useRef<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -185,7 +205,32 @@ export default function FoodPage() {
     };
   }, [activeBarcode]);
 
-  const canLog = identifiedFood !== null || lastAssistantRef.current !== null;
+  useEffect(() => {
+    if (!identifiedFoodId) {
+      lastPortionFoodIdRef.current = null;
+      setPortionServings(1);
+      return;
+    }
+    const parsedPortion = parsePortionServings(latestPatientUtterance, language);
+    if (parsedPortion !== null) {
+      setPortionServings(parsedPortion);
+      setLogged(false);
+      lastPortionFoodIdRef.current = identifiedFoodId;
+      return;
+    }
+    if (lastPortionFoodIdRef.current !== identifiedFoodId) {
+      setPortionServings(1);
+      setLogged(false);
+      lastPortionFoodIdRef.current = identifiedFoodId;
+    }
+  }, [identifiedFoodId, language, latestPatientUtterance]);
+
+  const handlePortionChange = useCallback((servings: number) => {
+    setPortionServings(servings);
+    setLogged(false);
+  }, []);
+
+  const canLog = scaledFood !== null || lastAssistantRef.current !== null;
 
   const onLog = useCallback(() => {
     const entry = buildMealLogEntry({
@@ -203,7 +248,6 @@ export default function FoodPage() {
     setLogged(true);
   }, [dispatch, language]);
 
-  const foodMessages = state.aiMessages.filter((message) => message.mode === "food");
   const recentMeals = state.mealLog.slice(-5).reverse();
   const scanChip = identifiedFood ? (identifiedFood.brand ? `${identifiedFood.brand} ${identifiedFood.name}` : identifiedFood.name) : activeBarcode;
 
@@ -251,8 +295,17 @@ export default function FoodPage() {
           <PantryRecipes detectedItems={pantryResult.detectedItems} recipes={pantryResult.recipes} language={language} />
         ) : null}
 
-        {identifiedFood || flags.length > 0 ? (
-          <FoodFactsCard food={identifiedFood} flags={flags} logged={logged} canLog={canLog} onLog={onLog} language={language} />
+        {scaledFood || flags.length > 0 ? (
+          <FoodFactsCard
+            food={scaledFood}
+            flags={flags}
+            logged={logged}
+            canLog={canLog}
+            onLog={onLog}
+            language={language}
+            portionServings={portionServings}
+            onPortionChange={handlePortionChange}
+          />
         ) : null}
 
         <FoodConversation

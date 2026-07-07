@@ -25,6 +25,14 @@ export type FoodLensStringKey =
   | "holdToTalkHint"
   | "visionEstimateBadge"
   | "unknownFood"
+  | "portionAssuming"
+  | "portionLabel"
+  | "portionDecrease"
+  | "portionIncrease"
+  | "nutritionCalories"
+  | "nutritionSodium"
+  | "nutritionCarbs"
+  | "nutritionAddedSugars"
   | "logThis"
   | "loggedConfirmation"
   | "recentMealsTitle"
@@ -77,6 +85,14 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     holdToTalkHint: "Speak your question out loud.",
     visionEstimateBadge: "Estimate from photo",
     unknownFood: "This food",
+    portionAssuming: "Assuming {servings} serving(s) - tap to change.",
+    portionLabel: "Servings",
+    portionDecrease: "Decrease servings",
+    portionIncrease: "Increase servings",
+    nutritionCalories: "Calories",
+    nutritionSodium: "Sodium",
+    nutritionCarbs: "Carbs",
+    nutritionAddedSugars: "Added sugars",
     logThis: "Log this",
     loggedConfirmation: "Added to your meals",
     recentMealsTitle: "Recent meals",
@@ -128,6 +144,14 @@ export const foodLensStrings: Record<Language, Record<FoodLensStringKey, string>
     holdToTalkHint: "Di tu pregunta en voz alta.",
     visionEstimateBadge: "Estimado por la foto",
     unknownFood: "Esta comida",
+    portionAssuming: "Suponiendo {servings} porcion(es) - toca para cambiar.",
+    portionLabel: "Porciones",
+    portionDecrease: "Disminuir porciones",
+    portionIncrease: "Aumentar porciones",
+    nutritionCalories: "Calorias",
+    nutritionSodium: "Sodio",
+    nutritionCarbs: "Carbohidratos",
+    nutritionAddedSugars: "Azucares anadidos",
     logThis: "Guardar",
     loggedConfirmation: "Agregado a tus comidas",
     recentMealsTitle: "Comidas recientes",

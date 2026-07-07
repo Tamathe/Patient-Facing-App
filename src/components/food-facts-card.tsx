@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { t, type Language } from "@/i18n/strings";
+import { t, type FoodLensStringKey, type Language } from "@/i18n/strings";
 import type { FoodFlag, FoodFlagSeverity } from "@/domain/food-flags";
-import type { IdentifiedFood } from "@/domain/types";
+import type { IdentifiedFood, NutritionFacts } from "@/domain/types";
 
 const severityClass: Record<FoodFlagSeverity, string> = {
   warning: "bg-pulse/10 text-pulse",
@@ -11,13 +11,48 @@ const severityClass: Record<FoodFlagSeverity, string> = {
   info: "bg-calm text-care"
 };
 
+type NutritionRow = {
+  labelKey: FoodLensStringKey;
+  value: number | null;
+  unit: "" | "mg" | "g";
+};
+
+function formatServingCount(servings: number): string {
+  return Number.isInteger(servings) ? String(servings) : String(Math.round(servings * 10) / 10);
+}
+
+function previousServing(servings: number): number {
+  if (servings <= 0.5) {
+    return 0.5;
+  }
+  if (servings <= 1) {
+    return 0.5;
+  }
+  return servings - 1;
+}
+
+function nextServing(servings: number): number {
+  return servings < 1 ? 1 : servings + 1;
+}
+
+function buildNutritionRows(nutrition: NutritionFacts): NutritionRow[] {
+  return [
+    { labelKey: "nutritionCalories", value: nutrition.calories, unit: "" },
+    { labelKey: "nutritionSodium", value: nutrition.sodiumMg, unit: "mg" },
+    { labelKey: "nutritionCarbs", value: nutrition.carbsG, unit: "g" },
+    { labelKey: "nutritionAddedSugars", value: nutrition.addedSugarsG, unit: "g" }
+  ];
+}
+
 export function FoodFactsCard({
   food,
   flags,
   logged,
   canLog,
   onLog,
-  language
+  language,
+  portionServings,
+  onPortionChange
 }: {
   food: IdentifiedFood | null;
   flags: FoodFlag[];
@@ -25,8 +60,12 @@ export function FoodFactsCard({
   canLog: boolean;
   onLog: () => void;
   language: Language;
+  portionServings: number;
+  onPortionChange: (servings: number) => void;
 }) {
   const title = food ? (food.brand ? `${food.brand} ${food.name}` : food.name) : t(language, "unknownFood");
+  const portionLabel = formatServingCount(portionServings);
+  const nutritionRows = food?.nutrition ? buildNutritionRows(food.nutrition).filter((row) => row.value !== null) : [];
 
   return (
     <section className="rounded-control border border-ink/10 bg-white p-4 shadow-sm">
@@ -39,6 +78,51 @@ export function FoodFactsCard({
           <span className="rounded-control bg-calm px-2 py-1 text-xs font-semibold text-care">{t(language, "visionEstimateBadge")}</span>
         ) : null}
       </div>
+
+      {food?.nutrition ? (
+        <div className="mt-3 grid gap-3 rounded-control bg-calm/60 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-ink/75">
+              {t(language, "portionAssuming", { servings: portionLabel })}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                aria-label={t(language, "portionDecrease")}
+                className="min-h-12 min-w-12 rounded-control border border-ink/15 bg-white px-3 text-lg font-semibold text-ink disabled:opacity-40"
+                disabled={portionServings <= 0.5}
+                onClick={() => onPortionChange(previousServing(portionServings))}
+                type="button"
+              >
+                -
+              </button>
+              <span aria-label={t(language, "portionLabel")} className="min-w-10 text-center text-sm font-semibold">
+                {portionLabel}
+              </span>
+              <button
+                aria-label={t(language, "portionIncrease")}
+                className="min-h-12 min-w-12 rounded-control border border-ink/15 bg-white px-3 text-lg font-semibold text-ink"
+                onClick={() => onPortionChange(nextServing(portionServings))}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+          </div>
+          {nutritionRows.length > 0 ? (
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              {nutritionRows.map((row) => (
+                <div key={row.labelKey} className="rounded-control bg-white px-3 py-2">
+                  <dt className="text-xs font-medium text-ink/60">{t(language, row.labelKey)}</dt>
+                  <dd className="font-semibold">
+                    {row.value}
+                    {row.unit ? ` ${row.unit}` : ""}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+        </div>
+      ) : null}
 
       {flags.length > 0 ? (
         <ul className="mt-3 grid gap-2">
