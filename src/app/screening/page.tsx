@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ScreeningBooked } from "@/components/screening-booked";
@@ -87,6 +88,14 @@ function ScreeningPageInner() {
     return (
       <section className="rounded-control border border-ink/10 bg-white p-4">
         <p className="text-sm leading-6 text-ink/80">{tScreening(language, "allCaughtUp")}</p>
+        {state.screeningResults.length > 0 ? (
+          <Link
+            className="mt-3 inline-flex min-h-12 items-center rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
+            href="/screening/result"
+          >
+            {tScreening(language, "seeLatestResult")}
+          </Link>
+        ) : null}
       </section>
     );
   }

@@ -318,7 +318,7 @@ describe("healthReducer", () => {
     ]
   });
 
-  it("screeningResultConfirmed imports an abnormal result and parks the gap in referral", () => {
+  it("screeningResultConfirmed imports an abnormal result, parks the gap, and places the routine referral", () => {
     const next = healthReducer(scheduledState(), {
       type: "screeningResultConfirmed",
       extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
@@ -335,10 +335,32 @@ describe("healthReducer", () => {
       reportRef: "report-moderate-npdr.svg"
     });
     expect(next.screeningGaps[0].status).toBe("referral");
-    expect(next.auditEvents.at(-1)?.action).toBe("screening_result_confirmed");
+
+    // The same dispatch places the referral: routine tier, nearest optometry,
+    // drafted + sent history, its own audit event.
+    expect(next.referrals).toHaveLength(1);
+    expect(next.referrals[0]).toMatchObject({
+      resultId: next.screeningResults[0].id,
+      tier: "optometry_routine",
+      destinationId: "dest_hazard_optometry"
+    });
+    expect(next.referrals[0].stageHistory.map((entry) => entry.stage)).toEqual(["drafted", "sent"]);
+    expect(next.auditEvents.at(-2)?.action).toBe("screening_result_confirmed");
+    expect(next.auditEvents.at(-1)?.action).toBe("referral_placed");
   });
 
-  it("screeningResultConfirmed closes the gap on a normal result", () => {
+  it("screeningResultConfirmed routes DME/PDR to the urgent retina destination", () => {
+    const next = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "pdr", dmePresent: true, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-pdr-dme.svg"
+    });
+
+    expect(next.referrals[0]).toMatchObject({ tier: "retina_urgent", destinationId: "dest_uk_retina" });
+  });
+
+  it("screeningResultConfirmed closes the gap on a normal result with no referral", () => {
     const next = healthReducer(scheduledState(), {
       type: "screeningResultConfirmed",
       extraction: { grade: "no_dr", dmePresent: false, ungradable: false },
@@ -348,6 +370,7 @@ describe("healthReducer", () => {
 
     expect(next.screeningResults[0].outcome).toBe("normal");
     expect(next.screeningGaps[0].status).toBe("closed");
+    expect(next.referrals).toHaveLength(0);
   });
 
   it("screeningResultConfirmed loops an ungradable result into the repeat flow", () => {

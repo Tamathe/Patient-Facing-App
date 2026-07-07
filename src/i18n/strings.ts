@@ -325,7 +325,35 @@ export type ScreeningStringKey =
   | "provenanceTyped"
   | "resultTitle"
   | "resultNeedBooking"
-  | "resultNeedBookingCta";
+  | "resultNeedBookingCta"
+  | "seeLatestResult"
+  | "stageNoteDrafted"
+  | "stageNoteSent"
+  | "referralWentTo"
+  | "kindOptometrist"
+  | "kindRetina"
+  | "stageDrafted"
+  | "stageSent"
+  | "stageConfirmed"
+  | "stageScheduled"
+  | "stageCompleted"
+  | "stalledNotice"
+  | "urgentBannerTitle"
+  | "urgentBannerBody"
+  | "packetOpen"
+  | "packetTitle"
+  | "packetPatient"
+  | "packetResult"
+  | "packetUrgency"
+  | "packetUrgencyRoutine"
+  | "packetUrgencyUrgent"
+  | "packetDestination"
+  | "packetScreenedAt"
+  | "packetWatermark"
+  | "packetFootnote"
+  | "packetPrint"
+  | "careTeamDraftTitle"
+  | "careTeamDraftHint";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -423,7 +451,36 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     provenanceTyped: "From your typed entry — confirmed by you",
     resultTitle: "Your result",
     resultNeedBooking: "Book your screening first — then bring the printed report back here.",
-    resultNeedBookingCta: "Find a screening"
+    resultNeedBookingCta: "Find a screening",
+    seeLatestResult: "See your latest result",
+    stageNoteDrafted: "Drafted from your confirmed report",
+    stageNoteSent: "Sent to {name}",
+    referralWentTo: "Your referral went to {name} ({kind}), {miles} mi — expect a call within {days} days.",
+    kindOptometrist: "Optometrist",
+    kindRetina: "Retina specialist",
+    stageDrafted: "Drafted",
+    stageSent: "Sent",
+    stageConfirmed: "Clinic confirmed",
+    stageScheduled: "Scheduled",
+    stageCompleted: "Done",
+    stalledNotice: "We're on it — your care team has been notified.",
+    urgentBannerTitle: "Needs care soon",
+    urgentBannerBody:
+      "Your referral has already been sent. Getting seen quickly protects your vision — you don't need to figure this out alone.",
+    packetOpen: "View referral packet",
+    packetTitle: "Referral packet",
+    packetPatient: "Patient",
+    packetResult: "Report result",
+    packetUrgency: "Urgency",
+    packetUrgencyRoutine: "Routine — optometry",
+    packetUrgencyUrgent: "Urgent — retina service",
+    packetDestination: "Sent to",
+    packetScreenedAt: "Screening",
+    packetWatermark: "DEMO PACKET",
+    packetFootnote: "A real referral would also include: insurance card copy, PCP signature, image files.",
+    packetPrint: "Print",
+    careTeamDraftTitle: "Message for your care team",
+    careTeamDraftHint: "Ready to copy or show at your clinic — nothing is sent by the app."
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -520,7 +577,36 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     provenanceTyped: "De tu texto escrito — confirmado por ti",
     resultTitle: "Tu resultado",
     resultNeedBooking: "Primero reserva tu examen — luego trae aquí el reporte impreso.",
-    resultNeedBookingCta: "Buscar un examen"
+    resultNeedBookingCta: "Buscar un examen",
+    seeLatestResult: "Ver tu último resultado",
+    stageNoteDrafted: "Preparado a partir de tu reporte confirmado",
+    stageNoteSent: "Enviado a {name}",
+    referralWentTo: "Tu referido fue a {name} ({kind}), a {miles} millas — espera una llamada dentro de {days} días.",
+    kindOptometrist: "Optometrista",
+    kindRetina: "Especialista de retina",
+    stageDrafted: "Preparado",
+    stageSent: "Enviado",
+    stageConfirmed: "Clínica confirmó",
+    stageScheduled: "Agendado",
+    stageCompleted: "Hecho",
+    stalledNotice: "Estamos en esto — tu equipo de salud ya fue notificado.",
+    urgentBannerTitle: "Necesita atención pronto",
+    urgentBannerBody:
+      "Tu referido ya fue enviado. Que te atiendan rápido protege tu visión — no tienes que resolver esto por tu cuenta.",
+    packetOpen: "Ver paquete de referido",
+    packetTitle: "Paquete de referido",
+    packetPatient: "Paciente",
+    packetResult: "Resultado del reporte",
+    packetUrgency: "Urgencia",
+    packetUrgencyRoutine: "Rutina — optometría",
+    packetUrgencyUrgent: "Urgente — servicio de retina",
+    packetDestination: "Enviado a",
+    packetScreenedAt: "Examen",
+    packetWatermark: "PAQUETE DE DEMOSTRACIÓN",
+    packetFootnote: "Un referido real también incluiría: copia de la tarjeta del seguro, firma del médico primario, archivos de imágenes.",
+    packetPrint: "Imprimir",
+    careTeamDraftTitle: "Mensaje para tu equipo de salud",
+    careTeamDraftHint: "Listo para copiar o mostrar en tu clínica — la app no envía nada."
   }
 };
 

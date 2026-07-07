@@ -13,7 +13,9 @@ import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
-import { outcomeForGrade } from "@/domain/dr-triage";
+import { outcomeForGrade, tierForResult } from "@/domain/dr-triage";
+import { nearestDestinationOfKind } from "@/domain/screening-sites";
+import { tScreening } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -249,6 +251,7 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         return state;
       }
       const outcome = outcomeForGrade(action.extraction);
+      const confirmedAt = new Date().toISOString();
       const result: ScreeningResult = {
         id: crypto.randomUUID(),
         gapId: gap.id,
@@ -257,21 +260,47 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         dmePresent: action.extraction.dmePresent,
         source: action.source,
         reportRef: action.reportRef,
-        confirmedAt: new Date().toISOString()
+        confirmedAt
       };
       const finalGap = transition(transition(gap, "completed"), outcomeToStatus(outcome));
+      const auditEvents = [
+        ...state.auditEvents,
+        recordAuditEvent(
+          state.patient.id,
+          "screening_result_confirmed",
+          `Screening result confirmed from your report (${outcome})`
+        )
+      ];
+
+      // An abnormal confirm places the referral in the same dispatch: correct
+      // tier, nearest destination of the required kind, drafted+sent history.
+      const referrals = [...state.referrals];
+      const tier = tierForResult(result);
+      if (outcome === "abnormal" && tier !== "none") {
+        const destination = nearestDestinationOfKind(tier === "retina_urgent" ? "retina" : "optometry");
+        const language = state.patient.language;
+        referrals.push({
+          id: crypto.randomUUID(),
+          resultId: result.id,
+          tier,
+          destinationId: destination.id,
+          stageHistory: [
+            { stage: "drafted", at: confirmedAt, note: tScreening(language, "stageNoteDrafted") },
+            { stage: "sent", at: confirmedAt, note: tScreening(language, "stageNoteSent", { name: destination.name }) }
+          ],
+          sentAt: confirmedAt
+        });
+        auditEvents.push(
+          recordAuditEvent(state.patient.id, "referral_placed", `Referral placed — ${destination.name} (${tier})`)
+        );
+      }
+
       return {
         ...state,
         screeningGaps: state.screeningGaps.map((candidate) => (candidate.id === finalGap.id ? finalGap : candidate)),
         screeningResults: [...state.screeningResults, result],
-        auditEvents: [
-          ...state.auditEvents,
-          recordAuditEvent(
-            state.patient.id,
-            "screening_result_confirmed",
-            `Screening result confirmed from your report (${outcome})`
-          )
-        ]
+        referrals,
+        auditEvents
       };
     }
     case "resetDemo":
