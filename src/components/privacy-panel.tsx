@@ -22,7 +22,8 @@ const actionLabelMap: Record<AuditEvent["action"], string> = {
   screening_result_confirmed: "Screening result confirmed",
   referral_placed: "Referral placed",
   referral_escalated: "Referral escalated to care team",
-  recall_scheduled: "Annual recall scheduled"
+  recall_scheduled: "Annual recall scheduled",
+  referral_booked: "Referral appointment booked"
 };
 
 type PrivacyPanelProps = {

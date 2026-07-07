@@ -10,6 +10,8 @@ import { ReferralStatusCard, referralHasStage } from "@/components/referral-stat
 import { ScreeningResultCapture } from "@/components/screening-result-capture";
 import { ScreeningResultView } from "@/components/screening-result-view";
 import { extractReportViaLiveRoute } from "@/ai/screening-extract-provider";
+import { ReferralSlotPicker } from "@/components/referral-slot-picker";
+import { recordAuditEvent } from "@/domain/audit";
 import { buildReferralCareTeamMessage } from "@/domain/care-team-message";
 import { escalationThresholdDays } from "@/domain/dr-triage";
 import { getDestinationById } from "@/domain/screening-sites";
@@ -106,6 +108,20 @@ function ReferralSection({
             ) : null}
           </div>
         ) : null}
+        <ReferralSlotPicker
+          county={state.patient.county ?? "Perry"}
+          destination={destination}
+          language={language}
+          onBookSlot={(slot) => dispatch({ type: "bookReferralSlot", referralId: referral.id, slot })}
+          onShareReferral={(resource) =>
+            dispatch({
+              type: "addAuditEvent",
+              event: recordAuditEvent(state.patient.id, "shared", `Shared referral: ${resource.name}`)
+            })
+          }
+          onWent={() => dispatch({ type: "markReferralCompleted", referralId: referral.id })}
+          referral={referral}
+        />
       </ReferralStatusCard>
 
       {referral.tier === "retina_urgent" || (stalled && !confirmed) ? (

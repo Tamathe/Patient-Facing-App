@@ -461,6 +461,54 @@ describe("healthReducer", () => {
     expect(healthReducer(confirmed, { type: "markClinicConfirmed", referralId })).toBe(confirmed);
   });
 
+  it("bookReferralSlot appends the scheduled stage with the slot and audits it", () => {
+    const withReferral = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+    const referralId = withReferral.referrals[0].id;
+
+    const booked = healthReducer(withReferral, {
+      type: "bookReferralSlot",
+      referralId,
+      slot: "Tue Jul 14 · 9:20 AM"
+    });
+
+    expect(booked.referrals[0].scheduledFor).toBe("Tue Jul 14 · 9:20 AM");
+    expect(booked.referrals[0].stageHistory.at(-1)).toMatchObject({
+      stage: "scheduled",
+      note: "Booked Tue Jul 14 · 9:20 AM at Hazard Optometry Associates"
+    });
+    expect(booked.auditEvents.at(-1)?.action).toBe("referral_booked");
+
+    // A second booking or an off-catalog slot is refused.
+    expect(healthReducer(booked, { type: "bookReferralSlot", referralId, slot: "Thu Jul 16 · 1:40 PM" })).toBe(booked);
+    expect(
+      healthReducer(withReferral, { type: "bookReferralSlot", referralId, slot: "Sun Jul 19 · 4:00 AM" })
+    ).toBe(withReferral);
+  });
+
+  it("markReferralCompleted closes the loop once, self-reported", () => {
+    const withReferral = healthReducer(scheduledState(), {
+      type: "screeningResultConfirmed",
+      extraction: { grade: "moderate_npdr", dmePresent: false, ungradable: false },
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg"
+    });
+    const referralId = withReferral.referrals[0].id;
+    const booked = healthReducer(withReferral, {
+      type: "bookReferralSlot",
+      referralId,
+      slot: "Tue Jul 14 · 9:20 AM"
+    });
+
+    const completed = healthReducer(booked, { type: "markReferralCompleted", referralId });
+    expect(completed.referrals[0].stageHistory.at(-1)?.stage).toBe("completed");
+    expect(healthReducer(completed, { type: "markReferralCompleted", referralId })).toBe(completed);
+  });
+
   it("screeningResultConfirmed refuses to import without a scheduled gap or with a refusal", () => {
     const noSchedule = healthReducer(demoState, {
       type: "screeningResultConfirmed",

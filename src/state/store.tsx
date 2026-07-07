@@ -15,7 +15,7 @@ import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
 import { outcomeForGrade, recallDateFrom, recallReasonFor, tierForResult } from "@/domain/dr-triage";
 import { backdatedSentAt, escalationDue } from "@/domain/referral-followup";
-import { nearestDestinationOfKind } from "@/domain/screening-sites";
+import { getDestinationById, nearestDestinationOfKind } from "@/domain/screening-sites";
 import { tScreening } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
@@ -64,6 +64,8 @@ export type HealthAction =
   | { type: "checkReferralFollowup" }
   | { type: "backdateReferral"; referralId: string; days: number }
   | { type: "markClinicConfirmed"; referralId: string }
+  | { type: "bookReferralSlot"; referralId: string; slot: string }
+  | { type: "markReferralCompleted"; referralId: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -387,6 +389,65 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         auditEvents: [
           ...state.auditEvents,
           recordAuditEvent(state.patient.id, "updated", "Referral confirmed — the clinic called")
+        ]
+      };
+    }
+    case "bookReferralSlot": {
+      const referral = state.referrals.find((candidate) => candidate.id === action.referralId);
+      if (!referral || referral.stageHistory.some((entry) => entry.stage === "scheduled")) {
+        return state;
+      }
+      const destination = getDestinationById(referral.destinationId);
+      if (!destination || !destination.nextSlots.includes(action.slot)) {
+        return state;
+      }
+      const language = state.patient.language;
+      return {
+        ...state,
+        referrals: state.referrals.map((candidate) =>
+          candidate.id === action.referralId
+            ? {
+                ...candidate,
+                scheduledFor: action.slot,
+                stageHistory: [
+                  ...candidate.stageHistory,
+                  {
+                    stage: "scheduled",
+                    at: new Date().toISOString(),
+                    note: tScreening(language, "slotBookedNote", { when: action.slot, name: destination.name })
+                  }
+                ]
+              }
+            : candidate
+        ),
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "referral_booked", `Referral booked — ${action.slot} at ${destination.name}`)
+        ]
+      };
+    }
+    case "markReferralCompleted": {
+      const referral = state.referrals.find((candidate) => candidate.id === action.referralId);
+      if (!referral || referral.stageHistory.some((entry) => entry.stage === "completed")) {
+        return state;
+      }
+      const language = state.patient.language;
+      return {
+        ...state,
+        referrals: state.referrals.map((candidate) =>
+          candidate.id === action.referralId
+            ? {
+                ...candidate,
+                stageHistory: [
+                  ...candidate.stageHistory,
+                  { stage: "completed", at: new Date().toISOString(), note: tScreening(language, "completedNote") }
+                ]
+              }
+            : candidate
+        ),
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Referral visit completed (self-reported)")
         ]
       };
     }

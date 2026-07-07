@@ -172,7 +172,8 @@ export type AuditEvent = {
     | "screening_result_confirmed"
     | "referral_placed"
     | "referral_escalated"
-    | "recall_scheduled";
+    | "recall_scheduled"
+    | "referral_booked";
   label: string;
   createdAt: string;
 };

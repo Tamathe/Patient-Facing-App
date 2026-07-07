@@ -360,7 +360,13 @@ export type ScreeningStringKey =
   | "clinicCalledCta"
   | "recallLine"
   | "recallMildEmphasis"
-  | "rebookNow";
+  | "rebookNow"
+  | "slotPickerTitle"
+  | "slotBookedNote"
+  | "bookedForLine"
+  | "rideReAsk"
+  | "wentCta"
+  | "completedNote";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -494,7 +500,13 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     clinicCalledCta: "They called me — it's confirmed",
     recallLine: "We'll remind you in {monthYear}.",
     recallMildEmphasis: "Because early changes were seen, steady daily care matters even more this year.",
-    rebookNow: "Rebook now"
+    rebookNow: "Rebook now",
+    slotPickerTitle: "Or pick a time now:",
+    slotBookedNote: "Booked {when} at {name}",
+    bookedForLine: "Booked: {when}",
+    rideReAsk: "Need a ride that day?",
+    wentCta: "I went to this appointment",
+    completedNote: "Self-reported by you"
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -627,7 +639,13 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     clinicCalledCta: "Ya me llamaron — está confirmado",
     recallLine: "Te recordaremos en {monthYear}.",
     recallMildEmphasis: "Como se vieron cambios tempranos, el cuidado diario constante importa aún más este año.",
-    rebookNow: "Reservar de nuevo ahora"
+    rebookNow: "Reservar de nuevo ahora",
+    slotPickerTitle: "O elige un horario ahora:",
+    slotBookedNote: "Reservado {when} en {name}",
+    bookedForLine: "Reservado: {when}",
+    rideReAsk: "¿Necesitas transporte ese día?",
+    wentCta: "Fui a esta cita",
+    completedNote: "Reportado por ti"
   }
 };
 
