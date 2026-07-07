@@ -242,6 +242,54 @@ export type MedicationFill = {
   source: EvidenceStatus;
 };
 
+export type DrGrade = "no_dr" | "mild_npdr" | "moderate_npdr" | "severe_npdr" | "pdr";
+export type ReferralTier = "none" | "optometry_routine" | "retina_urgent";
+export type ReferralStage = "drafted" | "sent" | "clinic_confirmed" | "scheduled" | "completed" | "stalled";
+export type ScreeningGapStatus = "overdue" | "engaged" | "scheduled" | "completed" | "closed" | "referral" | "repeat";
+export type ScreeningOutcome = "normal" | "abnormal" | "ungradable";
+export type ResultCaptureSource = "photo_report" | "typed_entry";
+export type ExtractionRefusal = "not_a_report" | "retinal_photograph" | "unreadable";
+
+export type ScreeningVenueType = "fqhc" | "mobile_clinic" | "community_camera" | "eye_clinic" | "kroger" | "pharmacy" | "primary_care";
+
+export type ScreeningSite = {
+  id: string; name: string; type: ScreeningVenueType; zip: string; city: string;
+  lat: number; lng: number; nextAvailable: string; nextAvailableHours: number;
+  rideSupport: boolean; lowCost: boolean;
+};
+
+export type ReferralDestination = {
+  id: string; name: string; kind: "optometry" | "retina"; city: string; distanceMiles: number;
+  phone: string; nextSlots: string[]; coverageNote: string;
+};
+
+export type DrReportExtraction = {
+  grade: DrGrade | null; dmePresent: boolean | null; ungradable: boolean;
+  confidence: "high" | "medium" | "low"; fieldsRead: string[]; refusal?: ExtractionRefusal;
+};
+
+export type ScreeningGap = {
+  id: string; condition: "diabetes"; status: ScreeningGapStatus;
+  lastScreeningDate: string | null; scheduledSiteId?: string; scheduledFor?: string;
+};
+
+export type ScreeningResult = {
+  id: string; gapId: string; outcome: ScreeningOutcome; grade: DrGrade | null;
+  dmePresent: boolean | null; source: ResultCaptureSource; reportRef: string;
+  confirmedAt: string;
+};
+
+export type ReferralStageEntry = { stage: ReferralStage; at: string; note: string };
+
+export type Referral = {
+  id: string; resultId: string; tier: ReferralTier; destinationId: string;
+  stageHistory: ReferralStageEntry[]; sentAt: string; scheduledFor?: string;
+};
+
+export type RecallReminder = {
+  id: string; dueAt: string; reason: "annual_rescreen" | "annual_rescreen_mild";
+};
+
 export type AppState = {
   patient: PatientProfile;
   carePlan: CarePlan;
@@ -257,4 +305,8 @@ export type AppState = {
   doseEvents: DoseEvent[];
   medicationFills: MedicationFill[];
   assessmentEvents: AssessmentEvent[];
+  screeningGaps: ScreeningGap[];
+  screeningResults: ScreeningResult[];
+  referrals: Referral[];
+  recallReminders: RecallReminder[];
 };

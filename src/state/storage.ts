@@ -22,6 +22,11 @@ import type {
   NutritionFacts,
   PatientProfile,
   MeasurementContext,
+  RecallReminder,
+  Referral,
+  ReferralStageEntry,
+  ScreeningGap,
+  ScreeningResult,
   TaskItem,
   AiMode
 } from "@/domain/types";
@@ -84,6 +89,30 @@ function getKnownSourceIds(state: AppState): Set<string> {
   state.extractedFacts.forEach((fact) => {
     sourceIds.add(fact.id);
   });
+  // The screening arrays are sanitized after this relationship check runs, so
+  // they are read defensively here: a corrupt field must degrade, not throw a
+  // new reset-to-demo vector into hasValidRelationships.
+  if (Array.isArray(state.screeningGaps)) {
+    state.screeningGaps.forEach((gap) => {
+      if (isScreeningGap(gap)) {
+        sourceIds.add(gap.id);
+      }
+    });
+  }
+  if (Array.isArray(state.screeningResults)) {
+    state.screeningResults.forEach((result) => {
+      if (isScreeningResult(result)) {
+        sourceIds.add(result.id);
+      }
+    });
+  }
+  if (Array.isArray(state.referrals)) {
+    state.referrals.forEach((referral) => {
+      if (isReferral(referral)) {
+        sourceIds.add(referral.id);
+      }
+    });
+  }
 
   return sourceIds;
 }
@@ -317,6 +346,90 @@ function isMedicationFill(value: unknown): value is MedicationFill {
   );
 }
 
+function isDrGrade(value: unknown): value is NonNullable<ScreeningResult["grade"]> {
+  return (
+    value === "no_dr" ||
+    value === "mild_npdr" ||
+    value === "moderate_npdr" ||
+    value === "severe_npdr" ||
+    value === "pdr"
+  );
+}
+
+function isScreeningGapStatus(value: unknown): value is ScreeningGap["status"] {
+  return (
+    value === "overdue" ||
+    value === "engaged" ||
+    value === "scheduled" ||
+    value === "completed" ||
+    value === "closed" ||
+    value === "referral" ||
+    value === "repeat"
+  );
+}
+
+function isScreeningGap(value: unknown): value is ScreeningGap {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    value.condition === "diabetes" &&
+    isScreeningGapStatus(value.status) &&
+    (value.lastScreeningDate === null || typeof value.lastScreeningDate === "string") &&
+    (value.scheduledSiteId === undefined || typeof value.scheduledSiteId === "string") &&
+    (value.scheduledFor === undefined || typeof value.scheduledFor === "string")
+  );
+}
+
+function isScreeningResult(value: unknown): value is ScreeningResult {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "gapId") &&
+    (value.outcome === "normal" || value.outcome === "abnormal" || value.outcome === "ungradable") &&
+    (value.grade === null || isDrGrade(value.grade)) &&
+    (value.dmePresent === null || typeof value.dmePresent === "boolean") &&
+    (value.source === "photo_report" || value.source === "typed_entry") &&
+    hasString(value, "reportRef") &&
+    hasString(value, "confirmedAt")
+  );
+}
+
+function isReferralStageEntry(value: unknown): value is ReferralStageEntry {
+  return (
+    isObject(value) &&
+    (value.stage === "drafted" ||
+      value.stage === "sent" ||
+      value.stage === "clinic_confirmed" ||
+      value.stage === "scheduled" ||
+      value.stage === "completed" ||
+      value.stage === "stalled") &&
+    hasString(value, "at") &&
+    hasString(value, "note")
+  );
+}
+
+function isReferral(value: unknown): value is Referral {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "resultId") &&
+    (value.tier === "none" || value.tier === "optometry_routine" || value.tier === "retina_urgent") &&
+    hasString(value, "destinationId") &&
+    isArrayOfObjects(value.stageHistory, isReferralStageEntry) &&
+    hasString(value, "sentAt") &&
+    (value.scheduledFor === undefined || typeof value.scheduledFor === "string")
+  );
+}
+
+function isRecallReminder(value: unknown): value is RecallReminder {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "dueAt") &&
+    (value.reason === "annual_rescreen" || value.reason === "annual_rescreen_mild")
+  );
+}
+
 function isMedication(value: unknown): value is Medication {
   return (
     isObject(value) &&
@@ -516,7 +629,16 @@ function isPatient(value: unknown): value is PatientProfile {
 
 type PersistedAppState = Omit<
   AppState,
-  "tasks" | "mealLog" | "doseEvents" | "medicationFills" | "assessmentEvents" | "glucoseReadings"
+  | "tasks"
+  | "mealLog"
+  | "doseEvents"
+  | "medicationFills"
+  | "assessmentEvents"
+  | "glucoseReadings"
+  | "screeningGaps"
+  | "screeningResults"
+  | "referrals"
+  | "recallReminders"
 > & {
   tasks: unknown;
   mealLog: unknown;
@@ -524,6 +646,10 @@ type PersistedAppState = Omit<
   medicationFills: unknown;
   assessmentEvents: unknown;
   glucoseReadings: unknown;
+  screeningGaps: unknown;
+  screeningResults: unknown;
+  referrals: unknown;
+  recallReminders: unknown;
 };
 
 function sanitizeTasks(tasks: unknown): TaskItem[] {
@@ -584,6 +710,38 @@ function sanitizeAssessmentEvents(events: unknown, patientId: string): Assessmen
   );
 }
 
+function sanitizeScreeningGaps(gaps: unknown): ScreeningGap[] {
+  if (!Array.isArray(gaps)) {
+    return [];
+  }
+
+  return gaps.filter(isScreeningGap);
+}
+
+function sanitizeScreeningResults(results: unknown, gapIds: Set<string>): ScreeningResult[] {
+  if (!Array.isArray(results)) {
+    return [];
+  }
+
+  return results.filter((entry): entry is ScreeningResult => isScreeningResult(entry) && gapIds.has(entry.gapId));
+}
+
+function sanitizeReferrals(referrals: unknown, resultIds: Set<string>): Referral[] {
+  if (!Array.isArray(referrals)) {
+    return [];
+  }
+
+  return referrals.filter((entry): entry is Referral => isReferral(entry) && resultIds.has(entry.resultId));
+}
+
+function sanitizeRecallReminders(reminders: unknown): RecallReminder[] {
+  if (!Array.isArray(reminders)) {
+    return [];
+  }
+
+  return reminders.filter(isRecallReminder);
+}
+
 function isValidCoreAppState(value: unknown): value is PersistedAppState {
   if (!isObject(value)) {
     return false;
@@ -636,7 +794,23 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return Array.isArray(value.assessmentEvents) && value.assessmentEvents.every(isAssessmentEvent);
+  if (!Array.isArray(value.assessmentEvents) || !value.assessmentEvents.every(isAssessmentEvent)) {
+    return false;
+  }
+
+  if (!Array.isArray(value.screeningGaps) || !value.screeningGaps.every(isScreeningGap)) {
+    return false;
+  }
+
+  if (!Array.isArray(value.screeningResults) || !value.screeningResults.every(isScreeningResult)) {
+    return false;
+  }
+
+  if (!Array.isArray(value.referrals) || !value.referrals.every(isReferral)) {
+    return false;
+  }
+
+  return Array.isArray(value.recallReminders) && value.recallReminders.every(isRecallReminder);
 }
 
 export function loadStoredState(): AppState {
@@ -666,6 +840,18 @@ export function loadStoredState(): AppState {
     if (isObject(parsed) && parsed.glucoseReadings === undefined) {
       parsed.glucoseReadings = [];
     }
+    if (isObject(parsed) && parsed.screeningGaps === undefined) {
+      parsed.screeningGaps = [];
+    }
+    if (isObject(parsed) && parsed.screeningResults === undefined) {
+      parsed.screeningResults = [];
+    }
+    if (isObject(parsed) && parsed.referrals === undefined) {
+      parsed.referrals = [];
+    }
+    if (isObject(parsed) && parsed.recallReminders === undefined) {
+      parsed.recallReminders = [];
+    }
     if (isValidCoreAppState(parsed)) {
       const sanitizedTasks = sanitizeTasks(parsed.tasks);
       const sanitizedMealLog = sanitizeMealLog(parsed.mealLog, parsed.patient.id);
@@ -675,6 +861,12 @@ export function loadStoredState(): AppState {
       const sanitizedMedicationFills = sanitizeMedicationFills(parsed.medicationFills, parsed.patient.id, medicationIds);
       const sanitizedAssessmentEvents = sanitizeAssessmentEvents(parsed.assessmentEvents, parsed.patient.id);
       const sanitizedAiMessages = sanitizeAiMessageActions(parsed.aiMessages);
+      const sanitizedScreeningGaps = sanitizeScreeningGaps(parsed.screeningGaps);
+      const gapIds = new Set(sanitizedScreeningGaps.map((gap) => gap.id));
+      const sanitizedScreeningResults = sanitizeScreeningResults(parsed.screeningResults, gapIds);
+      const resultIds = new Set(sanitizedScreeningResults.map((result) => result.id));
+      const sanitizedReferrals = sanitizeReferrals(parsed.referrals, resultIds);
+      const sanitizedRecallReminders = sanitizeRecallReminders(parsed.recallReminders);
       const sanitizedState: AppState = {
         ...parsed,
         tasks: sanitizedTasks,
@@ -683,7 +875,11 @@ export function loadStoredState(): AppState {
         doseEvents: sanitizedDoseEvents,
         medicationFills: sanitizedMedicationFills,
         assessmentEvents: sanitizedAssessmentEvents,
-        aiMessages: sanitizedAiMessages
+        aiMessages: sanitizedAiMessages,
+        screeningGaps: sanitizedScreeningGaps,
+        screeningResults: sanitizedScreeningResults,
+        referrals: sanitizedReferrals,
+        recallReminders: sanitizedRecallReminders
       };
 
       if (!isValidAppState(sanitizedState)) {
@@ -698,7 +894,11 @@ export function loadStoredState(): AppState {
         JSON.stringify(parsed.doseEvents) !== JSON.stringify(sanitizedState.doseEvents) ||
         JSON.stringify(parsed.medicationFills) !== JSON.stringify(sanitizedState.medicationFills) ||
         JSON.stringify(parsed.assessmentEvents) !== JSON.stringify(sanitizedState.assessmentEvents) ||
-        JSON.stringify(parsed.aiMessages) !== JSON.stringify(sanitizedState.aiMessages)
+        JSON.stringify(parsed.aiMessages) !== JSON.stringify(sanitizedState.aiMessages) ||
+        JSON.stringify(parsed.screeningGaps) !== JSON.stringify(sanitizedState.screeningGaps) ||
+        JSON.stringify(parsed.screeningResults) !== JSON.stringify(sanitizedState.screeningResults) ||
+        JSON.stringify(parsed.referrals) !== JSON.stringify(sanitizedState.referrals) ||
+        JSON.stringify(parsed.recallReminders) !== JSON.stringify(sanitizedState.recallReminders)
       ) {
         safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));
       }

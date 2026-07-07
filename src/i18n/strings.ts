@@ -235,3 +235,52 @@ export function tSafety(language: Language, key: SafetyStringKey, vars?: Record<
     return value === undefined ? match : String(value);
   });
 }
+
+// Diabetic-retinopathy screening pathway copy. The five grade strings are the
+// LOCKED plain-language table from docs/plans/09 — grounding-safe ("Your report
+// says…", never "You have…"), calm at every urgency level, equal urgency in es.
+export type ScreeningStringKey =
+  | "pageTitle"
+  | "gradeNoDr"
+  | "gradeMild"
+  | "gradeModerateSevere"
+  | "gradeDmePdr"
+  | "gradeUngradable";
+
+export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
+  en: {
+    pageTitle: "Eye Check",
+    gradeNoDr: "Your report says no signs of diabetic eye disease were found.",
+    gradeMild:
+      "Your report shows mild early changes. No specialist visit is needed now — a repeat photo in 12 months keeps watch.",
+    gradeModerateSevere:
+      "Your report shows changes that need a closer look by an eye doctor. This is common and treatable when caught early.",
+    gradeDmePdr:
+      "Your report shows changes that need care soon. Getting seen quickly protects your vision. Your referral has already been sent.",
+    gradeUngradable:
+      "The image could not be read clearly, which happens sometimes. A quick repeat screening is all that is needed."
+  },
+  es: {
+    pageTitle: "Chequeo de Ojos",
+    gradeNoDr: "Tu reporte dice que no se encontraron señales de enfermedad diabética del ojo.",
+    gradeMild:
+      "Tu reporte muestra cambios leves y tempranos. No se necesita una visita al especialista ahora — una nueva foto en 12 meses mantiene la vigilancia.",
+    gradeModerateSevere:
+      "Tu reporte muestra cambios que necesitan una revisión más de cerca por un doctor de los ojos. Esto es común y tratable cuando se detecta a tiempo.",
+    gradeDmePdr:
+      "Tu reporte muestra cambios que necesitan atención pronto. Que te atiendan rápido protege tu visión. Tu referido ya fue enviado.",
+    gradeUngradable:
+      "La imagen no se pudo leer con claridad, lo cual pasa a veces. Solo se necesita repetir el examen rápidamente."
+  }
+};
+
+export function tScreening(language: Language, key: ScreeningStringKey, vars?: Record<string, string | number>): string {
+  const template = screeningStrings[language]?.[key] ?? screeningStrings.en[key];
+  if (!vars) {
+    return template;
+  }
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const value = vars[name];
+    return value === undefined ? match : String(value);
+  });
+}

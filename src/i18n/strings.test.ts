@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foodLensStrings, safetyStrings, t, tSafety } from "./strings";
+import { foodLensStrings, safetyStrings, screeningStrings, t, tSafety, tScreening } from "./strings";
 
 describe("t", () => {
   it("interpolates variables", () => {
@@ -18,7 +18,7 @@ describe("t", () => {
 });
 
 describe("locale parity", () => {
-  const catalogs = { foodLensStrings, safetyStrings };
+  const catalogs = { foodLensStrings, safetyStrings, screeningStrings };
 
   it.each(Object.entries(catalogs))("defines every %s key in both locales", (_name, catalog) => {
     const enKeys = Object.keys(catalog.en);
@@ -30,5 +30,40 @@ describe("locale parity", () => {
     expect(tSafety("es", "callEmergency")).toBe("Llama al 911");
     expect(tSafety("es", "crisisResponse")).toContain("988");
     expect(tSafety("es", "crisisResponse")).toContain("911");
+  });
+});
+
+// The five grade strings are LOCKED (docs/plans/09 clinical line): report-first
+// phrasing, never a diagnosis claim, both languages carrying equal urgency.
+describe("screening grade copy — locked", () => {
+  it("keeps the exact locked English grade copy", () => {
+    expect(tScreening("en", "gradeNoDr")).toBe("Your report says no signs of diabetic eye disease were found.");
+    expect(tScreening("en", "gradeMild")).toBe(
+      "Your report shows mild early changes. No specialist visit is needed now — a repeat photo in 12 months keeps watch."
+    );
+    expect(tScreening("en", "gradeModerateSevere")).toBe(
+      "Your report shows changes that need a closer look by an eye doctor. This is common and treatable when caught early."
+    );
+    expect(tScreening("en", "gradeDmePdr")).toBe(
+      "Your report shows changes that need care soon. Getting seen quickly protects your vision. Your referral has already been sent."
+    );
+    expect(tScreening("en", "gradeUngradable")).toBe(
+      "The image could not be read clearly, which happens sometimes. A quick repeat screening is all that is needed."
+    );
+  });
+
+  it("speaks about the report, never a diagnosis, in both languages", () => {
+    const gradeKeys = ["gradeNoDr", "gradeMild", "gradeModerateSevere", "gradeDmePdr"] as const;
+    for (const key of gradeKeys) {
+      expect(tScreening("en", key)).toMatch(/^Your report (says|shows)/);
+      expect(tScreening("es", key)).toMatch(/^Tu reporte (dice|muestra)/);
+      expect(tScreening("en", key)).not.toMatch(/\bYou have\b/i);
+      expect(tScreening("es", key)).not.toMatch(/\bTienes\b/i);
+    }
+  });
+
+  it("carries equal urgency in Spanish for the needs-care-soon branch", () => {
+    expect(tScreening("es", "gradeDmePdr")).toContain("pronto");
+    expect(tScreening("es", "gradeDmePdr")).toContain("referido ya fue enviado");
   });
 });

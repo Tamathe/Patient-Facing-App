@@ -685,4 +685,110 @@ describe("storage", () => {
     expect(loaded.readings).toHaveLength(demoState.readings.length);
     expect(loaded.doseEvents).toHaveLength(demoState.doseEvents.length);
   });
+
+  // House tripwire for the DR sprint: a payload persisted before the screening
+  // arrays existed must load with backfilled empties, never reset to demo.
+  it("backfills a pre-DR-screening payload with empty screening arrays without resetting", () => {
+    const legacy: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Pre-Screening Patient", preferredName: "Pre" }
+    };
+    delete legacy.screeningGaps;
+    delete legacy.screeningResults;
+    delete legacy.referrals;
+    delete legacy.recallReminders;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Pre-Screening Patient");
+    expect(loaded.screeningGaps).toEqual([]);
+    expect(loaded.screeningResults).toEqual([]);
+    expect(loaded.referrals).toEqual([]);
+    expect(loaded.recallReminders).toEqual([]);
+    expect(loaded.readings).toHaveLength(demoState.readings.length);
+  });
+
+  it("keeps a valid screening pathway and drops orphaned results and referrals", () => {
+    const gap = { id: "gap-1", condition: "diabetes", status: "referral", lastScreeningDate: "2024-12-10" };
+    const result = {
+      id: "result-1",
+      gapId: "gap-1",
+      outcome: "abnormal",
+      grade: "moderate_npdr",
+      dmePresent: false,
+      source: "photo_report",
+      reportRef: "report-moderate-npdr.svg",
+      confirmedAt: "2026-07-07T10:00:00.000Z"
+    };
+    const orphanResult = { ...result, id: "result-orphan", gapId: "gap-missing" };
+    const referral = {
+      id: "referral-1",
+      resultId: "result-1",
+      tier: "optometry_routine",
+      destinationId: "dest-1",
+      stageHistory: [
+        { stage: "drafted", at: "2026-07-07T10:00:00.000Z", note: "Referral drafted from your confirmed report" },
+        { stage: "sent", at: "2026-07-07T10:00:01.000Z", note: "Sent to the clinic" }
+      ],
+      sentAt: "2026-07-07T10:00:01.000Z"
+    };
+    const orphanReferral = { ...referral, id: "referral-orphan", resultId: "result-missing" };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        screeningGaps: [gap],
+        screeningResults: [result, orphanResult, {}],
+        referrals: [referral, orphanReferral],
+        recallReminders: [{ id: "recall-1", dueAt: "2027-07-07T10:00:00.000Z", reason: "annual_rescreen" }, {}]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.screeningGaps.map((entry) => entry.id)).toEqual(["gap-1"]);
+    expect(loaded.screeningResults.map((entry) => entry.id)).toEqual(["result-1"]);
+    expect(loaded.referrals.map((entry) => entry.id)).toEqual(["referral-1"]);
+    expect(loaded.recallReminders.map((entry) => entry.id)).toEqual(["recall-1"]);
+    expect(loaded.patient.id).toBe("patient-1");
+  });
+
+  it("keeps an ai message citing a screening result as a known source", () => {
+    const gap = { id: "gap-1", condition: "diabetes", status: "referral", lastScreeningDate: "2024-12-10" };
+    const result = {
+      id: "result-cited",
+      gapId: "gap-1",
+      outcome: "normal",
+      grade: "no_dr",
+      dmePresent: false,
+      source: "photo_report",
+      reportRef: "report-no-dr.svg",
+      confirmedAt: "2026-07-07T10:00:00.000Z"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        screeningGaps: [gap],
+        screeningResults: [result],
+        aiMessages: [
+          {
+            id: "message-screening",
+            mode: "ask",
+            role: "assistant",
+            content: "Your report from July 7 says no signs of diabetic eye disease were found.",
+            createdAt: "2026-07-07T11:00:00.000Z",
+            safety: "allowed",
+            sources: ["result-cited"]
+          }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.aiMessages).toHaveLength(1);
+    expect(loaded.screeningResults[0].id).toBe("result-cited");
+  });
 });

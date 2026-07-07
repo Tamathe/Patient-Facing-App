@@ -108,7 +108,18 @@ export const demoState: AppState = {
     }
   ],
   medicationFills: [],
-  assessmentEvents: []
+  assessmentEvents: [],
+  screeningGaps: [
+    {
+      id: "gap-demo-dr",
+      condition: "diabetes",
+      status: "overdue",
+      lastScreeningDate: "2024-12-10"
+    }
+  ],
+  screeningResults: [],
+  referrals: [],
+  recallReminders: []
 };
 
 export const deletedDemoState: AppState = {
@@ -144,7 +155,11 @@ export const deletedDemoState: AppState = {
   mealLog: [],
   doseEvents: [],
   medicationFills: [],
-  assessmentEvents: []
+  assessmentEvents: [],
+  screeningGaps: [],
+  screeningResults: [],
+  referrals: [],
+  recallReminders: []
 };
 
 export const brentState: AppState = {
@@ -822,5 +837,16 @@ export const brentState: AppState = {
       source: "patient_reported"
     }
   ],
-  assessmentEvents: []
+  assessmentEvents: [],
+  screeningGaps: [
+    {
+      id: "gap-brent-dr",
+      condition: "diabetes",
+      status: "overdue",
+      lastScreeningDate: "2024-12-10"
+    }
+  ],
+  screeningResults: [],
+  referrals: [],
+  recallReminders: []
 };
