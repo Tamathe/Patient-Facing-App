@@ -10,11 +10,11 @@ import { tSafety, type Language } from "@/i18n/strings";
 // who cannot compose a sentence still has one tap to help.
 export function UrgentHelp({ language = "en" }: { language?: Language }) {
   return (
-    <details className="rounded-control border border-rose-300 bg-rose-50 px-3 py-2">
-      <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-rose-800">
+    <section aria-label={tSafety(language, "urgentHelpSummary")} className="rounded-control border border-rose-300 bg-rose-50 p-3">
+      <p className="flex items-center gap-2 text-sm font-semibold text-rose-800">
         <ShieldAlert aria-hidden="true" className="h-4 w-4" />
         {tSafety(language, "urgentHelpSummary")}
-      </summary>
+      </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <a className="inline-flex min-h-12 items-center gap-2 rounded-control bg-rose-600 px-4 py-2 text-sm font-semibold text-white" href="tel:988">
           <Phone aria-hidden="true" className="h-4 w-4" />
@@ -29,6 +29,6 @@ export function UrgentHelp({ language = "en" }: { language?: Language }) {
           {tSafety(language, "callEmergency")}
         </a>
       </div>
-    </details>
+    </section>
   );
 }

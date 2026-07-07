@@ -102,6 +102,22 @@ describe("PrivacyPanel", () => {
     expect(onReset).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a visible retinopathy walkthrough restore control when provided", () => {
+    const onRestoreDefaultDemo = vi.fn();
+
+    render(
+      <PrivacyPanel
+        state={demoState}
+        onReset={() => undefined}
+        onExport={() => undefined}
+        onRestoreDefaultDemo={onRestoreDefaultDemo}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Restore retinopathy walkthrough" }));
+
+    expect(onRestoreDefaultDemo).toHaveBeenCalledTimes(1);
+  });
+
   it("shows readable action labels and sorts newest entries first", () => {
     const state = {
       ...demoState,
@@ -135,4 +151,3 @@ describe("PrivacyPanel", () => {
     expect(screen.getByText("No activity recorded yet.")).toBeInTheDocument();
   });
 });
-

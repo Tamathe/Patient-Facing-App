@@ -63,6 +63,15 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
     expect(decideFrontDoor("eye check", en)).toMatchObject({ kind: "navigate", href: "/screening" });
     expect(decideFrontDoor("show my eye exam options", en)).toMatchObject({ kind: "navigate", href: "/screening" });
   });
+
+  it("routes retinopathy learning asks to the learning page, not the booking flow", () => {
+    expect(decideFrontDoor("learn about diabetic eye disease", en)).toMatchObject({
+      kind: "navigate",
+      href: "/learn/retinopathy"
+    });
+    expect(decideFrontDoor("retinopathy", en)).toMatchObject({ kind: "navigate", href: "/learn/retinopathy" });
+    expect(decideFrontDoor("book a retinopathy screening", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+  });
 });
 
 describe("decideFrontDoor — constrained classifier stage", () => {
@@ -97,6 +106,13 @@ describe("decideFrontDoor — Spanish", () => {
   it("keeps the eye check and the mood check-in apart in Spanish", () => {
     expect(decideFrontDoor("chequeo de ojos", es)).toMatchObject({ kind: "navigate", href: "/screening" });
     expect(decideFrontDoor("chequeo", es)).toMatchObject({ kind: "navigate", href: "/checkin" });
+  });
+
+  it("routes Spanish retinopathy learning asks to the learning page", () => {
+    expect(decideFrontDoor("aprender retinopatía diabética", es)).toMatchObject({
+      kind: "navigate",
+      href: "/learn/retinopathy"
+    });
   });
 
   it("does not match the English lexicon for a Spanish patient", () => {

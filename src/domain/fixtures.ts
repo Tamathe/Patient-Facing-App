@@ -1075,3 +1075,5 @@ export const brentState: AppState = {
   referrals: [],
   recallReminders: []
 };
+
+export const defaultDemoState: AppState = brentState;

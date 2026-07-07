@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Camera, Droplet, Pill, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, Droplet, GraduationCap, Pill, Sparkles } from "lucide-react";
 import { tScreening, type Language } from "@/i18n/strings";
 
 // The teachable moment: the eye result becomes daily-diabetes motivation, with
@@ -35,6 +35,14 @@ export function TeachableMomentCard({ language }: { language: Language }) {
           );
         })}
       </div>
+      <Link
+        className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-control border border-care/40 bg-white px-3 py-2 text-sm font-semibold text-care hover:bg-calm"
+        href="/learn/retinopathy"
+      >
+        <GraduationCap aria-hidden="true" className="h-4 w-4" />
+        {language === "es" ? "Aprende sobre la retinopatía diabética" : "Learn about diabetic retinopathy"}
+        <ArrowRight aria-hidden="true" className="h-4 w-4" />
+      </Link>
     </section>
   );
 }

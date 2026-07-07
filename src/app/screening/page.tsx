@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ScreeningBooked } from "@/components/screening-booked";
@@ -88,19 +89,39 @@ function ScreeningPageInner() {
     return (
       <section className="rounded-control border border-ink/10 bg-white p-4">
         <p className="text-sm leading-6 text-ink/80">{tScreening(language, "allCaughtUp")}</p>
-        {state.screeningResults.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {state.screeningResults.length > 0 ? (
+            <Link
+              className="inline-flex min-h-12 items-center rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
+              href="/screening/result"
+            >
+              {tScreening(language, "seeLatestResult")}
+            </Link>
+          ) : null}
           <Link
-            className="mt-3 inline-flex min-h-12 items-center rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
-            href="/screening/result"
+            className="inline-flex min-h-12 items-center gap-2 rounded-control border border-care/40 px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
+            href="/learn/retinopathy"
           >
-            {tScreening(language, "seeLatestResult")}
+            <GraduationCap aria-hidden="true" className="h-4 w-4" />
+            {language === "es" ? "Aprende sobre la retinopatía diabética" : "Learn about diabetic retinopathy"}
           </Link>
-        ) : null}
+        </div>
       </section>
     );
   }
 
-  return <ScreeningFind canBook initialZip={DEFAULT_ZIP} language={language} onBook={bookSite} />;
+  return (
+    <div className="space-y-4">
+      <ScreeningFind canBook initialZip={DEFAULT_ZIP} language={language} onBook={bookSite} />
+      <Link
+        className="flex min-h-12 items-center justify-center gap-2 rounded-control border border-care/40 bg-white px-4 py-2.5 text-sm font-semibold text-care hover:bg-calm"
+        href="/learn/retinopathy"
+      >
+        <GraduationCap aria-hidden="true" className="h-4 w-4" />
+        {language === "es" ? "¿Nuevo en esto? Aprende sobre la retinopatía diabética" : "New to this? Learn about diabetic retinopathy"}
+      </Link>
+    </div>
+  );
 }
 
 export default function ScreeningPage() {

@@ -30,7 +30,7 @@ type PrivacyPanelProps = {
   state: AppState;
   onReset: () => void;
   onExport: () => void;
-  onLoadBrentDemo?: () => void;
+  onRestoreDefaultDemo?: () => void;
   onUpdateAccessibility?: (preferences: AccessibilityPreference[]) => void;
 };
 
@@ -38,7 +38,7 @@ function getDisplayLabel(event: AuditEvent): string {
   return event.label === event.action ? actionLabelMap[event.action] : event.label;
 }
 
-export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo, onUpdateAccessibility }: PrivacyPanelProps) {
+export function PrivacyPanel({ state, onReset, onExport, onRestoreDefaultDemo, onUpdateAccessibility }: PrivacyPanelProps) {
   const activePreferences = state.patient.accessibilityPreferences ?? [];
 
   function togglePreference(preference: AccessibilityPreference) {
@@ -97,13 +97,13 @@ export function PrivacyPanel({ state, onReset, onExport, onLoadBrentDemo, onUpda
           >
             Delete demo data
           </button>
-          {onLoadBrentDemo ? (
+          {onRestoreDefaultDemo ? (
             <button
               className="rounded-control border border-care px-4 py-2 text-sm font-semibold text-care"
-              onClick={onLoadBrentDemo}
+              onClick={onRestoreDefaultDemo}
               type="button"
             >
-              Load Brent demo (blood pressure + diabetes)
+              Restore retinopathy walkthrough
             </button>
           ) : null}
         </div>

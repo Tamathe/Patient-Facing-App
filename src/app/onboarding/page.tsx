@@ -1,25 +1,52 @@
 "use client";
 
-import { useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { markOnboardingComplete } from "@/state/storage";
+import { UrgentHelp } from "@/components/urgent-help";
 import { useHealthState } from "@/state/store";
 import type { Condition } from "@/domain/types";
+import type { Language } from "@/i18n/strings";
 
-// A short first-run step so the app is tuned to what the patient is working on,
-// instead of defaulting everyone to the hypertension demo. English-gated per the
-// composer precedent: a Spanish patient skips straight to the home (their care
-// plan still drives everything from its primary condition).
+type OnboardingChoice = { label: string; description: string; conditions: Condition[] };
+type OnboardingCopy = {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  choices: OnboardingChoice[];
+  skip: string;
+};
+
+const onboardingCopy: Record<Language, OnboardingCopy> = {
+  en: {
+    eyebrow: "Welcome",
+    heading: "What would you like help with?",
+    body: "Pick what you are working on. You can change this later.",
+    choices: [
+      { label: "Blood pressure", description: "Keep your blood pressure in a safer range.", conditions: ["hypertension"] },
+      { label: "Blood sugar", description: "Keep your blood sugar steadier.", conditions: ["diabetes"] },
+      { label: "Both", description: "Work on blood pressure and blood sugar together.", conditions: ["hypertension", "diabetes"] }
+    ],
+    skip: "Skip for now"
+  },
+  es: {
+    eyebrow: "Bienvenido",
+    heading: "¿Con qué quieres ayuda?",
+    body: "Elige en qué estás trabajando. Puedes cambiarlo más tarde.",
+    choices: [
+      { label: "Presión arterial", description: "Mantén tu presión arterial en un rango más seguro.", conditions: ["hypertension"] },
+      { label: "Azúcar en sangre", description: "Mantén tu azúcar en sangre más estable.", conditions: ["diabetes"] },
+      { label: "Ambas", description: "Trabaja en presión arterial y azúcar en sangre juntas.", conditions: ["hypertension", "diabetes"] }
+    ],
+    skip: "Omitir por ahora"
+  }
+};
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { state, dispatch } = useHealthState();
-
-  useEffect(() => {
-    if (state.patient.language === "es") {
-      markOnboardingComplete();
-      router.replace("/today");
-    }
-  }, [state.patient.language, router]);
+  const language = state.patient.language;
+  const copy = onboardingCopy[language];
 
   function finish(conditions: Condition[]) {
     if (conditions.length > 0) {
@@ -29,21 +56,16 @@ export default function OnboardingPage() {
     router.replace("/today");
   }
 
-  const choices: Array<{ label: string; description: string; conditions: Condition[] }> = [
-    { label: "Blood pressure", description: "Keep your blood pressure in a safer range.", conditions: ["hypertension"] },
-    { label: "Blood sugar", description: "Keep your blood sugar steadier.", conditions: ["diabetes"] },
-    { label: "Both", description: "Work on blood pressure and blood sugar together.", conditions: ["hypertension", "diabetes"] }
-  ];
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-6 px-6 py-10 text-ink">
+    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-6 py-8 text-ink">
+      <UrgentHelp language={language} />
       <div>
-        <p className="text-sm font-medium text-care">Welcome</p>
-        <h1 className="mt-1 text-2xl font-semibold">What would you like help with?</h1>
-        <p className="mt-2 text-sm leading-6 text-ink/70">Pick what you are working on. You can change this later.</p>
+        <p className="text-sm font-medium text-care">{copy.eyebrow}</p>
+        <h1 className="mt-1 text-2xl font-semibold">{copy.heading}</h1>
+        <p className="mt-2 text-sm leading-6 text-ink/70">{copy.body}</p>
       </div>
       <div className="grid gap-3">
-        {choices.map((choice) => (
+        {copy.choices.map((choice) => (
           <button
             key={choice.label}
             type="button"
@@ -56,7 +78,7 @@ export default function OnboardingPage() {
         ))}
       </div>
       <button type="button" onClick={() => finish([])} className="text-sm text-ink/60 underline">
-        Skip for now
+        {copy.skip}
       </button>
     </main>
   );

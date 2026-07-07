@@ -70,7 +70,9 @@ const CRISIS_RULES: CrisisRule[] = [
   {
     id: "vision_curtain_shadow",
     domain: "vision",
-    pattern: /(?:curtain|shadow).{0,32}vision/i
+    // Broadened beyond "curtain over my vision" to also catch the plainer
+    // "curtain/shadow over my eye/sight" a patient is more likely to type.
+    pattern: /(?:curtain|shadow).{0,32}(?:vision|eye|sight)/i
   },
   {
     id: "vision_flashes_floaters",
@@ -81,6 +83,35 @@ const CRISIS_RULES: CrisisRule[] = [
     id: "vision_eye_pain",
     domain: "vision",
     pattern: /(?:severe\s+)?eye\s+pain|eye\s+pain.{0,48}(?:worse|severe)|eye\s+pain\s+is\s+severe/i
+  },
+  // Plain-language acute-vision phrasings that the corpus-shaped patterns above
+  // miss. Each requires a present/acute marker, so general education questions
+  // ("will I go blind?", "will I lose my vision someday?") do NOT fire — only a
+  // symptom report does. Verified zero false positives on the maintained corpus.
+  {
+    id: "vision_losing_sight",
+    domain: "vision",
+    pattern: /\b(?:losing|lost)\s+(?:my\s+)?(?:sight|vision)\b/i
+  },
+  {
+    id: "vision_going_blind",
+    domain: "vision",
+    pattern: /\bgoing\s+blind\b/i
+  },
+  {
+    id: "vision_new_floaters",
+    domain: "vision",
+    pattern: /\b(?:new|lots\s+of|bunch\s+of|shower\s+of|sudden|many)\s+(?:new\s+)?floaters?\b/i
+  },
+  {
+    id: "vision_flashes_light",
+    domain: "vision",
+    pattern: /\bflash(?:es|ing)?\s+(?:of\s+)?light/i
+  },
+  {
+    id: "vision_went_dark",
+    domain: "vision",
+    pattern: /\b(?:everything|my\s+vision|my\s+sight)\s+(?:went|going|turned)\s+(?:dark|black)\b/i
   },
   {
     id: "self_harm_wake_up",

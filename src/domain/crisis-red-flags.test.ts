@@ -10,6 +10,21 @@ describe("screenCrisisRedFlags", () => {
     expect(screenCrisisRedFlags("A curtain came over my vision").domain).toBe("vision");
   });
 
+  it("detects plain-language acute vision symptoms the corpus patterns miss", () => {
+    expect(screenCrisisRedFlags("I am losing my sight").domain).toBe("vision");
+    expect(screenCrisisRedFlags("a curtain came over my eye").domain).toBe("vision");
+    expect(screenCrisisRedFlags("lots of new floaters today").domain).toBe("vision");
+    expect(screenCrisisRedFlags("I keep seeing flashes of light").domain).toBe("vision");
+    expect(screenCrisisRedFlags("everything went dark for a minute").domain).toBe("vision");
+    expect(screenCrisisRedFlags("I think I am going blind").domain).toBe("vision");
+  });
+
+  it("does not flag general vision-education questions as a crisis", () => {
+    expect(screenCrisisRedFlags("will I go blind from diabetes?").matched).toBe(false);
+    expect(screenCrisisRedFlags("will I lose my vision someday?").matched).toBe(false);
+    expect(screenCrisisRedFlags("what is diabetic retinopathy?").matched).toBe(false);
+  });
+
   it("detects self-harm and suicidal ideation", () => {
     const result = screenCrisisRedFlags("I do not want to wake up tomorrow");
 

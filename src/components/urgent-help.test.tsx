@@ -4,6 +4,14 @@ import React from "react";
 import { UrgentHelp } from "./urgent-help";
 
 describe("UrgentHelp", () => {
+  it("shows crisis actions without a collapsed disclosure gate", () => {
+    render(<UrgentHelp />);
+
+    expect(document.querySelector("details")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /crisis lifeline/i })).toBeVisible();
+    expect(screen.getByRole("link", { name: /911/i })).toBeVisible();
+  });
+
   it("offers offline-safe 988/911 deep links with no dependency on a clinic number", () => {
     render(<UrgentHelp />);
 

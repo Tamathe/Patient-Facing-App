@@ -1,4 +1,4 @@
-import { demoState } from "@/domain/fixtures";
+import { defaultDemoState } from "@/domain/fixtures";
 import type { AssessmentEvent, SeverityBand } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -546,7 +546,7 @@ function isAiMessageAction(value: unknown): value is AiMessageAction {
 // Actions are not part of the isAiMessage guard (they were never validated), so
 // rather than introduce a new rejection vector we lenient-filter unknown action
 // strings out of persisted messages. A rolled-back build that wrote a newer
-// action value therefore loads cleanly instead of resetting to demoState.
+// action value therefore loads cleanly instead of resetting to the default demo.
 function sanitizeAiMessageActions(messages: AiMessage[]): AiMessage[] {
   return messages.map((message) => {
     if (!Array.isArray(message.actions)) {
@@ -821,12 +821,12 @@ function isValidAppState(value: unknown): value is AppState {
 
 export function loadStoredState(): AppState {
   if (typeof window === "undefined") {
-    return demoState;
+    return defaultDemoState;
   }
 
   const raw = safeGetItem(STORAGE_KEY);
   if (!raw) {
-    return demoState;
+    return defaultDemoState;
   }
 
   try {
@@ -890,7 +890,7 @@ export function loadStoredState(): AppState {
 
       if (!isValidAppState(sanitizedState)) {
         safeRemoveItem(STORAGE_KEY);
-        return demoState;
+        return defaultDemoState;
       }
 
       if (
@@ -913,10 +913,10 @@ export function loadStoredState(): AppState {
     }
 
     safeRemoveItem(STORAGE_KEY);
-    return demoState;
+    return defaultDemoState;
   } catch {
     safeRemoveItem(STORAGE_KEY);
-    return demoState;
+    return defaultDemoState;
   }
 }
 

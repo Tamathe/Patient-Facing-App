@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { deletedDemoState, demoState } from "@/domain/fixtures";
+import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { clearStoredState, loadStoredState, saveStoredState } from "./storage";
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
@@ -9,7 +9,18 @@ describe("storage", () => {
     window.localStorage.clear();
   });
 
-  it("removes structurally invalid but syntactically valid payloads and falls back to demo state", () => {
+  it("starts a fresh browser on the retinopathy-due demo state", () => {
+    const loaded = loadStoredState();
+
+    expect(loaded).toEqual(brentState);
+    expect(loaded.patient.preferredName).toBe("Brent");
+    expect(loaded.carePlan.conditions).toContain("diabetes");
+    expect(loaded.screeningGaps).toContainEqual(
+      expect.objectContaining({ condition: "diabetes", status: "overdue" })
+    );
+  });
+
+  it("removes structurally invalid but syntactically valid payloads and falls back to the retinopathy demo state", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -26,30 +37,30 @@ describe("storage", () => {
     );
 
     expect(() => loadStoredState()).not.toThrow();
-    expect(loadStoredState()).toEqual(demoState);
+    expect(loadStoredState()).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state when localStorage.getItem throws", () => {
+  it("falls back to the retinopathy demo state when localStorage.getItem throws", () => {
     const getItemSpy = vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
       throw new Error("Storage unavailable");
     });
 
     expect(() => loadStoredState()).not.toThrow();
-    expect(loadStoredState()).toEqual(demoState);
+    expect(loadStoredState()).toEqual(brentState);
 
     getItemSpy.mockRestore();
   });
 
-  it("falls back to demo state for malformed localStorage payloads and removes the entry", () => {
+  it("falls back to the retinopathy demo state for malformed localStorage payloads and removes the entry", () => {
     window.localStorage.setItem(STORAGE_KEY, "{malformed json");
 
     expect(() => loadStoredState()).not.toThrow();
-    expect(loadStoredState()).toEqual(demoState);
+    expect(loadStoredState()).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for malformed medication entries and clears storage", () => {
+  it("falls back to the retinopathy demo state for malformed medication entries and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -66,7 +77,7 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -131,7 +142,7 @@ describe("storage", () => {
     expect(persistedState.tasks.map((task) => task.id)).toEqual(["task-valid-1", "task-valid-2"]);
   });
 
-  it("falls back to demo state for carePlan patient mismatch and clears storage", () => {
+  it("falls back to the retinopathy demo state for carePlan patient mismatch and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -145,11 +156,11 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for medication/readings patient mismatch and clears storage", () => {
+  it("falls back to the retinopathy demo state for medication/readings patient mismatch and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -177,11 +188,11 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for malformed audit events and clears storage", () => {
+  it("falls back to the retinopathy demo state for malformed audit events and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -198,11 +209,11 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for non-finite care plan thresholds and clears storage", () => {
+  it("falls back to the retinopathy demo state for non-finite care plan thresholds and clears storage", () => {
     const rawPayload = JSON.stringify(demoState).replace(
       "\"callThresholdSystolic\":160",
       "\"callThresholdSystolic\":1e309"
@@ -212,7 +223,7 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -234,7 +245,7 @@ describe("storage", () => {
     });
 
     expect(() => clearStoredState()).not.toThrow();
-    expect(loadStoredState()).toEqual(demoState);
+    expect(loadStoredState()).toEqual(brentState);
 
     removeItemSpy.mockRestore();
   });
@@ -251,7 +262,7 @@ describe("storage", () => {
     expect(loaded.aiMessages).toHaveLength(0);
   });
 
-  it("falls back to demo state for invalid reading pulse or contexts and clears storage", () => {
+  it("falls back to the retinopathy demo state for invalid reading pulse or contexts and clears storage", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -273,11 +284,11 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("falls back to demo state for extracted facts with unknown contextItemId", () => {
+  it("falls back to the retinopathy demo state for extracted facts with unknown contextItemId", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -308,7 +319,7 @@ describe("storage", () => {
 
     const loaded = loadStoredState();
 
-    expect(loaded).toEqual(demoState);
+    expect(loaded).toEqual(brentState);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 

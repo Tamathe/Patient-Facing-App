@@ -56,6 +56,8 @@ export type HomeStringKey =
   | "menuMedicinesDesc"
   | "menuFoodLabel"
   | "menuFoodDesc"
+  | "menuRetinopathyLearnLabel"
+  | "menuRetinopathyLearnDesc"
   | "menuPlanLabel"
   | "menuPlanDesc"
   | "menuVisitsLabel"
@@ -131,6 +133,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuMedicinesDesc: "Understand your medicines and adherence",
     menuFoodLabel: "Food",
     menuFoodDesc: "Ask about a food with the camera",
+    menuRetinopathyLearnLabel: "Diabetic Eye Disease",
+    menuRetinopathyLearnDesc: "Learn what it is and why screening matters",
     menuPlanLabel: "My Plan",
     menuPlanDesc: "Your care plan and instructions",
     menuVisitsLabel: "My Visits",
@@ -206,6 +210,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuMedicinesDesc: "Entiende tus medicinas y tu constancia",
     menuFoodLabel: "Comida",
     menuFoodDesc: "Pregunta sobre una comida con la cámara",
+    menuRetinopathyLearnLabel: "Enfermedad Diabética del Ojo",
+    menuRetinopathyLearnDesc: "Aprende qué es y por qué importa el examen",
     menuPlanLabel: "Mi Plan",
     menuPlanDesc: "Tu plan de cuidado e instrucciones",
     menuVisitsLabel: "Mis Visitas",

@@ -47,14 +47,14 @@ diabetes).
   utilities, transportation, finances) with a county-first Kentucky resource
   finder and a per-referral consent step before anything is shared.
 - **Medicines PDC card.** A refill-based, honestly-labeled diabetes coverage
-  estimate beside the dose streaks — visible after loading the Brent demo.
+  estimate beside the dose streaks in the default retinopathy walkthrough.
 - **Display & access.** Accessibility preferences (large text, high contrast,
   keyboard focus) set on the Privacy page apply app-wide.
 
 ## Demos
 
-- Load the **Brent demo (blood pressure + diabetes)** from the Privacy page's data
-  controls to see the diabetes/PDC/county story.
+- Fresh sessions default to **Brent Wright**, a blood-pressure + diabetes patient
+  who is overdue for diabetic retinopathy screening.
 - `/demo` renders the app inside a phone bezel (same-origin iframe opening on
   the `/screening?entry=sms` nudge, shares this browser's data) for stakeholder
   walkthroughs — it is not in the nav.

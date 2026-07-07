@@ -5,6 +5,7 @@ import { verifyGrounding } from "@/domain/grounding";
 import { findRecentClinicalReading, findRecentGlucoseReading } from "@/domain/recent-clinical-reading";
 import { tSafety, type Language } from "@/i18n/strings";
 import { collectSourceFacts } from "./grounding-facts";
+import { answerEducationQuestion, isEducationQuestion } from "@/domain/retinopathy-education";
 import { inferAiMode } from "./intent";
 import type { HealthAiProvider, HealthAiRequest, HealthAiResponse } from "./types";
 import type { AiMessageAction, HomeReading, Medication } from "@/domain/types";
@@ -205,6 +206,24 @@ export async function createSafeAiResponse(
       sources: decision.sources,
       actions: decision.tier === "emergency" ? EMERGENCY_ACTIONS : CARE_TEAM_ACTIONS
     };
+  }
+
+  // A confident diabetic-retinopathy education question is answered from the
+  // curated, cited knowledge base instead of the model. This runs only after the
+  // crisis/emergency short-circuits above, so an acute vision symptom always
+  // escalates first. It is English-gated (Spanish free-text falls through to the
+  // provider) and skips grounding because the answer is pre-vetted education, not
+  // a model claim about the patient's own records.
+  if (decision.kind === "allowed" && language === "en" && isEducationQuestion(request.patientInput)) {
+    const education = answerEducationQuestion(request.patientInput);
+    if (education.kind === "answer") {
+      return {
+        content: `${education.text}\n\n${education.source}`,
+        safety: "allowed",
+        sources: [],
+        grounding: { allowed: true, blockedReasons: [] }
+      };
+    }
   }
 
   const effectiveRequest: HealthAiRequest = {

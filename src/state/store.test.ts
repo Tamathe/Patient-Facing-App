@@ -78,7 +78,7 @@ describe("healthReducer", () => {
     expect(next.auditEvents.at(-1)?.label).toBe("Meal logged from Food Lens");
   });
 
-  it("returns seeded demo state for an explicit resetDemo action", () => {
+  it("returns the retinopathy-due demo state for a plain resetDemo action", () => {
     const modifiedState = {
       ...demoState,
       readings: [
@@ -103,7 +103,7 @@ describe("healthReducer", () => {
 
     const next = healthReducer(modifiedState, { type: "resetDemo" });
 
-    expect(next).toEqual(demoState);
+    expect(next).toEqual(brentState);
   });
 
   it("deletes demo data without reseeding personal demo content", () => {
@@ -227,10 +227,10 @@ describe("healthReducer", () => {
     expect(next.auditEvents.at(-1)?.action).toBe("assessment_recorded");
   });
 
-  it("loads the Brent fixture through resetDemo with a patient argument", () => {
+  it("keeps the legacy Jordan fixture available through resetDemo with a patient argument", () => {
     const next = healthReducer(demoState, { type: "resetDemo", patient: "brent" });
     expect(next).toEqual(brentState);
-    expect(healthReducer(brentState, { type: "resetDemo" })).toEqual(demoState);
+    expect(healthReducer(brentState, { type: "resetDemo", patient: "jordan" })).toEqual(demoState);
   });
 
   it("updates accessibility preferences and audits the change", () => {

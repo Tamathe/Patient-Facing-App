@@ -9,7 +9,7 @@ import {
   type Dispatch,
   type ReactNode
 } from "react";
-import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
+import { brentState, defaultDemoState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
@@ -452,7 +452,13 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       };
     }
     case "resetDemo":
-      return action.patient === "brent" ? brentState : demoState;
+      if (action.patient === "jordan") {
+        return demoState;
+      }
+      if (action.patient === "brent") {
+        return brentState;
+      }
+      return defaultDemoState;
     case "deleteDemoData":
       return {
         ...deletedDemoState,
@@ -471,7 +477,7 @@ type HealthStateContextValue = {
 const HealthStateContext = createContext<HealthStateContextValue | null>(null);
 
 export function HealthStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(healthReducer, demoState, loadStoredState);
+  const [state, dispatch] = useReducer(healthReducer, defaultDemoState, loadStoredState);
 
   // Silence escalation runs on every app load; the reducer is a strict no-op
   // (same state reference) when nothing is due, so this never dirties storage.

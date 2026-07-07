@@ -28,6 +28,36 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
     domain: "vision"
   },
   {
+    id: "vision_losing_sight_plain",
+    text: "I think I am losing my sight",
+    expectedMatched: true,
+    domain: "vision"
+  },
+  {
+    id: "vision_curtain_eye_plain",
+    text: "a curtain came over my eye",
+    expectedMatched: true,
+    domain: "vision"
+  },
+  {
+    id: "vision_new_floaters_plain",
+    text: "I suddenly have lots of new floaters",
+    expectedMatched: true,
+    domain: "vision"
+  },
+  {
+    id: "vision_flashes_light_plain",
+    text: "I keep seeing flashes of light",
+    expectedMatched: true,
+    domain: "vision"
+  },
+  {
+    id: "vision_went_dark_plain",
+    text: "everything went dark for a minute",
+    expectedMatched: true,
+    domain: "vision"
+  },
+  {
     id: "self_harm_sleep",
     text: "I do not want to wake up tomorrow",
     expectedMatched: true,
@@ -114,6 +144,18 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
   {
     id: "logistics_eye_appointment",
     text: "I need a ride to my eye appointment",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "education_go_blind_question",
+    text: "will I go blind from diabetes?",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "education_lose_vision_question",
+    text: "will I lose my vision someday?",
     expectedMatched: false,
     domain: "logistics"
   },

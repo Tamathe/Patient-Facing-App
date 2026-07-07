@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ClipboardList, Droplet, Eye, HandHeart, HeartPulse, LockKeyhole, MessageCircle, NotebookPen, Pill, Stethoscope, Upload, type LucideIcon } from "lucide-react";
+import { BookOpen, Camera, ClipboardList, Droplet, Eye, HandHeart, HeartPulse, LockKeyhole, MessageCircle, NotebookPen, Pill, Stethoscope, Upload, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import { tHome, type HomeStringKey } from "@/i18n/home-strings";
@@ -27,6 +27,7 @@ export const MENU_GROUPS: MenuGroup[] = [
   {
     titleKey: "menuGroupUnderstand",
     items: [
+      { href: "/learn/retinopathy", labelKey: "menuRetinopathyLearnLabel", descKey: "menuRetinopathyLearnDesc", icon: BookOpen },
       { href: "/plan", labelKey: "menuPlanLabel", descKey: "menuPlanDesc", icon: ClipboardList },
       { href: "/visits", labelKey: "menuVisitsLabel", descKey: "menuVisitsDesc", icon: Stethoscope },
       { href: "/chat", labelKey: "menuCoachLabel", descKey: "menuCoachDesc", icon: MessageCircle }

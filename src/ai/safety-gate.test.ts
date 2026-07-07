@@ -734,6 +734,38 @@ describe("createSafeAiResponse", () => {
     expect(response.actions).toContain("call_emergency");
   });
 
+  it("answers a diabetic-retinopathy education question from the knowledge base, not the model", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "should not be called", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "explain", patientInput: "what is diabetic retinopathy?", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("allowed");
+    expect(response.content).toContain("eye damage from diabetes");
+    expect(response.content).toContain("Not a diagnosis");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("escalates a plain-language acute eye symptom instead of answering it as education", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "should not be called", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "explain", patientInput: "I think I am losing my sight", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("escalate");
+    expect(response.actions).toContain("call_emergency");
+    expect(response.content).not.toContain("eye damage from diabetes");
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
   it("escalates a material emergency with 911/211 guidance and emergency actions", async () => {
     const provider: HealthAiProvider = {
       respond: vi.fn().mockResolvedValue({ content: "unused", safety: "allowed" as const, sources: [] })
