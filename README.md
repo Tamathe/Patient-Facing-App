@@ -1,15 +1,21 @@
 # Home Health AI Ownership App
 
-Mobile-first v0.1 prototype for patient-owned hypertension care at home.
+Mobile-first prototype for patient-owned chronic care at home (hypertension +
+diabetes).
 
 ## What it does
 
-- Helps a patient understand a hypertension care plan.
-- Logs home blood pressure readings.
+- Helps a patient understand a hypertension/diabetes care plan.
+- Logs home blood pressure and blood sugar readings.
 - Explains medicines in plain language.
 - Captures medication barriers without blame.
 - Provides guided AI coaching with safety boundaries.
 - Generates a visit-ready Health Brief.
+- Carries a diabetic patient through the eye-screening loop (`/screening`):
+  "you're due" nudge → find & book the nearest camera → photograph the printed
+  result → confirmed import → correctly-tiered referral → silence escalation →
+  slot booking → annual recall. The app reads the camera's **printed report**
+  only — it never interprets eye photographs.
 - Provides privacy, export, delete, and audit foundations.
 
 ## Safety and support behavior
@@ -41,8 +47,17 @@ Mobile-first v0.1 prototype for patient-owned hypertension care at home.
 
 - Load the **Brent demo (blood pressure + diabetes)** from the Privacy page's data
   controls to see the diabetes/PDC/county story.
-- `/demo` renders the app inside a phone bezel (same-origin iframe of `/today`,
-  shares this browser's data) for stakeholder walkthroughs — it is not in the nav.
+- `/demo` renders the app inside a phone bezel (same-origin iframe opening on
+  the `/screening?entry=sms` nudge, shares this browser's data) for stakeholder
+  walkthroughs — it is not in the nav.
+- **DR screening golden path:** open `/screening?entry=sms` → "See times near
+  me" → Book it → answer the ride question → "I had my screening — read my
+  report" → pick `report-moderate-npdr.svg` from the demo picker → "That's
+  right" → referral already sent (packet viewable) → "Demo: simulate 5 days
+  passing" → care team notified → pick a slot → teachable moment into
+  `/glucose` / `/food`. Rerun with `report-pdr-dme.svg` (urgent retina tier) or
+  `report-no-dr.svg` (12-month recall). Ask the Coach "what did my eye report
+  say?" for the grounded answer.
 
 ## What it does not do
 
