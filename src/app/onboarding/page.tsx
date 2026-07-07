@@ -3,7 +3,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { markOnboardingComplete } from "@/state/storage";
-import { UrgentHelp } from "@/components/urgent-help";
 import { useHealthState } from "@/state/store";
 import type { Condition } from "@/domain/types";
 import type { Language } from "@/i18n/strings";
@@ -58,7 +57,6 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-6 py-8 text-ink">
-      <UrgentHelp language={language} />
       <div>
         <p className="text-sm font-medium text-care">{copy.eyebrow}</p>
         <h1 className="mt-1 text-2xl font-semibold">{copy.heading}</h1>

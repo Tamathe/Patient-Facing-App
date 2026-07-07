@@ -34,11 +34,12 @@ describe("OnboardingPage", () => {
     mockValues.replace.mockClear();
   });
 
-  it("keeps urgent help visible during first run", () => {
+  it("does not show persistent urgent help in the startup chrome", () => {
     render(<OnboardingPage />);
 
-    expect(screen.getByRole("link", { name: /crisis lifeline/i })).toHaveAttribute("href", "tel:988");
-    expect(screen.getByRole("link", { name: /911/i })).toHaveAttribute("href", "tel:911");
+    expect(screen.queryByText(/feeling unsafe right now/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /988/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /911/i })).not.toBeInTheDocument();
   });
 
   it("lets Spanish users choose their health focus instead of skipping onboarding", () => {

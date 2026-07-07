@@ -20,15 +20,16 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: /all my health/i })).toHaveAttribute("href", "/menu");
   });
 
-  it("keeps a persistent, offline-safe crisis affordance on every screen", () => {
+  it("does not show a persistent crisis affordance in the demo chrome", () => {
     render(
       <AppShell title="Today">
         <p>Body</p>
       </AppShell>
     );
 
-    expect(screen.getByRole("link", { name: /988 — crisis lifeline/i })).toHaveAttribute("href", "tel:988");
-    expect(screen.getByRole("link", { name: /911/i })).toHaveAttribute("href", "tel:911");
+    expect(screen.queryByText(/feeling unsafe right now/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /988/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /911/i })).not.toBeInTheDocument();
   });
 
   it("renders the page body content in the main region", () => {
