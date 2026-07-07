@@ -1,4 +1,6 @@
 import { openLocalCoachSession } from "./local-coach-session";
+import { gradeStringKey } from "@/domain/dr-triage";
+import { tScreening } from "@/i18n/strings";
 import type { HomeReading, IdentifiedFood, Medication } from "@/domain/types";
 import type {
   HealthAiProvider,
@@ -23,6 +25,9 @@ const ACE_ARB_NAMES = [
 ];
 
 const SALT_SUBSTITUTE_PATTERN = /salt substitute|lite salt|potassium chloride|no.?salt/i;
+
+const EYE_REPORT_ASK_PATTERN =
+  /eye (report|screening|result|check|photo)|retinopathy|reporte de (mis )?ojos|examen de (mis )?ojos|chequeo de ojos/i;
 
 function findAceInhibitor(medications: Medication[]): Medication | null {
   return (
@@ -93,6 +98,40 @@ export class MockHealthAiProvider implements HealthAiProvider {
         content,
         safety: "allowed",
         sources
+      };
+    }
+
+    // "What did my eye report say?" answers strictly from the confirmed
+    // screening result — the LOCKED copy with the report date, cited so the
+    // grounding verifier can check it.
+    if (EYE_REPORT_ASK_PATTERN.test(lowercasedInput)) {
+      const latestResult = request.state.screeningResults.at(-1);
+      const language = request.state.patient.language;
+      if (latestResult) {
+        const gradeCopy = tScreening(
+          language,
+          gradeStringKey({
+            grade: latestResult.grade,
+            dmePresent: latestResult.dmePresent,
+            ungradable: latestResult.outcome === "ungradable"
+          })
+        );
+        return {
+          content: tScreening(language, "coachReportAnswer", {
+            date: new Date(latestResult.confirmedAt).toLocaleDateString(language === "es" ? "es-US" : "en-US"),
+            gradeCopy
+          }),
+          safety: "allowed",
+          sources: [latestResult.id]
+        };
+      }
+      return {
+        content:
+          language === "es"
+            ? "Todavía no tengo un reporte de examen de ojos confirmado en tus registros. Cuando confirmes uno, puedo decirte exactamente qué dice."
+            : "I don't have a confirmed eye screening report in your records yet. Once you confirm one, I can tell you exactly what it says.",
+        safety: "allowed",
+        sources: []
       };
     }
 

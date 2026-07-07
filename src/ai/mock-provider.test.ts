@@ -184,4 +184,45 @@ describe("MockHealthAiProvider", () => {
     expect(events.some((event) => event.type === "assistantTranscript")).toBe(false);
     handle.close();
   });
+
+  it("answers 'what did my eye report say?' strictly from the confirmed report", async () => {
+    const provider = new MockHealthAiProvider();
+    const withResult = {
+      ...demoState,
+      screeningResults: [
+        {
+          id: "result-eye-1",
+          gapId: "gap-demo-dr",
+          outcome: "normal" as const,
+          grade: "no_dr" as const,
+          dmePresent: false,
+          source: "photo_report" as const,
+          reportRef: "report-no-dr.svg",
+          confirmedAt: "2026-07-07T10:00:00.000Z"
+        }
+      ]
+    };
+
+    const response = await provider.respond({
+      mode: "ask",
+      patientInput: "what did my eye report say?",
+      state: withResult
+    });
+
+    expect(response.content).toContain("Your report from");
+    expect(response.content).toContain("no signs of diabetic eye disease were found");
+    expect(response.sources).toEqual(["result-eye-1"]);
+  });
+
+  it("says so honestly when no eye report has been confirmed yet", async () => {
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({
+      mode: "ask",
+      patientInput: "what did my eye screening say?",
+      state: demoState
+    });
+
+    expect(response.content).toContain("don't have a confirmed eye screening report");
+    expect(response.sources).toEqual([]);
+  });
 });

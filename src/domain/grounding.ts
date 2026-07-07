@@ -4,7 +4,8 @@ export type SourceFactKind =
   | "reading"
   | "extracted_fact"
   | "context_item"
-  | "goal";
+  | "goal"
+  | "screening_result";
 
 export type SourceFactConfidence =
   | "confirmed"

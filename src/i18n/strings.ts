@@ -366,7 +366,24 @@ export type ScreeningStringKey =
   | "bookedForLine"
   | "rideReAsk"
   | "wentCta"
-  | "completedNote";
+  | "completedNote"
+  | "teachBridge"
+  | "teachCtaGlucose"
+  | "teachCtaFood"
+  | "teachCtaMeds"
+  | "lensTitle"
+  | "lensDue"
+  | "lensBooked"
+  | "lensRepeat"
+  | "lensReferred"
+  | "lensAllClear"
+  | "journeyTitle"
+  | "journeyScreened"
+  | "journeyReferralSent"
+  | "journeyAwaitingSchedule"
+  | "journeyScheduled"
+  | "journeyCompleted"
+  | "coachReportAnswer";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -506,7 +523,24 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     bookedForLine: "Booked: {when}",
     rideReAsk: "Need a ride that day?",
     wentCta: "I went to this appointment",
-    completedNote: "Self-reported by you"
+    completedNote: "Self-reported by you",
+    teachBridge: "The same blood sugar that affects your eyes responds to daily care. Small steps protect your sight.",
+    teachCtaGlucose: "My Blood Sugar",
+    teachCtaFood: "Check a food",
+    teachCtaMeds: "My medicines",
+    lensTitle: "Your diabetes eye care",
+    lensDue: "Eye check due — it's been {months} months since your last photo.",
+    lensBooked: "Eye screening booked — {site}, {when}.",
+    lensRepeat: "A quick repeat screening is needed — the last photo couldn't be read.",
+    lensReferred: "Referral in motion with {name}.",
+    lensAllClear: "Eyes all clear until {monthYear}.",
+    journeyTitle: "Your eye-care loop",
+    journeyScreened: "Screened {date}",
+    journeyReferralSent: "Referral sent",
+    journeyAwaitingSchedule: "Scheduling — expect the clinic's call",
+    journeyScheduled: "Scheduled {when}",
+    journeyCompleted: "Completed",
+    coachReportAnswer: "Your report from {date} says: {gradeCopy}"
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -645,7 +679,24 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     bookedForLine: "Reservado: {when}",
     rideReAsk: "¿Necesitas transporte ese día?",
     wentCta: "Fui a esta cita",
-    completedNote: "Reportado por ti"
+    completedNote: "Reportado por ti",
+    teachBridge: "La misma azúcar en sangre que afecta tus ojos responde al cuidado diario. Pasos pequeños protegen tu vista.",
+    teachCtaGlucose: "Mi Azúcar en Sangre",
+    teachCtaFood: "Revisar una comida",
+    teachCtaMeds: "Mis medicinas",
+    lensTitle: "Tu cuidado de ojos por la diabetes",
+    lensDue: "Chequeo de ojos pendiente — han pasado {months} meses desde tu última foto.",
+    lensBooked: "Examen de ojos reservado — {site}, {when}.",
+    lensRepeat: "Se necesita repetir el examen rápidamente — la última foto no se pudo leer.",
+    lensReferred: "Referido en marcha con {name}.",
+    lensAllClear: "Ojos sin novedades hasta {monthYear}.",
+    journeyTitle: "Tu ciclo de cuidado de ojos",
+    journeyScreened: "Examinado el {date}",
+    journeyReferralSent: "Referido enviado",
+    journeyAwaitingSchedule: "Agendando — espera la llamada de la clínica",
+    journeyScheduled: "Agendado {when}",
+    journeyCompleted: "Completado",
+    coachReportAnswer: "Tu reporte del {date} dice: {gradeCopy}"
   }
 };
 

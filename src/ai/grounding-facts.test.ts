@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { brentState, demoState } from "@/domain/fixtures";
-import type { AppState } from "@/domain/types";
-import { collectSourceFacts } from "./grounding-facts";
+import type { AppState, ScreeningResult } from "@/domain/types";
+import { coachCitations, collectSourceFacts } from "./grounding-facts";
 
 function knownSourceIds(state: AppState): Set<string> {
   const ids = new Set<string>();
@@ -12,8 +12,20 @@ function knownSourceIds(state: AppState): Set<string> {
   state.glucoseReadings.forEach((reading) => ids.add(reading.id));
   state.contextItems.forEach((item) => ids.add(item.id));
   state.extractedFacts.forEach((fact) => ids.add(fact.id));
+  state.screeningResults.forEach((result) => ids.add(result.id));
   return ids;
 }
+
+const confirmedScreeningResult: ScreeningResult = {
+  id: "result-eye-1",
+  gapId: "gap-demo-dr",
+  outcome: "abnormal",
+  grade: "moderate_npdr",
+  dmePresent: false,
+  source: "photo_report",
+  reportRef: "report-moderate-npdr.svg",
+  confirmedAt: "2026-07-07T10:00:00.000Z"
+};
 
 describe("collectSourceFacts", () => {
   it("emits exactly the known app source ids for brentState", () => {
@@ -34,6 +46,27 @@ describe("collectSourceFacts", () => {
     expect(plan?.value).toContain("160/100");
     expect(facts.some((fact) => /type 2 diabetes/i.test(fact.value))).toBe(true);
     expect(context).toBeDefined();
+  });
+
+  it("grounds a confirmed screening result with the locked copy — the coach repeats, never re-grades", () => {
+    const withResult: AppState = { ...demoState, screeningResults: [confirmedScreeningResult] };
+    const facts = collectSourceFacts(withResult);
+    const screeningFact = facts.find((fact) => fact.id === "result-eye-1");
+
+    expect(screeningFact).toBeDefined();
+    expect(screeningFact?.sourceKind).toBe("screening_result");
+    expect(screeningFact?.value).toBe(
+      "Your report shows changes that need a closer look by an eye doctor. This is common and treatable when caught early."
+    );
+    expect(screeningFact?.patientConfirmed).toBe(true);
+    expect(screeningFact?.effectiveDate).toBe("2026-07-07T10:00:00.000Z");
+    expect(new Set(facts.map((fact) => fact.id))).toEqual(knownSourceIds(withResult));
+  });
+
+  it("adds the latest screening result to the coach citation set", () => {
+    const withResult: AppState = { ...demoState, screeningResults: [confirmedScreeningResult] };
+    expect(coachCitations(withResult)).toContain("result-eye-1");
+    expect(coachCitations(demoState)).not.toContain("result-eye-1");
   });
 
   it("marks confirmed facts and medications as patientConfirmed", () => {

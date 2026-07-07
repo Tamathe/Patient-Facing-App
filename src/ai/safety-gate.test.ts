@@ -832,6 +832,10 @@ describe("grounding leaves every mock canned answer intact", () => {
     {
       label: "food with sodium trend",
       request: (state) => ({ mode: "food", patientInput: "is this okay?", state, identifiedFood: soupFood })
+    },
+    {
+      label: "eye report ask (no confirmed report yet)",
+      request: (state) => ({ mode: "ask", patientInput: "what did my eye report say?", state })
     }
   ];
 
@@ -850,4 +854,42 @@ describe("grounding leaves every mock canned answer intact", () => {
       });
     }
   }
+
+  it("passes a screening-grounded eye-report answer end to end, citing the confirmed result", async () => {
+    const withResult: AppState = {
+      ...brentState,
+      screeningResults: [
+        {
+          id: "result-eye-brent",
+          gapId: "gap-brent-dr",
+          outcome: "abnormal",
+          grade: "moderate_npdr",
+          dmePresent: false,
+          source: "photo_report",
+          reportRef: "report-moderate-npdr.svg",
+          confirmedAt: "2026-07-07T10:00:00.000Z"
+        }
+      ]
+    };
+
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({ mode: "ask", patientInput: "what did my eye report say?", state: withResult });
+    expect(response.sources).toEqual(["result-eye-brent"]);
+
+    const result = verifyGrounding({
+      answer: response.content,
+      sourceFacts: collectSourceFacts(withResult),
+      citationIds: response.sources
+    });
+    expect(result.allowed).toBe(true);
+
+    // The full gate keeps the grounded answer intact end to end.
+    const gated = await createSafeAiResponse(
+      { mode: "ask", patientInput: "what did my eye report say?", state: withResult },
+      provider
+    );
+    expect(gated.safety).toBe("allowed");
+    expect(gated.content).toContain("Your report from");
+    expect(gated.content).toContain("closer look by an eye doctor");
+  });
 });

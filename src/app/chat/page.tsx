@@ -44,6 +44,11 @@ export default function ChatPage() {
       return `your blood sugar of ${glucose.valueMgDl} mg/dL`;
     }
 
+    const screeningResult = state.screeningResults.find((item) => item.id === id);
+    if (screeningResult) {
+      return `your eye screening report from ${new Date(screeningResult.confirmedAt).toLocaleDateString()}`;
+    }
+
     return null;
   }
 

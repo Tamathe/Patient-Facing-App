@@ -14,9 +14,8 @@ import {
   toDateKey,
   type TrendSummary
 } from "@/domain/adherence";
-import { activeConditions } from "@/domain/condition-lens";
 import { isDiabetesMedication, pickFeaturedMedication } from "@/domain/featured-medication";
-import { monthsSince } from "@/domain/screening-sites";
+import { screeningLens, screeningLensHref, screeningLensLine } from "@/domain/screening-status";
 import { buildTodayTasks } from "@/domain/tasks";
 import type { DoseEvent, MedicationBarrier } from "@/domain/types";
 import { tScreening } from "@/i18n/strings";
@@ -40,13 +39,11 @@ export default function TodayPage() {
     ? summarizeGlucoseTrend(state.glucoseReadings)
     : summarizeBpTrend(state.readings);
   const standaloneGlucoseTrend = featuredIsDiabetes ? null : summarizeGlucoseTrend(state.glucoseReadings);
-  // The eye-check tile follows the glucose-tile idiom: it appears only when a
-  // diabetes condition and an overdue screening gap coexist.
-  const hasDiabetes = activeConditions(state.carePlan).includes("diabetes");
-  const overdueScreening = hasDiabetes ? state.screeningGaps.find((gap) => gap.status === "overdue") : undefined;
-  const overdueMonths = overdueScreening?.lastScreeningDate
-    ? monthsSince(overdueScreening.lastScreeningDate, now)
-    : null;
+  // The eye-care tile follows the glucose-tile idiom: the diabetes condition
+  // lens says where the screening loop stands (due / booked / referred /
+  // all-clear) and only renders when there is something to say.
+  const eyeLens = screeningLens(state, now);
+  const eyeLensHref = eyeLens ? screeningLensHref(eyeLens) : null;
 
   function recordDose(status: DoseEvent["status"], barrier: MedicationBarrier | null) {
     if (!featuredMedication) {
@@ -87,22 +84,30 @@ export default function TodayPage() {
             <p className="mt-1 text-sm leading-6 text-ink/80">{standaloneGlucoseTrend.message}</p>
           </section>
         ) : null}
-        {overdueScreening ? (
+        {eyeLens ? (
           <section className="rounded-control border border-care/30 bg-white p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-care">
               <Eye aria-hidden="true" className="h-4 w-4" />
-              {tScreening(state.patient.language, "tileEyeCheckTitle")}
+              {tScreening(state.patient.language, eyeLens.kind === "due" ? "tileEyeCheckTitle" : "lensTitle")}
             </p>
             <p className="mt-1 text-sm leading-6 text-ink/80">
-              {tScreening(state.patient.language, "tileEyeCheckBody", { months: overdueMonths ?? 12 })}
+              {screeningLensLine(eyeLens, state.patient.language)}
             </p>
-            <Link
-              className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
-              href="/screening?entry=sms"
-            >
-              {tScreening(state.patient.language, "tileEyeCheckCta")}
-              <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </Link>
+            {eyeLensHref ? (
+              <Link
+                className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-control border border-care px-4 py-2 text-sm font-semibold text-care hover:bg-calm"
+                href={eyeLensHref}
+              >
+                {eyeLens.kind === "due"
+                  ? tScreening(state.patient.language, "tileEyeCheckCta")
+                  : eyeLens.kind === "repeat"
+                    ? tScreening(state.patient.language, "rebookNow")
+                    : eyeLens.kind === "referred"
+                      ? tScreening(state.patient.language, "seeLatestResult")
+                      : tScreening(state.patient.language, "pageTitle")}
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            ) : null}
           </section>
         ) : null}
       </div>

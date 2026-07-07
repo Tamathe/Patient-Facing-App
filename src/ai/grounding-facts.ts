@@ -1,5 +1,7 @@
 import { activeConditions } from "@/domain/condition-lens";
+import { gradeStringKey } from "@/domain/dr-triage";
 import type { SourceFact } from "@/domain/grounding";
+import { tScreening } from "@/i18n/strings";
 import type { AppState } from "@/domain/types";
 
 // Builds the grounding source-fact set from on-device state. Every fact id is an
@@ -104,17 +106,39 @@ export function collectSourceFacts(state: AppState): SourceFact[] {
     });
   });
 
+  // Confirmed screening results ground "what did my eye report say?" — the
+  // fact value is the LOCKED plain-language copy, so the coach can only ever
+  // repeat what the report said, never re-grade it.
+  state.screeningResults.forEach((result) => {
+    const gradeCopy = tScreening(
+      state.patient.language,
+      gradeStringKey({ grade: result.grade, dmePresent: result.dmePresent, ungradable: result.outcome === "ungradable" })
+    );
+    facts.push({
+      id: result.id,
+      label: "Eye screening report",
+      value: gradeCopy,
+      sourceKind: "screening_result",
+      sourceName: "Screening report — confirmed by you",
+      confidence: "confirmed",
+      patientConfirmed: true,
+      effectiveDate: result.confirmedAt
+    });
+  });
+
   return facts;
 }
 
 // Citation ids a text Coach answer may lean on: the care plan plus the most
-// recent glucose and blood-pressure readings. A live provider returns these as
-// its `sources`, which the safety gate passes to verifyGrounding as citationIds,
-// so a grounded blood-sugar answer can name a real reading.
+// recent glucose reading, blood-pressure reading, and confirmed screening
+// result. A live provider returns these as its `sources`, which the safety
+// gate passes to verifyGrounding as citationIds, so a grounded blood-sugar or
+// eye-report answer can name a real record.
 export function coachCitations(state: AppState): string[] {
   const latest = <T extends { measuredAt: string; id: string }>(items: T[]): string | null =>
     items.length === 0 ? null : [...items].sort((a, b) => a.measuredAt.localeCompare(b.measuredAt)).at(-1)!.id;
-  return [state.carePlan.id, latest(state.glucoseReadings), latest(state.readings)].filter(
+  const latestScreening = state.screeningResults.at(-1)?.id ?? null;
+  return [state.carePlan.id, latest(state.glucoseReadings), latest(state.readings), latestScreening].filter(
     (id): id is string => id !== null
   );
 }

@@ -9,6 +9,7 @@ import { ReferralPacketView } from "@/components/referral-packet-view";
 import { ReferralStatusCard, referralHasStage } from "@/components/referral-status-card";
 import { ScreeningResultCapture } from "@/components/screening-result-capture";
 import { ScreeningResultView } from "@/components/screening-result-view";
+import { TeachableMomentCard } from "@/components/teachable-moment-card";
 import { extractReportViaLiveRoute } from "@/ai/screening-extract-provider";
 import { ReferralSlotPicker } from "@/components/referral-slot-picker";
 import { recordAuditEvent } from "@/domain/audit";
@@ -226,6 +227,7 @@ export default function ScreeningResultPage() {
           {referral ? (
             <ReferralSection dispatch={dispatch} language={language} referral={referral} result={latestResult} state={state} />
           ) : null}
+          <TeachableMomentCard language={language} />
         </ScreeningResultView>
       ) : (
         <section className="rounded-control border border-ink/10 bg-white p-4">
