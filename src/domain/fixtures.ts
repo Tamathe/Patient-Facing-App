@@ -114,7 +114,7 @@ export const demoState: AppState = {
       id: "gap-demo-dr",
       condition: "diabetes",
       status: "overdue",
-      lastScreeningDate: "2024-12-10"
+      lastScreeningDate: "2024-12-01"
     }
   ],
   screeningResults: [],
@@ -843,7 +843,7 @@ export const brentState: AppState = {
       id: "gap-brent-dr",
       condition: "diabetes",
       status: "overdue",
-      lastScreeningDate: "2024-12-10"
+      lastScreeningDate: "2024-12-01"
     }
   ],
   screeningResults: [],

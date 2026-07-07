@@ -1,5 +1,6 @@
 import type { AppState, HomeReading, TaskItem } from "./types";
 import { findRecentClinicalReading, type ClinicalReadingCandidate } from "./recent-clinical-reading";
+import { getSiteById } from "./screening-sites";
 import { tHome } from "@/i18n/home-strings";
 
 const MAX_TODAY_TASKS = 3;
@@ -84,6 +85,22 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       priority: 2,
       kind: "medicine",
       status: "inferred"
+    });
+  }
+
+  // A booked eye screening shows up as a confirmed appointment chip until the
+  // result comes back (the gap machine owns that lifecycle).
+  const scheduledScreening = state.screeningGaps.find((gap) => gap.status === "scheduled");
+  if (scheduledScreening?.scheduledSiteId && scheduledScreening.scheduledFor) {
+    const siteName = getSiteById(scheduledScreening.scheduledSiteId)?.name ?? scheduledScreening.scheduledSiteId;
+    tasks.push({
+      id: "task-screening-booked",
+      title: tHome(lang, "taskScreeningBookedTitle", { site: siteName, when: scheduledScreening.scheduledFor }),
+      body: tHome(lang, "taskScreeningBookedBody"),
+      href: "/screening",
+      priority: 2,
+      kind: "visit",
+      status: "confirmed"
     });
   }
 

@@ -12,6 +12,7 @@ import {
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
+import { canTransition, transition } from "@/domain/screening-gap";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -46,6 +47,7 @@ export type HealthAction =
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
   | { type: "completeOnboarding"; conditions: Condition[] }
+  | { type: "bookScreening"; gapId: string; siteId: string; siteName: string; when: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -200,6 +202,35 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ...state,
         carePlan: { ...state.carePlan, condition: primary, conditions: ordered },
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Onboarding completed")]
+      };
+    }
+    case "bookScreening": {
+      const gap = state.screeningGaps.find((candidate) => candidate.id === action.gapId);
+      if (!gap) {
+        return state;
+      }
+      // Walk the legal edges: an overdue gap engages first, then schedules; a
+      // repeat gap schedules directly. Anything else has no legal path here.
+      const engaged = gap.status === "overdue" ? transition(gap, "engaged") : gap;
+      if (!canTransition(engaged.status, "scheduled")) {
+        return state;
+      }
+      const scheduled = {
+        ...transition(engaged, "scheduled"),
+        scheduledSiteId: action.siteId,
+        scheduledFor: action.when
+      };
+      return {
+        ...state,
+        screeningGaps: state.screeningGaps.map((candidate) => (candidate.id === scheduled.id ? scheduled : candidate)),
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(
+            state.patient.id,
+            "screening_scheduled",
+            `Eye screening booked — ${action.siteName}, ${action.when}`
+          )
+        ]
       };
     }
     case "resetDemo":

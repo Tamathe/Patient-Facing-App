@@ -57,6 +57,12 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
   it("sends a genuine question to the Coach rather than a keyword screen", () => {
     expect(decideFrontDoor("why does my medicine even matter if I feel fine?", en).kind).toBe("coach");
   });
+
+  it("routes eye-screening asks to the screening screen", () => {
+    expect(decideFrontDoor("book my eye screening", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+    expect(decideFrontDoor("eye check", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+    expect(decideFrontDoor("show my eye exam options", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+  });
 });
 
 describe("decideFrontDoor — constrained classifier stage", () => {
@@ -86,6 +92,11 @@ describe("decideFrontDoor — Spanish", () => {
     expect(decideFrontDoor("muéstrame mis medicinas", es)).toMatchObject({ kind: "navigate", href: "/medicines" });
     expect(decideFrontDoor("registré mi presión", es)).toMatchObject({ kind: "navigate", href: "/numbers" });
     expect(decideFrontDoor("comida", es)).toMatchObject({ kind: "navigate", href: "/food" });
+  });
+
+  it("keeps the eye check and the mood check-in apart in Spanish", () => {
+    expect(decideFrontDoor("chequeo de ojos", es)).toMatchObject({ kind: "navigate", href: "/screening" });
+    expect(decideFrontDoor("chequeo", es)).toMatchObject({ kind: "navigate", href: "/checkin" });
   });
 
   it("does not match the English lexicon for a Spanish patient", () => {

@@ -25,7 +25,8 @@ const ROUTE_SYNONYMS: Record<string, string[]> = {
   "/checkin": ["mood", "check in", "check-in", "how i feel", "how i'm feeling"],
   "/support": ["support", "resource", "resources", "rent", "housing", "utilities", "food stamps"],
   "/intake": ["add instructions", "paste", "upload instructions"],
-  "/privacy": ["privacy", "my data", "delete my", "export my", "download my"]
+  "/privacy": ["privacy", "my data", "delete my", "export my", "download my"],
+  "/screening": ["eye", "eyes", "eye check", "eye exam", "eye screening", "eye photo", "retinopathy", "vision check", "eye doctor"]
 };
 
 export const CLASSIFIER_HREFS: readonly string[] = Object.keys(ROUTE_SYNONYMS);

@@ -245,7 +245,58 @@ export type ScreeningStringKey =
   | "gradeMild"
   | "gradeModerateSevere"
   | "gradeDmePdr"
-  | "gradeUngradable";
+  | "gradeUngradable"
+  | "nudgeSmsHeader"
+  | "nudgeSeeTimes"
+  | "nudgeTalkInstead"
+  | "nudgeCallbackTitle"
+  | "nudgeCallbackBody"
+  | "findTitle"
+  | "findIntro"
+  | "zipLabel"
+  | "zipBasedOn"
+  | "zipUnknown"
+  | "recommendedTitle"
+  | "bookIt"
+  | "recommendationLine"
+  | "seeOtherOptions"
+  | "hideOtherOptions"
+  | "modeBest"
+  | "modeFastest"
+  | "modeClosest"
+  | "equityNudge"
+  | "rideSupportBadge"
+  | "lowCostBadge"
+  | "matchLeadBest"
+  | "matchLeadFastest"
+  | "matchLeadClosest"
+  | "matchPartDistance"
+  | "matchPartOpen"
+  | "matchPartRide"
+  | "matchPartLowCost"
+  | "venueFqhc"
+  | "venueMobile"
+  | "venueCommunityCamera"
+  | "venueEyeClinic"
+  | "venueKroger"
+  | "venuePharmacy"
+  | "venuePrimaryCare"
+  | "coverageTitle"
+  | "coverageEstimated"
+  | "coverageRide"
+  | "bookedTitle"
+  | "bookedLine"
+  | "whatToExpectTitle"
+  | "whatToExpectBody"
+  | "rideQuestion"
+  | "rideYes"
+  | "rideNo"
+  | "rideSiteCovered"
+  | "rideResourcesTitle"
+  | "tileEyeCheckTitle"
+  | "tileEyeCheckBody"
+  | "tileEyeCheckCta"
+  | "allCaughtUp";
 
 export const screeningStrings: Record<Language, Record<ScreeningStringKey, string>> = {
   en: {
@@ -258,7 +309,60 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     gradeDmePdr:
       "Your report shows changes that need care soon. Getting seen quickly protects your vision. Your referral has already been sent.",
     gradeUngradable:
-      "The image could not be read clearly, which happens sometimes. A quick repeat screening is all that is needed."
+      "The image could not be read clearly, which happens sometimes. A quick repeat screening is all that is needed.",
+    nudgeSmsHeader: "Text message · today",
+    nudgeSeeTimes: "See times near me",
+    nudgeTalkInstead: "I'd rather talk to someone",
+    nudgeCallbackTitle: "A message for your care team is ready",
+    nudgeCallbackBody:
+      "No queue, no hold music. Copy this message or show it at your clinic, and someone will call you back about your eye check.",
+    findTitle: "Find a screening near you",
+    findIntro: "A quick photo of your eyes — no appointment with a specialist needed to get checked.",
+    zipLabel: "Your ZIP code",
+    zipBasedOn: "Based on your ZIP {zip}, here are {count} screening options near you.",
+    zipUnknown: "Showing the closest demo locations to that ZIP. Distances are straight-line estimates.",
+    recommendedTitle: "Recommended for you",
+    bookIt: "Book it",
+    recommendationLine: "{when} at {site}, {miles} mi",
+    seeOtherOptions: "See other options",
+    hideOtherOptions: "Hide other options",
+    modeBest: "Best match",
+    modeFastest: "Fastest",
+    modeClosest: "Closest",
+    equityNudge:
+      "Nearest eye specialist: about {eyeMiles} mi. Nearest screening camera: about {cameraMiles} mi. A camera close to home closes the gap without the long drive.",
+    rideSupportBadge: "Ride support",
+    lowCostBadge: "Low-cost",
+    matchLeadBest: "Best match because {parts}.",
+    matchLeadFastest: "Fastest option because {parts}.",
+    matchLeadClosest: "Closest option because {parts}.",
+    matchPartDistance: "it is {miles} miles away",
+    matchPartOpen: "open {when}",
+    matchPartRide: "has ride support",
+    matchPartLowCost: "is low-cost",
+    venueFqhc: "Community health center",
+    venueMobile: "Mobile camera",
+    venueCommunityCamera: "Community camera",
+    venueEyeClinic: "Eye clinic",
+    venueKroger: "Kroger",
+    venuePharmacy: "Pharmacy",
+    venuePrimaryCare: "Primary care office",
+    coverageTitle: "Coverage & ride check",
+    coverageEstimated: "Estimated: {cost}",
+    coverageRide: "Ride help: {ride}",
+    bookedTitle: "You're booked",
+    bookedLine: "Eye screening — {site}, {when}",
+    whatToExpectTitle: "What to expect",
+    whatToExpectBody: "About 10 minutes. Usually no dilation. No air puff. You'll know before you leave.",
+    rideQuestion: "Do you have a way to get there?",
+    rideYes: "Yes, I have a ride",
+    rideNo: "I need help with a ride",
+    rideSiteCovered: "This site offers ride support — say so when they confirm your visit and they will set it up.",
+    rideResourcesTitle: "Transportation help near you",
+    tileEyeCheckTitle: "Eye check due",
+    tileEyeCheckBody: "It's been {months} months since your last diabetes eye photo. A new one takes about 10 minutes, close to home.",
+    tileEyeCheckCta: "See times near me",
+    allCaughtUp: "No eye screening is due right now. We'll remind you when your next one comes up."
   },
   es: {
     pageTitle: "Chequeo de Ojos",
@@ -270,7 +374,60 @@ export const screeningStrings: Record<Language, Record<ScreeningStringKey, strin
     gradeDmePdr:
       "Tu reporte muestra cambios que necesitan atención pronto. Que te atiendan rápido protege tu visión. Tu referido ya fue enviado.",
     gradeUngradable:
-      "La imagen no se pudo leer con claridad, lo cual pasa a veces. Solo se necesita repetir el examen rápidamente."
+      "La imagen no se pudo leer con claridad, lo cual pasa a veces. Solo se necesita repetir el examen rápidamente.",
+    nudgeSmsHeader: "Mensaje de texto · hoy",
+    nudgeSeeTimes: "Ver horarios cerca de mí",
+    nudgeTalkInstead: "Prefiero hablar con alguien",
+    nudgeCallbackTitle: "Un mensaje para tu equipo de salud está listo",
+    nudgeCallbackBody:
+      "Sin filas ni música de espera. Copia este mensaje o muéstralo en tu clínica, y alguien te llamará sobre tu chequeo de ojos.",
+    findTitle: "Encuentra un examen cerca de ti",
+    findIntro: "Una foto rápida de tus ojos — no necesitas cita con un especialista para hacerte el chequeo.",
+    zipLabel: "Tu código postal",
+    zipBasedOn: "Según tu código postal {zip}, hay {count} opciones de examen cerca de ti.",
+    zipUnknown: "Mostrando las ubicaciones de demostración más cercanas a ese código. Las distancias son estimaciones en línea recta.",
+    recommendedTitle: "Recomendado para ti",
+    bookIt: "Reservar",
+    recommendationLine: "{when} en {site}, a {miles} millas",
+    seeOtherOptions: "Ver otras opciones",
+    hideOtherOptions: "Ocultar otras opciones",
+    modeBest: "Mejor opción",
+    modeFastest: "Más rápida",
+    modeClosest: "Más cercana",
+    equityNudge:
+      "El especialista de ojos más cercano: a unas {eyeMiles} millas. La cámara de examen más cercana: a unas {cameraMiles} millas. Una cámara cerca de casa cierra la brecha sin el viaje largo.",
+    rideSupportBadge: "Apoyo con transporte",
+    lowCostBadge: "Bajo costo",
+    matchLeadBest: "Mejor opción porque {parts}.",
+    matchLeadFastest: "Opción más rápida porque {parts}.",
+    matchLeadClosest: "Opción más cercana porque {parts}.",
+    matchPartDistance: "está a {miles} millas",
+    matchPartOpen: "abre {when}",
+    matchPartRide: "tiene apoyo con transporte",
+    matchPartLowCost: "es de bajo costo",
+    venueFqhc: "Centro de salud comunitario",
+    venueMobile: "Cámara móvil",
+    venueCommunityCamera: "Cámara comunitaria",
+    venueEyeClinic: "Clínica de ojos",
+    venueKroger: "Kroger",
+    venuePharmacy: "Farmacia",
+    venuePrimaryCare: "Consultorio de atención primaria",
+    coverageTitle: "Chequeo de cobertura y transporte",
+    coverageEstimated: "Estimado: {cost}",
+    coverageRide: "Ayuda con transporte: {ride}",
+    bookedTitle: "Tu cita está reservada",
+    bookedLine: "Examen de ojos — {site}, {when}",
+    whatToExpectTitle: "Qué esperar",
+    whatToExpectBody: "Unos 10 minutos. Normalmente sin dilatación. Sin soplo de aire. Sabrás el resultado antes de irte.",
+    rideQuestion: "¿Tienes cómo llegar?",
+    rideYes: "Sí, tengo transporte",
+    rideNo: "Necesito ayuda con el transporte",
+    rideSiteCovered: "Este lugar ofrece apoyo con transporte — dilo cuando confirmen tu visita y lo organizarán.",
+    rideResourcesTitle: "Ayuda de transporte cerca de ti",
+    tileEyeCheckTitle: "Chequeo de ojos pendiente",
+    tileEyeCheckBody: "Han pasado {months} meses desde tu última foto de ojos por la diabetes. Una nueva toma unos 10 minutos, cerca de casa.",
+    tileEyeCheckCta: "Ver horarios cerca de mí",
+    allCaughtUp: "No tienes ningún examen de ojos pendiente por ahora. Te recordaremos cuando toque el próximo."
   }
 };
 

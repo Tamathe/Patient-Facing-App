@@ -256,4 +256,53 @@ describe("healthReducer", () => {
     expect(next.auditEvents[0]?.action).toBe("exported");
     expect(next.auditEvents[0]?.label).toBe("Data exported");
   });
+
+  it("bookScreening walks an overdue gap through engaged to scheduled and audits it", () => {
+    const next = healthReducer(demoState, {
+      type: "bookScreening",
+      gapId: "gap-demo-dr",
+      siteId: "site_fqhc_mobile",
+      siteName: "Perry County FQHC Mobile Camera",
+      when: "Tuesday 2:40 PM"
+    });
+
+    const gap = next.screeningGaps[0];
+    expect(gap.status).toBe("scheduled");
+    expect(gap.scheduledSiteId).toBe("site_fqhc_mobile");
+    expect(gap.scheduledFor).toBe("Tuesday 2:40 PM");
+    expect(next.auditEvents.at(-1)?.action).toBe("screening_scheduled");
+    expect(next.auditEvents.at(-1)?.label).toContain("Perry County FQHC Mobile Camera");
+  });
+
+  it("bookScreening ignores a gap with no legal path to scheduled", () => {
+    const closed = {
+      ...demoState,
+      screeningGaps: [{ ...demoState.screeningGaps[0], status: "closed" as const }]
+    };
+    const next = healthReducer(closed, {
+      type: "bookScreening",
+      gapId: "gap-demo-dr",
+      siteId: "site_fqhc_mobile",
+      siteName: "Perry County FQHC Mobile Camera",
+      when: "Tuesday 2:40 PM"
+    });
+
+    expect(next).toBe(closed);
+  });
+
+  it("bookScreening reschedules a repeat gap directly", () => {
+    const repeat = {
+      ...demoState,
+      screeningGaps: [{ ...demoState.screeningGaps[0], status: "repeat" as const }]
+    };
+    const next = healthReducer(repeat, {
+      type: "bookScreening",
+      gapId: "gap-demo-dr",
+      siteId: "site_kroger",
+      siteName: "Community Camera at Kroger",
+      when: "Friday 4:00 PM"
+    });
+
+    expect(next.screeningGaps[0].status).toBe("scheduled");
+  });
 });

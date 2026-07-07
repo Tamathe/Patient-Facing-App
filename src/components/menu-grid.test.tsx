@@ -4,8 +4,9 @@ import React from "react";
 import { MenuGrid, MENU_GROUPS } from "./menu-grid";
 
 // Every route the old flat bottom bar reached, except the home (/today), which
-// is the persistent Home nav item.
-const REQUIRED_ROUTES = ["/numbers", "/glucose", "/medicines", "/food", "/plan", "/visits", "/chat", "/checkin", "/support", "/intake", "/privacy"];
+// is the persistent Home nav item. /screening joined at the end in the DR
+// sprint (plan 09).
+const REQUIRED_ROUTES = ["/numbers", "/glucose", "/medicines", "/food", "/plan", "/visits", "/chat", "/checkin", "/support", "/intake", "/privacy", "/screening"];
 
 describe("MenuGrid reachability", () => {
   it("renders a link to every destination so collapsing the tab bar orphans no route", () => {

@@ -27,3 +27,30 @@ export function buildCareTeamMessage(state: AppState): string {
 
   return lines.join("\n");
 }
+
+// The "I'd rather talk to someone" path from the screening nudge: an honest
+// drafted callback request instead of a fake queue. Same on-device rules as
+// buildCareTeamMessage — nothing is sent by this function.
+export function buildScreeningCallbackMessage(state: AppState, monthsSinceLast: number | null): string {
+  const language = state.patient.language;
+  const lines: string[] =
+    language === "es"
+      ? [
+          "Para mi equipo de salud:",
+          `- Soy ${state.patient.name}. Recibí un recordatorio de mi chequeo de ojos por la diabetes y prefiero hablar con alguien para agendarlo.`,
+          monthsSinceLast === null
+            ? "- No tengo registrada la fecha de mi último examen de ojos."
+            : `- Han pasado unos ${monthsSinceLast} meses desde mi último examen de ojos.`,
+          `- Por favor llámenme para encontrar un horario y lugar que me funcione. Mi clínica: ${state.patient.primaryClinicName}.`
+        ]
+      : [
+          "For my care team:",
+          `- I'm ${state.patient.name}. I got a reminder about my diabetes eye check and I'd rather talk to someone to set it up.`,
+          monthsSinceLast === null
+            ? "- I don't have a record of my last eye screening date."
+            : `- It has been about ${monthsSinceLast} months since my last eye screening.`,
+          `- Please call me to find a time and place that works. My clinic: ${state.patient.primaryClinicName}.`
+        ];
+
+  return lines.join("\n");
+}

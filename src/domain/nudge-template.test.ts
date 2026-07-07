@@ -1,0 +1,70 @@
+import { describe, expect, it } from "vitest";
+import { lintNudgeMessage, renderNudge } from "./nudge-template";
+
+describe("renderNudge", () => {
+  it("renders the approved screening nudge in English", () => {
+    const rendered = renderNudge({
+      templateId: "screening_nudge_v1",
+      language: "en",
+      slots: { firstName: "Jordan", months: "19" }
+    });
+    expect(rendered.ok).toBe(true);
+    if (rendered.ok) {
+      expect(rendered.message).toBe(
+        "Hi Jordan — it's been 19 months since your last diabetes eye check. A new photo takes about 10 minutes, close to home."
+      );
+    }
+  });
+
+  it("renders the approved screening nudge in Spanish", () => {
+    const rendered = renderNudge({
+      templateId: "screening_nudge_v1",
+      language: "es",
+      slots: { firstName: "Jordan", months: "19" }
+    });
+    expect(rendered.ok).toBe(true);
+    if (rendered.ok) {
+      expect(rendered.message).toContain("Hola Jordan");
+      expect(rendered.message).toContain("19 meses");
+    }
+  });
+
+  it("refuses a template that is not on the approved list", () => {
+    const rendered = renderNudge({ templateId: "improvised_v9", language: "en", slots: {} });
+    expect(rendered).toMatchObject({ ok: false, reason: "template_not_approved" });
+  });
+
+  it("refuses when a required slot is missing or blank", () => {
+    const rendered = renderNudge({
+      templateId: "screening_nudge_v1",
+      language: "en",
+      slots: { firstName: " ", months: "19" }
+    });
+    expect(rendered).toMatchObject({ ok: false, reason: "missing_slot" });
+  });
+
+  it("refuses a rendered message that trips the prohibited-term lint", () => {
+    const rendered = renderNudge({
+      templateId: "screening_nudge_v1",
+      language: "en",
+      slots: { firstName: "Depression Study", months: "19" }
+    });
+    expect(rendered).toMatchObject({ ok: false, reason: "disclosure_lint_failed" });
+  });
+});
+
+describe("lintNudgeMessage", () => {
+  it("passes the approved screening copy in both languages", () => {
+    expect(lintNudgeMessage("it's been 19 months since your last diabetes eye check").ok).toBe(true);
+    expect(lintNudgeMessage("han pasado 19 meses desde tu último chequeo de ojos por la diabetes").ok).toBe(true);
+  });
+
+  it("flags sensitive-category disclosures, en and es", () => {
+    const en = lintNudgeMessage("your depression follow-up is ready");
+    expect(en).toMatchObject({ ok: false, terms: ["depression"] });
+    const es = lintNudgeMessage("apoyo por violencia doméstica disponible");
+    expect(es.ok).toBe(false);
+    const hiv = lintNudgeMessage("HIV care task ready");
+    expect(hiv.ok).toBe(false);
+  });
+});

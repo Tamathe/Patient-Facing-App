@@ -69,7 +69,11 @@ export type HomeStringKey =
   | "menuIntakeLabel"
   | "menuIntakeDesc"
   | "menuPrivacyLabel"
-  | "menuPrivacyDesc";
+  | "menuPrivacyDesc"
+  | "menuScreeningLabel"
+  | "menuScreeningDesc"
+  | "taskScreeningBookedTitle"
+  | "taskScreeningBookedBody";
 
 export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
   en: {
@@ -138,7 +142,11 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuIntakeLabel: "Add Instructions",
     menuIntakeDesc: "Paste care instructions to review",
     menuPrivacyLabel: "Privacy",
-    menuPrivacyDesc: "Export or delete your data"
+    menuPrivacyDesc: "Export or delete your data",
+    menuScreeningLabel: "Eye Check",
+    menuScreeningDesc: "Find and book your diabetes eye screening",
+    taskScreeningBookedTitle: "Eye screening — {site}, {when}",
+    taskScreeningBookedBody: "About 10 minutes. Usually no dilation. Bring the printed report back to the app afterward."
   },
   es: {
     greetingMorning: "Buenos días",
@@ -207,7 +215,11 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuIntakeLabel: "Agregar Instrucciones",
     menuIntakeDesc: "Pega instrucciones de cuidado para revisar",
     menuPrivacyLabel: "Privacidad",
-    menuPrivacyDesc: "Exporta o borra tus datos"
+    menuPrivacyDesc: "Exporta o borra tus datos",
+    menuScreeningLabel: "Chequeo de Ojos",
+    menuScreeningDesc: "Encuentra y reserva tu examen de ojos por la diabetes",
+    taskScreeningBookedTitle: "Examen de ojos — {site}, {when}",
+    taskScreeningBookedBody: "Unos 10 minutos. Normalmente sin dilatación. Después, trae el reporte impreso a la app."
   }
 };
 
