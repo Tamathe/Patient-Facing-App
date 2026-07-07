@@ -3,10 +3,12 @@
 import { AppShell } from "@/components/app-shell";
 import { GlucoseInsights } from "@/components/glucose-insights";
 import { GlucoseLogForm } from "@/components/glucose-log-form";
+import { GlucoseReadingRow } from "@/components/glucose-reading-row";
 import { interpretGlucose } from "@/domain/blood-glucose";
 import { summarizeGlucoseTrend } from "@/domain/adherence";
 import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { summarizeFoodGlucoseLink } from "@/domain/glucose-correlation";
+import { annotateGlucoseWithMedContext } from "@/domain/glucose-med-context";
 import { computeTimeInRange } from "@/domain/glucose-range";
 import type { GlucoseReading } from "@/domain/types";
 import { useHealthState } from "@/state/store";
@@ -21,6 +23,12 @@ export default function GlucosePage() {
     state.mealLog,
     state.glucoseReadings,
     selectLenses(activeConditions(state.carePlan))
+  );
+  const medContextByReadingId = new Map(
+    annotateGlucoseWithMedContext(state.glucoseReadings, state.doseEvents, state.medications).map((context) => [
+      context.reading.id,
+      context
+    ])
   );
 
   return (
@@ -62,11 +70,16 @@ export default function GlucosePage() {
         <GlucoseInsights timeInRange={timeInRange} foodInsight={foodInsight} />
         <section className="grid gap-2">
           <h2 className="text-lg font-semibold">Recent readings</h2>
+          <p className="text-sm leading-6 text-ink/65">
+            Tags show what your dose log says for that day - not medical advice.
+          </p>
           {state.glucoseReadings.slice(-5).reverse().map((reading) => (
-            <div key={reading.id} className="rounded-control border border-ink/10 bg-white p-3 text-sm">
-              <strong>{reading.valueMgDl} mg/dL</strong>
-              <p className="text-ink/65">{new Date(reading.measuredAt).toLocaleString()}</p>
-            </div>
+            <GlucoseReadingRow
+              key={reading.id}
+              reading={reading}
+              status={medContextByReadingId.get(reading.id)?.status ?? "unknown"}
+              medNames={medContextByReadingId.get(reading.id)?.medNames ?? []}
+            />
           ))}
         </section>
       </div>
