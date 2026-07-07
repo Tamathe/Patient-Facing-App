@@ -970,6 +970,15 @@ export const brentState: AppState = {
       recordedAt: "2026-07-02T07:50:00.000Z"
     },
     {
+      id: "dose-brent-metformin-0702",
+      patientId: "patient-brent",
+      medicationId: "med-metformin",
+      date: "2026-07-02",
+      status: "skipped",
+      barrier: "cost",
+      recordedAt: "2026-07-02T20:30:00.000Z"
+    },
+    {
       id: "dose-brent-14",
       patientId: "patient-brent",
       medicationId: "med-lisinopril",

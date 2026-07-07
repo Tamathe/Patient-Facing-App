@@ -10,6 +10,8 @@ diabetes).
 - Summarizes blood-sugar **time-in-range** and surfaces a plain-language
   **food↔blood-sugar pattern** from the patient's own logs (discrete readings
   summarized — no CGM, no device, no causal claim).
+- Shows whether the day's diabetes medicine was marked taken in the patient's
+  own dose log, and lets meal logging assume an editable serving count.
 - Explains medicines in plain language.
 - Captures medication barriers without blame.
 - Provides guided AI coaching with safety boundaries.
