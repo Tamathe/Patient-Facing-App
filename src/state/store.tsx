@@ -11,6 +11,7 @@ import {
 } from "react";
 import { brentState, defaultDemoState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
+import { mergeFamilyDomains } from "@/domain/family-screen";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
@@ -96,17 +97,6 @@ function emptyFamilyState(profile: FamilyProfile): FamilyNavigatorState {
     saved: [],
     alreadyEnrolled: []
   };
-}
-
-function computeActiveFamilyDomains(
-  answers: FamilyScreenAnswer[],
-  latestInterviewDomains: FamilyNavigatorState["latestInterviewDomains"]
-): FamilyNavigatorState["activeDomains"] {
-  const screenDomains = answers
-    .filter(({ response }) => response === "yes")
-    .map(({ domain }) => domain);
-
-  return [...new Set([...screenDomains, ...latestInterviewDomains])];
 }
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
@@ -511,8 +501,17 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         family: {
           ...state.family,
           screenAnswers: action.answers,
-          facts: [...interviewFacts, ...action.facts.map(({ interviewId: _interviewId, ...fact }) => fact)],
-          activeDomains: computeActiveFamilyDomains(action.answers, state.family.latestInterviewDomains)
+          facts: [
+            ...interviewFacts,
+            ...action.facts.map(({ id, label, value, status, sourceSnippet }) => ({
+              id,
+              label,
+              value,
+              status,
+              sourceSnippet
+            }))
+          ],
+          activeDomains: mergeFamilyDomains(action.answers, state.family.latestInterviewDomains)
         }
       };
     }
@@ -532,7 +531,7 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
             ...action.facts.map((fact) => ({ ...fact, interviewId: action.interview.id }))
           ],
           latestInterviewDomains,
-          activeDomains: computeActiveFamilyDomains(state.family.screenAnswers, latestInterviewDomains)
+          activeDomains: mergeFamilyDomains(state.family.screenAnswers, latestInterviewDomains)
         }
       };
     }
