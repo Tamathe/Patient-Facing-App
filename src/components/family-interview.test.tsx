@@ -268,4 +268,62 @@ describe("FamilyInterview", () => {
       rawText: morganFamilyState.interviewDraft
     });
   });
+
+  it("reconciles the latest external draft after an atomic pending submission", async () => {
+    const draftA = "Riley was diagnosed with dyslexia.";
+    const draftB = "Casey is in grade 4.";
+    const profileA = { ...morganFamilyState.profile!, childFirstName: "Riley" };
+    const profileB = { ...morganFamilyState.profile!, childFirstName: "Casey" };
+    const pending = deferred<null>();
+    requestFamilyInterview.mockReturnValueOnce(pending.promise);
+    const onDraftChange = vi.fn();
+    const onExtracted = vi.fn();
+    const baseProps = {
+      passcode: "secret",
+      language: "en" as const,
+      onDraftChange,
+      onExtracted
+    };
+    const { rerender } = render(<FamilyInterview {...baseProps} draft={draftA} profile={profileA} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    rerender(<FamilyInterview {...baseProps} draft={draftB} profile={profileB} />);
+    expect(screen.getByRole("textbox", { name: /family interview/i })).toHaveValue(draftA);
+
+    await act(async () => pending.resolve(null));
+    await waitFor(() =>
+      expect(onExtracted).toHaveBeenCalledWith(
+        {
+          facts: [
+            {
+              label: "Reported diagnosis",
+              value: "dyslexia",
+              sourceSnippet: "Riley was diagnosed with dyslexia"
+            }
+          ],
+          domains: [],
+          followUps: []
+        },
+        { extraction: "mock", source: "typed", rawText: draftA }
+      )
+    );
+    expect(requestFamilyInterview.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ text: draftA, profile: profileA })
+    );
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /family interview/i })).toHaveValue(draftB));
+
+    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
+    expect(requestFamilyInterview.mock.calls[1][0]).toEqual(
+      expect.objectContaining({ text: draftB, profile: profileB })
+    );
+    expect(onExtracted.mock.calls[1]).toEqual([
+      {
+        facts: [{ label: "Grade", value: "grade 4", sourceSnippet: "grade 4" }],
+        domains: [],
+        followUps: []
+      },
+      { extraction: "mock", source: "typed", rawText: draftB }
+    ]);
+  });
 });

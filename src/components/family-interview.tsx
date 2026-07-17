@@ -140,14 +140,14 @@ export function FamilyInterview({
   }, []);
 
   useEffect(() => {
-    if (submittingRef.current) return;
+    if (submitting) return;
     setText(draft);
     setError(draft.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : null);
     if (draft !== lastLocalDraftRef.current) {
       inputSourceRef.current = "typed";
       lastLocalDraftRef.current = draft;
     }
-  }, [copy.tooLong, draft]);
+  }, [copy.tooLong, draft, submitting]);
 
   useEffect(() => {
     mountedRef.current = true;
