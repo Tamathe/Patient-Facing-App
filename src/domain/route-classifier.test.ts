@@ -29,13 +29,25 @@ describe("mockRouteClassifier", () => {
     "help for my daughter",
     "resources for my child",
     "support for my son",
-    "developmental resources for my kid",
-    "ayuda para mi hija",
-    "recursos para mi hijo"
+    "developmental resources for my kid"
   ])("routes family-specific help intent to the family navigator: %s", (utterance) => {
     expect(mockRouteClassifier.classify(utterance, CLASSIFIER_HREFS)).toMatchObject({
       kind: "navigate",
       href: "/family"
+    });
+  });
+
+  it("keeps Spanish phrases out of the English-only mock classifier", () => {
+    expect(mockRouteClassifier.classify("ayuda para mi hija", CLASSIFIER_HREFS)).toEqual({
+      kind: "coach",
+      confidence: 0.3
+    });
+  });
+
+  it("prefers general support when a family phrase also names an SDOH need", () => {
+    expect(mockRouteClassifier.classify("housing resources for my child", CLASSIFIER_HREFS)).toMatchObject({
+      kind: "navigate",
+      href: "/support"
     });
   });
 
@@ -46,6 +58,22 @@ describe("mockRouteClassifier", () => {
 
   it("asks to clarify when two destinations tie", () => {
     expect(mockRouteClassifier.classify("my food and my medicine", CLASSIFIER_HREFS).kind).toBe("clarify");
+  });
+
+  it("preserves base-score clarification and stable candidate order", () => {
+    expect(mockRouteClassifier.classify("eye exam and prescriptions", CLASSIFIER_HREFS)).toEqual({
+      kind: "clarify",
+      candidates: ["/medicines", "/screening"],
+      confidence: 0.5
+    });
+  });
+
+  it("preserves base-score preference for overlapping prescription synonyms", () => {
+    expect(mockRouteClassifier.classify("care plan and prescriptions", CLASSIFIER_HREFS)).toEqual({
+      kind: "navigate",
+      href: "/medicines",
+      confidence: 0.8
+    });
   });
 });
 

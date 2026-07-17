@@ -32,6 +32,21 @@ const CLASSIFIER_CONFIDENCE_FLOOR = 0.75;
 
 type NavRule = { test: RegExp; href: string; label: string };
 
+const FAMILY_RELATIONSHIP_EN =
+  /\b(?:help|support|resources?|services?)(?:\s+(?:for|with))?\s+(?:my|our)\s+(?:child|daughter|son|kid)\b/;
+const FAMILY_RELATIONSHIP_ES =
+  /\b(?:ayuda|apoyo|recursos?|servicios?)(?:\s+(?:para|con|a))?\s+(?:mi|nuestro|nuestra)\s+(?:hij[oa]|niñ[oa])\b/;
+const FAMILY_DEVELOPMENT_EN =
+  /\b(?:development(?:al)?|diagnos(?:is|es|ed)|iep|arc|therap(?:y|ies)|speech|language|autism|adhd|dyslexia|early intervention)\b/;
+const FAMILY_DEVELOPMENT_ES =
+  /\b(?:desarrollo|diagn[oó]stico|iep|arc|terapia|habla|lenguaje|autismo|tdah|dislexia|intervenci[oó]n temprana)\b/;
+const FAMILY_RESOURCE_SEARCH_EN = /\b(?:find|need|looking for)\b.*\bresources?\b/;
+const FAMILY_RESOURCE_SEARCH_ES = /\b(?:encontrar|buscar|necesito)\b.*\brecursos?\b/;
+const FAMILY_ORDINARY_CONTEXT_EN = /\b(?:homework|schoolwork|soccer|football|baseball|basketball|sports?|practice|game|activities?)\b/;
+const FAMILY_ORDINARY_CONTEXT_ES = /\b(?:tarea|f[uú]tbol|b[eé]isbol|baloncesto|deportes?|pr[aá]ctica|juego|actividades?)\b/;
+const FAMILY_SDOH_EN = /\b(?:rent|housing|utilit(?:y|ies)|food stamps?|electric(?:ity)? bill|water bill)\b/;
+const FAMILY_SDOH_ES = /\b(?:renta|alquiler|vivienda|servicios|facturas?|luz|agua|comida)\b/;
+
 // Verb rules land the patient on the real feature screen (chat proposes, the
 // form commits) — never a silent write. Checked before the broader nav lexicon.
 const VERB_RULES: NavRule[] = [
@@ -118,16 +133,35 @@ export function decideFrontDoor(
     return { kind: "coach", ask: text, reason: "safety" };
   }
 
-  const lex = LEXICONS[state.patient.language];
+  const language = state.patient.language;
   const lower = text.toLowerCase();
+  const familyRelationship =
+    language === "es" ? FAMILY_RELATIONSHIP_ES.test(lower) : FAMILY_RELATIONSHIP_EN.test(lower);
 
-  const ordinaryParentingContext =
-    state.patient.language === "es"
-      ? /\b(?:apoyo|ayudo)\s+a\s+(?:mi|nuestro|nuestra)\s+(?:hij[oa]|niñ[oa])\b/
-      : /\b(?:help|support)\s+(?:my|our)\s+(?:child|daughter|son|kid)\b/;
-  if (ordinaryParentingContext.test(lower)) {
+  if (familyRelationship && (language === "es" ? FAMILY_SDOH_ES.test(lower) : FAMILY_SDOH_EN.test(lower))) {
+    return { kind: "navigate", href: "/support", label: language === "es" ? "Apoyo" : "Support" };
+  }
+
+  if (
+    familyRelationship &&
+    (language === "es" ? FAMILY_ORDINARY_CONTEXT_ES.test(lower) : FAMILY_ORDINARY_CONTEXT_EN.test(lower))
+  ) {
     return { kind: "coach", ask: text, reason: "no_match" };
   }
+
+  const explicitDevelopmentalIntent =
+    language === "es"
+      ? FAMILY_DEVELOPMENT_ES.test(lower) || FAMILY_RESOURCE_SEARCH_ES.test(lower)
+      : FAMILY_DEVELOPMENT_EN.test(lower) || FAMILY_RESOURCE_SEARCH_EN.test(lower);
+  if (familyRelationship && explicitDevelopmentalIntent) {
+    return {
+      kind: "navigate",
+      href: "/family",
+      label: language === "es" ? "Navegador para familias" : "Family navigator"
+    };
+  }
+
+  const lex = LEXICONS[language];
 
   for (const rule of lex.verbRules) {
     if (rule.test.test(lower)) {

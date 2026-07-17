@@ -100,6 +100,7 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
 
   it.each([
     "how do I help my daughter with homework?",
+    "help with our kid's homework",
     "I support my daughter at soccer"
   ])("does not steal ordinary parenting language for the family route: %s", (utterance) => {
     expect(decideFrontDoor(utterance, en)).toMatchObject({ kind: "coach", reason: "no_match" });
@@ -108,6 +109,29 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
   it("keeps bare resources on general support", () => {
     expect(decideFrontDoor("resources", en)).toMatchObject({ kind: "navigate", href: "/support" });
   });
+
+  it("prefers general support when a family phrase names an SDOH need", () => {
+    expect(decideFrontDoor("rent support for my son", en)).toEqual({
+      kind: "navigate",
+      href: "/support",
+      label: "Support"
+    });
+  });
+
+  it("routes explicit developmental intent in alternate word order", () => {
+    expect(decideFrontDoor("help my child find developmental resources", en)).toEqual({
+      kind: "navigate",
+      href: "/family",
+      label: "Family navigator"
+    });
+  });
+
+  it.each(["help with our child", "resources for our daughter", "support with my kid"])(
+    "routes canonical caregiver relationship help forms: %s",
+    (utterance) => {
+      expect(decideFrontDoor(utterance, en)).toMatchObject({ kind: "navigate", href: "/family" });
+    }
+  );
 });
 
 describe("decideFrontDoor — constrained classifier stage", () => {
@@ -159,7 +183,28 @@ describe("decideFrontDoor — Spanish", () => {
   );
 
   it("does not steal ordinary Spanish parenting language for the family route", () => {
-    expect(decideFrontDoor("apoyo a mi hija en fútbol", es)).toMatchObject({ kind: "coach", reason: "no_match" });
+    expect(decideFrontDoor("ayuda con mi hija en fútbol", es)).toMatchObject({ kind: "coach", reason: "no_match" });
+  });
+
+  it("prefers general support when a Spanish family phrase names an SDOH need", () => {
+    expect(decideFrontDoor("ayuda para mi hijo con la renta", es)).toEqual({
+      kind: "navigate",
+      href: "/support",
+      label: "Apoyo"
+    });
+  });
+
+  it("routes explicit Spanish developmental intent in alternate word order", () => {
+    expect(decideFrontDoor("ayuda a mi hija a encontrar recursos de desarrollo", es)).toEqual({
+      kind: "navigate",
+      href: "/family",
+      label: "Navegador para familias"
+    });
+  });
+
+  it("keeps Spanish family phrases isolated by patient language", () => {
+    expect(decideFrontDoor("ayuda para mi hija", en)).toMatchObject({ kind: "coach", reason: "no_match" });
+    expect(decideFrontDoor("ayuda para mi hija", es)).toMatchObject({ kind: "navigate", href: "/family" });
   });
 
   it("does not match the English lexicon for a Spanish patient", () => {
