@@ -63,9 +63,9 @@ const REFLEXIVE_INTENT =
   /\b(?:want(?:s|ed)? to|threatens? to|plans? to|trying to|says? (?:he|she|they) (?:will|might)|told me (?:he|she|they) (?:will|might|want(?:s|ed)? to))\b[^.?!]{0,32}\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
 const ONGOING_SELF_INJURY =
   /\b(?:has been|keeps?|continues? to)\b[^.?!]{0,24}\b(?:hurting|cutting)\s+(?:himself|herself|themself|themselves)\b/i;
-const THIRD_PERSON_END_LIFE = /\bwant(?:s|ed)? to end (?:his|her|their) life\b/i;
+const THIRD_PERSON_END_LIFE = /\bwant(?:s|ed)? to end (?:his|her|their) life\b(?!\s+(?:insurance|support)\b)/i;
 const MISSING_CHILD =
-  /\b(?:ran away(?: from home)?|wandered off|got out of (?:the )?house)\b[^.?!]{0,64}\b(?:(?:we\s+)?(?:still\s+)?(?:can't|cannot|couldn't)\s+find|(?:is|are|still)\s+missing)\b/i;
+  /\b(?:(?:my|our|the|a)\s+(?:child|kid|son|daughter|boy|girl|teen(?:ager)?)|he|she|they)\s+(?:ran away(?: from home)?|wandered off|got out of (?:the )?house)\b[^.?!]{0,64}\b(?:(?:we\s+)?(?:still\s+)?(?:can't|cannot|couldn't)\s+find|(?:is|are|still)\s+missing)\b/i;
 const CAREGIVER_COLLAPSE =
   /\bcan't do this anymore\b[^.?!]{0,64}\b(?:want to give up|ending it|end it)\b|\b(?:want to give up|ending it|end it)\b[^.?!]{0,64}\bcan't do this anymore\b/i;
 const CHILD_HARM_DISCLOSURE =

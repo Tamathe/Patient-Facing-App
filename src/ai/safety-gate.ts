@@ -191,10 +191,7 @@ export async function createSafeAiResponse(
   if (decision.kind === "crisis_escalate") {
     if (decision.domain === "abuse") {
       return {
-        content:
-          language === "es"
-            ? "Una persona capacitada para ayudar con la seguridad de menores debe participar ahora mismo. Si alguien est\u00e1 en peligro inmediato, llama al 911. Tambi\u00e9n puedes llamar o enviar un mensaje de texto al 988 y comunicarte con tu equipo de salud para obtener ayuda humana."
-            : "A person trained to help with child safety should be involved right now. If anyone is in immediate danger, call 911. You can also call or text 988 and contact your care team for human help.",
+        content: tSafety(language, "abuseResponse"),
         safety: "crisis",
         sources: [],
         actions: ABUSE_ACTIONS

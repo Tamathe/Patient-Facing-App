@@ -89,6 +89,15 @@ describe("screenCrisisRedFlags", () => {
     expect(screenCrisisRedFlags(text).matched).toBe(false);
   });
 
+  it.each([
+    "my father wants to end his life insurance policy",
+    "she wants to end her life support",
+    "my dog ran away from home and we still cannot find her",
+    "my package got out of the house and is missing"
+  ])("does not flag caregiver-context trap %s", (text) => {
+    expect(screenCrisisRedFlags(text).matched).toBe(false);
+  });
+
   it("strips negated self-harm spans but still fires on residual disclosures", () => {
     expect(screenCrisisRedFlags("I would never hurt myself").matched).toBe(false);
     expect(screenCrisisRedFlags("I'm not going to hurt myself, I just feel down").matched).toBe(false);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState, demoState } from "@/domain/fixtures";
-import { tSafety } from "@/i18n/strings";
+import { safetyStrings, tSafety } from "@/i18n/strings";
 import { verifyGrounding } from "@/domain/grounding";
 import { collectSourceFacts } from "./grounding-facts";
 import { MockHealthAiProvider } from "./mock-provider";
@@ -699,8 +699,7 @@ describe("createSafeAiResponse", () => {
     );
 
     expect(response.safety).toBe("crisis");
-    expect(response.content).toContain("person");
-    expect(response.content).toContain("right now");
+    expect(response.content).toBe(safetyStrings.en.abuseResponse);
     expect(response.actions).toEqual(
       expect.arrayContaining(["crisis_call_988", "call_emergency", "call_clinic", "draft_message"])
     );
@@ -718,6 +717,7 @@ describe("createSafeAiResponse", () => {
       new MockHealthAiProvider()
     );
 
+    expect(response.content).toBe(safetyStrings.es.abuseResponse);
     expect(response.content).toContain("est\u00e1");
     expect(response.content).toContain("Tambi\u00e9n");
   });

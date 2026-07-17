@@ -272,5 +272,29 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
     text: "he ran away with the soccer ball",
     expectedMatched: false,
     domain: "logistics"
+  },
+  {
+    id: "trap_life_insurance_policy",
+    text: "my father wants to end his life insurance policy",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_life_support",
+    text: "she wants to end her life support",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_missing_dog",
+    text: "my dog ran away from home and we still cannot find her",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_missing_package",
+    text: "my package got out of the house and is missing",
+    expectedMatched: false,
+    domain: "logistics"
   }
 ];
