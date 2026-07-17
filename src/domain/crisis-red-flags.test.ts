@@ -56,6 +56,39 @@ describe("screenCrisisRedFlags", () => {
     expect(screenCrisisRedFlags("worst headache of my life and my BP is 210 over 120").domain).toBe("acute_danger");
   });
 
+  it.each([
+    ["my son says he wants to die", "self_harm"],
+    ["honestly she's been saying she wants to die", "self_harm"],
+    ["my daughter has been hurting herself", "self_harm"],
+    ["he told me he wants to kill himself", "self_harm"],
+    ["my kid ran away from home and we can't find her", "acute_danger"],
+    ["I can't do this anymore, I want to give up", "caregiver_collapse"]
+  ] as const)("classifies caregiver regression %s as %s", (text, domain) => {
+    expect(screenCrisisRedFlags(text)).toMatchObject({ matched: true, domain });
+  });
+
+  it.each([
+    ["my son wants to end his life", "self_harm"],
+    ["my daughter threatens to hurt herself", "self_harm"],
+    ["my son keeps cutting himself", "self_harm"],
+    ["my child wandered off and we still cannot find them", "acute_danger"],
+    ["my child got out of the house and is missing", "acute_danger"],
+    ["someone is hurting my child", "abuse"],
+    ["my daughter is being abused", "abuse"]
+  ] as const)("classifies caregiver safety phrase %s as %s", (text, domain) => {
+    expect(screenCrisisRedFlags(text)).toMatchObject({ matched: true, domain });
+  });
+
+  it.each([
+    "he hurt himself at recess yesterday",
+    "this waitlist is killing me",
+    "I give up trying to get her to eat vegetables",
+    "she's dying to ride the horses",
+    "he ran away with the soccer ball"
+  ])("does not flag caregiver trap %s", (text) => {
+    expect(screenCrisisRedFlags(text).matched).toBe(false);
+  });
+
   it("strips negated self-harm spans but still fires on residual disclosures", () => {
     expect(screenCrisisRedFlags("I would never hurt myself").matched).toBe(false);
     expect(screenCrisisRedFlags("I'm not going to hurt myself, I just feel down").matched).toBe(false);
@@ -86,6 +119,8 @@ describe("screenCrisisRedFlags", () => {
 describe("crisisTierForDomain", () => {
   it("routes self-harm to crisis and vision/acute to emergency", () => {
     expect(crisisTierForDomain("self_harm")).toBe("crisis");
+    expect(crisisTierForDomain("caregiver_collapse")).toBe("crisis");
+    expect(crisisTierForDomain("abuse")).toBe("crisis");
     expect(crisisTierForDomain("vision")).toBe("emergency");
     expect(crisisTierForDomain("acute_danger")).toBe("emergency");
     expect(crisisTierForDomain("logistics")).toBeNull();
@@ -101,5 +136,9 @@ describe("measureCrisisRecall", () => {
     expect(report.falseNegatives).toEqual([]);
     expect(report.falsePositives).toEqual([]);
     expect(report.totalExpectedPositive).toBeGreaterThan(0);
+
+    for (const testCase of crisisGateCorpus.filter((entry) => entry.expectedMatched)) {
+      expect(screenCrisisRedFlags(testCase.text).domain, testCase.id).toBe(testCase.domain);
+    }
   });
 });

@@ -84,6 +84,19 @@ test("a typed crisis turn shows 988/911 deep links and locks the composer", asyn
   await expect(page.getByLabel("Message")).not.toBeDisabled();
 });
 
+test("a caregiver crisis from home opens crisis chat instead of feature navigation", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear());
+
+  await page.goto("/today");
+  await page.getByLabel("Tell me what you need").fill("honestly she's been saying she wants to die");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
+  await expect(page.getByRole("link", { name: /Call 911/ })).toHaveAttribute("href", "tel:911");
+  await expect(page.getByLabel("Message")).toBeDisabled();
+});
+
 test("a positive PHQ-9 item 9 routes to the crisis surface", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
 

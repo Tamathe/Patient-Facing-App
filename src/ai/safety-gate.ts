@@ -1,5 +1,5 @@
 import { classifyCrisis, classifySafety } from "@/domain/safety";
-import { crisisTierForDomain } from "@/domain/crisis-red-flags";
+import { crisisTierForDomain, type CrisisDomain } from "@/domain/crisis-red-flags";
 import { screenSocialEmergency } from "@/domain/social-screen";
 import { verifyGrounding } from "@/domain/grounding";
 import { findRecentClinicalReading, findRecentGlucoseReading } from "@/domain/recent-clinical-reading";
@@ -18,11 +18,12 @@ export const CRISIS_ACTIONS: AiMessageAction[] = [
   "safety_plan"
 ];
 export const EMERGENCY_ACTIONS: AiMessageAction[] = ["call_emergency", "call_clinic", "draft_message"];
+const ABUSE_ACTIONS: AiMessageAction[] = [...CRISIS_ACTIONS, ...CARE_TEAM_ACTIONS];
 
 type EscalationTier = "emergency" | "care_team";
 
 type SafetyDecision =
-  | { kind: "crisis_escalate" }
+  | { kind: "crisis_escalate"; domain: CrisisDomain }
   | { kind: "hard_escalate"; tier: EscalationTier; message: string; sources: string[] }
   | { kind: "soft_escalate"; message: string; sources: string[] }
   | { kind: "soft_block"; message: string; sources: string[] }
@@ -55,15 +56,15 @@ function dedupe(sources: string[]): string[] {
 function decideSafety(request: HealthAiRequest): SafetyDecision {
   const language = request.state.patient.language;
 
-  // The literal first statement of the gate: a self-harm disclosure short-circuits
-  // to the crisis tier (provider never called); sudden vision loss or acute danger
-  // escalates to the emergency tier. Running this before the stored-reading block
-  // is what stops "my face is drooping" from being buried under a threshold reading.
+  // The literal first statement of the gate: crisis-tier disclosures short-circuit
+  // before the provider; sudden vision loss or acute danger escalates to the
+  // emergency tier. Running this before the stored-reading block is what stops
+  // "my face is drooping" from being buried under a threshold reading.
   const crisis = classifyCrisis(request.patientInput);
   if (crisis.matched) {
     const tier = crisisTierForDomain(crisis.domain);
-    if (tier === "crisis") {
-      return { kind: "crisis_escalate" };
+    if (tier === "crisis" && crisis.domain) {
+      return { kind: "crisis_escalate", domain: crisis.domain };
     }
     if (tier === "emergency") {
       return {
@@ -185,10 +186,21 @@ export async function createSafeAiResponse(
   const decision = decideSafety(request);
   const language: Language = request.state.patient.language;
 
-  // A crisis short-circuits above everything else: the provider is never
-  // constructed or called, and the reply is the fixed human-authored crisis
-  // constant plus the 988/911/safety-plan actions.
+  // A crisis short-circuits above everything else: the provider is never called,
+  // and the reply uses fixed human-authored copy plus existing human-contact actions.
   if (decision.kind === "crisis_escalate") {
+    if (decision.domain === "abuse") {
+      return {
+        content:
+          language === "es"
+            ? "Una persona capacitada para ayudar con la seguridad de menores debe participar ahora mismo. Si alguien est\u00e1 en peligro inmediato, llama al 911. Tambi\u00e9n puedes llamar o enviar un mensaje de texto al 988 y comunicarte con tu equipo de salud para obtener ayuda humana."
+            : "A person trained to help with child safety should be involved right now. If anyone is in immediate danger, call 911. You can also call or text 988 and contact your care team for human help.",
+        safety: "crisis",
+        sources: [],
+        actions: ABUSE_ACTIONS
+      };
+    }
+
     return {
       content: tSafety(language, "crisisResponse"),
       safety: "crisis",

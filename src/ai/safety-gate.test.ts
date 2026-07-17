@@ -657,6 +657,71 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      label: "reported child ideation",
+      input: "my son says he wants to die",
+      expectedSafety: "crisis" as const,
+      expectedAction: "crisis_call_988" as const
+    },
+    {
+      label: "caregiver collapse",
+      input: "I can't do this anymore, I want to give up",
+      expectedSafety: "crisis" as const,
+      expectedAction: "crisis_call_988" as const
+    },
+    {
+      label: "missing child",
+      input: "my kid ran away from home and we can't find her",
+      expectedSafety: "escalate" as const,
+      expectedAction: "call_emergency" as const
+    }
+  ])("short-circuits the provider for $label", async ({ input, expectedSafety, expectedAction }) => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "unused", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse({ mode: "trouble", patientInput: input, state: demoState }, provider);
+
+    expect(response.safety).toBe(expectedSafety);
+    expect(response.actions).toContain(expectedAction);
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("routes an abuse disclosure to people with existing crisis and care-team actions", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "unused", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "someone is hurting my child", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toContain("person");
+    expect(response.content).toContain("right now");
+    expect(response.actions).toEqual(
+      expect.arrayContaining(["crisis_call_988", "call_emergency", "call_clinic", "draft_message"])
+    );
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("renders the abuse human-routing copy correctly for a Spanish speaker", async () => {
+    const state: AppState = {
+      ...demoState,
+      patient: { ...demoState.patient, language: "es" }
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "someone is hurting my child", state },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.content).toContain("est\u00e1");
+    expect(response.content).toContain("Tambi\u00e9n");
+  });
+
   it("returns the Spanish crisis constant for a Spanish speaker", async () => {
     const state: AppState = {
       ...demoState,

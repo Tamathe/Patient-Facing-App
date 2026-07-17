@@ -1,4 +1,10 @@
-export type CrisisDomain = "vision" | "self_harm" | "acute_danger" | "logistics";
+export type CrisisDomain =
+  | "vision"
+  | "self_harm"
+  | "acute_danger"
+  | "logistics"
+  | "caregiver_collapse"
+  | "abuse";
 export type CrisisMatchSource = "deterministic" | "model_backstop" | "none";
 
 export interface CrisisScreeningOptions {
@@ -50,6 +56,20 @@ function isIntentionalOverdose(input: string): boolean {
     );
   return tookWholeSupply && intentional;
 }
+
+const REPORTED_IDEATION = /\b(?:says?|said|saying|tells?|telling|told me)\b[^.?!]{0,48}\bwant(?:s|ed)? to die\b/i;
+const REFLEXIVE_HARM = /\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
+const REFLEXIVE_INTENT =
+  /\b(?:want(?:s|ed)? to|threatens? to|plans? to|trying to|says? (?:he|she|they) (?:will|might)|told me (?:he|she|they) (?:will|might|want(?:s|ed)? to))\b[^.?!]{0,32}\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
+const ONGOING_SELF_INJURY =
+  /\b(?:has been|keeps?|continues? to)\b[^.?!]{0,24}\b(?:hurting|cutting)\s+(?:himself|herself|themself|themselves)\b/i;
+const THIRD_PERSON_END_LIFE = /\bwant(?:s|ed)? to end (?:his|her|their) life\b/i;
+const MISSING_CHILD =
+  /\b(?:ran away(?: from home)?|wandered off|got out of (?:the )?house)\b[^.?!]{0,64}\b(?:(?:we\s+)?(?:still\s+)?(?:can't|cannot|couldn't)\s+find|(?:is|are|still)\s+missing)\b/i;
+const CAREGIVER_COLLAPSE =
+  /\bcan't do this anymore\b[^.?!]{0,64}\b(?:want to give up|ending it|end it)\b|\b(?:want to give up|ending it|end it)\b[^.?!]{0,64}\bcan't do this anymore\b/i;
+const CHILD_HARM_DISCLOSURE =
+  /\b(?:someone|somebody)\s+(?:is\s+)?(?:hurting|harming|abusing)\s+(?:my|our)\s+(?:child|kid|son|daughter)\b|\b(?:my|our)\s+(?:child|kid|son|daughter)\b[^.?!]{0,24}\b(?:is\s+)?being abused\b/i;
 
 const CRISIS_RULES: CrisisRule[] = [
   {
@@ -137,6 +157,41 @@ const CRISIS_RULES: CrisisRule[] = [
     id: "self_harm_overdose_disclosure",
     domain: "self_harm",
     match: isIntentionalOverdose
+  },
+  {
+    id: "self_harm_reported_ideation",
+    domain: "self_harm",
+    pattern: REPORTED_IDEATION
+  },
+  {
+    id: "self_harm_reflexive_intent",
+    domain: "self_harm",
+    match: (input) => REFLEXIVE_HARM.test(input) && REFLEXIVE_INTENT.test(input)
+  },
+  {
+    id: "self_harm_ongoing_injury",
+    domain: "self_harm",
+    pattern: ONGOING_SELF_INJURY
+  },
+  {
+    id: "self_harm_third_person_end_life",
+    domain: "self_harm",
+    pattern: THIRD_PERSON_END_LIFE
+  },
+  {
+    id: "acute_missing_child",
+    domain: "acute_danger",
+    pattern: MISSING_CHILD
+  },
+  {
+    id: "caregiver_collapse_combined",
+    domain: "caregiver_collapse",
+    pattern: CAREGIVER_COLLAPSE
+  },
+  {
+    id: "abuse_child_harm_disclosure",
+    domain: "abuse",
+    pattern: CHILD_HARM_DISCLOSURE
   },
   {
     id: "acute_chest_breathing",
@@ -235,11 +290,11 @@ export function measureCrisisRecall(cases: CrisisCorpusCase[]): CrisisRecallRepo
   };
 }
 
-// Self-harm disclosures route to the crisis tier; sudden vision loss (a
-// hypertensive-emergency presentation) and acute danger route to the emergency
-// tier. Logistics never reaches crisis handling. The gate consumes this mapping.
+// Self-harm, caregiver-collapse, and abuse disclosures route to the crisis tier;
+// sudden vision loss (a hypertensive-emergency presentation) and acute danger
+// route to the emergency tier. Logistics never reaches crisis handling.
 export function crisisTierForDomain(domain: CrisisDomain | null): "crisis" | "emergency" | null {
-  if (domain === "self_harm") {
+  if (domain === "self_harm" || domain === "caregiver_collapse" || domain === "abuse") {
     return "crisis";
   }
   if (domain === "vision" || domain === "acute_danger") {

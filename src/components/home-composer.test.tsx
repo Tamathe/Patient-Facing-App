@@ -38,6 +38,13 @@ describe("HomeComposer", () => {
     expect(classifyRouteRemote).not.toHaveBeenCalled();
   });
 
+  it("sends a caregiver-voice crisis to the Coach and never to feature classification", async () => {
+    render(<HomeComposer />);
+    type("honestly she's been saying she wants to die");
+    await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining("/chat?ask=")));
+    expect(classifyRouteRemote).not.toHaveBeenCalled();
+  });
+
   it("lets the live LLM upgrade a no-match to a navigate", async () => {
     classifyRouteRemote.mockResolvedValue({ kind: "navigate", href: "/plan", confidence: 0.9 });
     render(<HomeComposer />);

@@ -88,6 +88,84 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
     domain: "self_harm"
   },
   {
+    id: "caregiver_son_wants_to_die",
+    text: "my son says he wants to die",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_demo_saying_wants_to_die",
+    text: "honestly she's been saying she wants to die",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_daughter_hurting_herself",
+    text: "my daughter has been hurting herself",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_told_kill_himself",
+    text: "he told me he wants to kill himself",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_child_ran_away_missing",
+    text: "my kid ran away from home and we can't find her",
+    expectedMatched: true,
+    domain: "acute_danger"
+  },
+  {
+    id: "caregiver_collapse_give_up",
+    text: "I can't do this anymore, I want to give up",
+    expectedMatched: true,
+    domain: "caregiver_collapse"
+  },
+  {
+    id: "caregiver_wants_end_his_life",
+    text: "my son wants to end his life",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_threatens_hurt_herself",
+    text: "my daughter threatens to hurt herself",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_keeps_cutting_himself",
+    text: "my son keeps cutting himself",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "caregiver_wandered_still_cannot_find",
+    text: "my child wandered off and we still cannot find them",
+    expectedMatched: true,
+    domain: "acute_danger"
+  },
+  {
+    id: "caregiver_got_out_is_missing",
+    text: "my child got out of the house and is missing",
+    expectedMatched: true,
+    domain: "acute_danger"
+  },
+  {
+    id: "caregiver_someone_hurting_child",
+    text: "someone is hurting my child",
+    expectedMatched: true,
+    domain: "abuse"
+  },
+  {
+    id: "caregiver_child_being_abused",
+    text: "my daughter is being abused",
+    expectedMatched: true,
+    domain: "abuse"
+  },
+  {
     id: "acute_chest_pain",
     text: "I have crushing chest pain and cannot breathe",
     expectedMatched: true,
@@ -162,6 +240,36 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
   {
     id: "reading_after_stairs",
     text: "my blood pressure was 150 over 95 after climbing the stairs",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_accidental_recess_injury",
+    text: "he hurt himself at recess yesterday",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_metaphorical_waitlist",
+    text: "this waitlist is killing me",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_vegetable_frustration",
+    text: "I give up trying to get her to eat vegetables",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_eager_horse_language",
+    text: "she's dying to ride the horses",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_soccer_ball_movement",
+    text: "he ran away with the soccer ball",
     expectedMatched: false,
     domain: "logistics"
   }

@@ -30,6 +30,13 @@ describe("decideFrontDoor — safety first", () => {
     expect(crisis).toMatchObject({ kind: "coach", reason: "safety" });
     expect(question).toMatchObject({ kind: "coach", reason: "no_match" });
   });
+
+  it("routes the caregiver demo disclosure to safety instead of feature navigation", () => {
+    expect(decideFrontDoor("honestly she's been saying she wants to die", en)).toMatchObject({
+      kind: "coach",
+      reason: "safety"
+    });
+  });
 });
 
 describe("decideFrontDoor — deterministic navigation (English)", () => {
