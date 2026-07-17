@@ -97,7 +97,7 @@ Every claim below was re-verified against the working tree; several correct stal
    ```
 5. Zero-key/mock path: a **client-side** deterministic keyword extractor (regex per domain — "speech/talking" → `therapies` + `early_intervention` when age < 3; "school/IEP/reading" → `school_iep`; "waiver/money/afford" → `waivers_financial`; "break/exhausted/overwhelmed" → `respite` + `parent_support`; …) produces the same contract shape. It runs when the route reports unconfigured/locked **and on any fetch failure**, so "no API key," "wrong passcode," and "network down" all land on one identical path and the demo runs end to end regardless.
 6. Facts render as review cards (IntakeReviewCard pattern). Status is assigned by a deterministic client-side rule — a fact whose `sourceSnippet` is a verbatim substring of the interview text is `patient_reported`; anything else is `inferred` — so the contract carries no model-asserted status field to trust. A tap confirms (`confirmed`). Confirmed facts persist to the family slice — **this is how "minimal context deepens through use."** Each rationale passes the diagnosis-claim lint (below) or is dropped (domain chip stays, rationale text goes).
-7. Domain merge is a pure recompute, never accumulation: `activeDomains = union(computeFamilyFlags(screenAnswers), latestInterview.domains)` — re-running the screen or a new interview *replaces* that surface's contribution, so a yes→no re-answer or a narrower second interview can retract a domain (the same recompute semantics as `computeSocialFlags`). Model-proposed domains drive matching **without** a confirm tap (deliberate asymmetry — facts *assert* and need confirmation; domains only *route*). → Flow 4.
+7. Domain merge is a pure recompute, never accumulation: `activeDomains = union(computeFamilyFlags(screenAnswers), latestInterviewDomains)` — re-running the screen or a new interview *replaces* that surface's contribution, so a yes→no re-answer or a narrower second interview can retract a domain (the same recompute semantics as `computeSocialFlags`). `latestInterviewDomains` is persisted separately from the merged array so this invariant survives reloads and later screen edits. Model-proposed domains drive matching **without** a confirm tap (deliberate asymmetry — facts *assert* and need confirmation; domains only *route*). → Flow 4.
 
 **Flow 4 — Verified resources.**
 1. For each active domain, deterministic matching: `findFamilyResources({county, domain, childAgeYears, limit})` — county-first then statewide, age-band filtered (First Steps never offered for a 9-year-old; transition planning never for a toddler).
@@ -151,11 +151,13 @@ export type SavedFamilyResource = { resourceId: string; savedAt: string; domain:
 
 export type FamilyNavigatorState = {
   profile: FamilyProfile | null;
+  interviewDraft: string;             // editable, unsubmitted text; seeded examples populate this
   screenAnswers: FamilyScreenAnswer[];
   interviews: FamilyInterview[];
   facts: FamilyFact[];
+  latestInterviewDomains: DevNeedDomain[]; // replacement contribution from the latest crunch
   activeDomains: DevNeedDomain[];   // recomputed on screen submit / interview crunch:
-                                    // union(computeFamilyFlags(screenAnswers), latest interview's domains);
+                                    // union(computeFamilyFlags(screenAnswers), latestInterviewDomains);
                                     // each surface's contribution is replaced, never accumulated
   saved: SavedFamilyResource[];
   alreadyEnrolled: string[];        // resource ids the family marks "already on/receiving" —
@@ -164,7 +166,7 @@ export type FamilyNavigatorState = {
 // AppState gains: family: FamilyNavigatorState | null
 ```
 
-Storage: backfill `family: null` in `loadStoredState`, add an `isFamilyNavigatorState` guard + sanitize wiring (lenient-filter entries, never fatal), include in `resetDemo`/`deleteDemoData` paths. Deliberately **separate** from `contextItems`/`extractedFacts` so child facts never leak into the adult coach's grounding table (grounding-facts.ts pushes *all* `extractedFacts` — mixing would have Brent's BP coach citing Riley's IEP).
+Storage: backfill `family: null` in `loadStoredState`, add an `isFamilyNavigatorState` guard + sanitize wiring (lenient-filter entries, never fatal), include in `resetDemo`/`deleteDemoData` paths. The sanitizer backfills `interviewDraft: ""` and `latestInterviewDomains: []` inside an otherwise valid family slice so early P0 saves remain loadable. Deliberately **separate** from `contextItems`/`extractedFacts` so child facts never leak into the adult coach's grounding table (grounding-facts.ts pushes *all* `extractedFacts` — mixing would have Brent's BP coach citing Riley's IEP).
 
 ## Resource Catalog (`src/domain/family-resources.ts`)
 
@@ -181,6 +183,7 @@ export interface FamilyResource {
   sourceName: string;
   sourceUrl: string;                // rendered as a link on the card
   verifiedAt: string;               // fetch-verified date
+  humanVerify?: boolean;            // true when the primary source blocks automation or needs a phone check
   referralMode: "self_serve" | "call" | "provider_referral" | "school_contact" | "navigator_referral";
 }
 ```
@@ -195,7 +198,7 @@ export interface FamilyResource {
 | 2 | Office for Children with Special Health Care Needs (OCSHCN) — incl. KY Family to Family HIC | parent_support, therapies, waivers_financial, diagnosis_education | 0–21 | Current name confirmed (formerly "Commission" — obsolete); regional clinics statewide incl. **autism diagnostic clinics at Morehead & Somerset only** (per a fact sheet whose locations insert is dated 06/2023 — phone-verify the clinic lineup pre-demo); **RN case management open to any family regardless of diagnosis** (no eligibility hurdle); houses the F2F center's **peer parent-mentor matching** (Parent to Parent USA) + Medicaid/KCHIP navigation; (800) 232-1160 |
 | 3 | Kentucky First Steps / KEIS | early_intervention, therapies | 0–3 | Anyone can refer incl. parents: 1-877-41STEPS; eligibility not income-based, $0 under 250% FPG; **45-day** referral→IFSP clock; **no referrals accepted within 45 days of the 3rd birthday** |
 | 4 | First Steps Point of Entry directory | early_intervention | 0–3 | 15 districts cover all 120 counties (Dec 2025 listing); app maps county→POE so parents don't guess (the demo mappings Scott→Bluegrass and Perry→Kentucky River are *inferred from ADD geography — verify against the 12/25 POE listing PDF before seeding*) |
-| 5 | Help Me Grow Kentucky | early_intervention, diagnosis_education | 0–5½ | Free ASQ-3/ASQ:SE-2 screening online (en/es) or (877) 616-7388; **link the chfs.ky.gov page — helpmegrowky.com has an expired TLS cert** |
+| 5 | Help Me Grow Kentucky | early_intervention, diagnosis_education | 0–5 | Free ASQ-3/ASQ:SE-2 screening online (en/es) or (877) 616-7388; **link the chfs.ky.gov page — helpmegrowky.com has an expired TLS cert** |
 | 6 | Age-3 transition to preschool special ed (KDE) | early_intervention, school_iep | 2¼–4 | Transition conference window 2y3m–2y9m, ≥90 days pre-birthday; **IEP-by-3rd-birthday right only holds with an active IFSP** — don't exit First Steps early |
 | 7 | KDE special-ed dispute resolution (OSEEL) | school_iep | 3–21 | Kentucky calls the IEP team the **"ARC"**; escalation ladder: ARC meeting → free mediation → written complaint (**1-year hard window**) → due process (3-year); complaint forms in 8+ languages (mediation/due-process forms en/es) |
 | 8 | KDE Parent & Family Toolbox | school_iep, diagnosis_education | 3–21 | "Preparing for the ARC" guide; IEP fact sheets en/es |
@@ -203,13 +206,13 @@ export interface FamilyResource {
 | 10 | Michelle P. Waiver | waivers_financial, respite, therapies | all | **actNow:** date-ordered list; 9,686 waiting as of 9/2/2025, avg ~3.5 yrs, longest ~8.6 yrs (CHFS to KY legislature, 9/17/2025) — *the meeting's "8-year" figure is the tail, not the median; the app says the sourced version* |
 | 11 | SCL Waiver | waivers_financial, respite, future_planning | 3+* | The only KY IDD waiver with residential supports; avg wait ~7.8 yrs; placement by **category of need**, not date (*age band per the Kids' Waivers aggregator — the CHFS page states no age; confirm with DBHDID (502) 564-7700) |
 | 12 | HCB Waiver | waivers_financial, respite | all | Nursing-facility level of care (physical/medical) — autism/ADHD alone won't qualify; but avg wait ~4 months; listed to prevent the common MPW mix-up |
-| 13 | CHILD Waiver | waivers_financial, respite, therapies | 0–21 | **Approved for ~Jan 2026 launch**; ~100 slots *per the Kids' Waivers aggregator (3/24/26) — CHFS publishes no slot/waitlist status*; requires exhausting other services; absent from most parent guides — a currency moment, **but enrollment status gets phone-confirmed at the waiver help desk (844) 784-5614 pre-demo** |
+| 13 | CHILD Waiver | waivers_financial, respite, therapies | 0–21 | CHFS now states that it is accepting participant applications for the new CHILD program; requires exhausting other services; absent from most parent guides — a currency moment. Do not repeat the aggregator's ~100-slot figure as a CHFS fact; use the waiver help desk (844) 784-5614 for questions. |
 | 14 | STABLE Kentucky (ABLE accounts) | future_planning, waivers_financial | onset <46 | Age-of-onset rule expanded 26→**46 on 1/1/2026** (older KY decks are stale); save without losing SSI/Medicaid |
 | 15 | SSI for children (SSA) | waivers_financial, future_planning | 0–17 | Parental deeming ends at 18 — previously denied families should re-apply at 18; *ssa.gov blocked automated fetch (403): human re-verify before demo* |
 | 16 | My Choice Kentucky (supported decision-making) | future_planning | 14+ | KY has **no SDM statute** (bills failed '19/'20/'21) but courts treat SDM as a less-restrictive alternative; guardianship-alternatives education before 18 |
 | 17 | HDI Kentucky Disability Resource Guide (resources.hdiuky.org) | diagnosis_education, general fallback | all | UK UCEDD's searchable statewide directory, 2026 edition — the in-app "find more" link |
 | 18 | Kentucky Autism Training Center (U of L) | diagnosis_education, parent_support | all | Free trainings + caregiver-support-group support; **explicitly does NOT do individual family consults/IEP help** (older directories say otherwise — set the expectation) |
-| 19 | UK Developmental Pediatrics — Golisano Children's at UK | diagnosis_education, therapies | <5 new evals | **Referral-only** (PCP places Epic order); renamed from Kentucky Children's Hospital Oct 2025; new autism/GDD evals narrowed to **under 5**; explicitly does not see ADHD >12 or dyslexia — the app routes those to school + community paths instead of a dead-end referral |
+| 19 | UK Developmental Pediatrics — Golisano Children's at UK | diagnosis_education, therapies | 18 months–12 years, concern-specific | **Referral-only** through the child's primary care provider. Current published criteria: autism concerns 18 months–12 years, global developmental delay 18 months–5 years, intellectual disability 6–12 years, and ADHD 4–12 years. Dyslexia is not a listed referral indication, so the app routes that need to school + community paths. |
 | 20 | KY LEND (HDI) | parent_support, diagnosis_education | adults | Parents of children with IDD can *join as trainees* (~9/yr; spring application) — a growth path, not a service |
 | 21 | Kentucky 211 / kynect resources | all domains fallback | all | Already in the SDOH catalog; re-verified 2026-07-17 for this population: 211 covers all 120 counties with a "Disabilities, Independent Living & Aging" category (phone/text reliable; web fragmented); **kynect has NO developmental-disability browse category — keyword search works** ("developmental disability" → 30+ results), so in-app copy must say *search*, never *browse* |
 
@@ -239,7 +242,7 @@ Kept in the module as commented exclusions with dated reasons — they are the d
 - **Legacy URLs** — old KATC louisville.edu path (301s), old Michelle P. provider page (archived 2/28/24), dpa.ky.gov's stale P&A page (public defenders ≠ Protection & Advocacy), and the dead `chfs.ky.gov/agencies/ccshcn` OCSHCN URL — which **HDI's own Kentucky Disability Resource directory still lists** (fetched 2026-07-17): even the good directories have stale entries.
 - **Sibshops in Kentucky** — none confirmable (directory blocks fetching; Cincinnati lead is 2017-era/COVID-hold). `sibling_support` matches route to KY-SPIN + the Sibling Support Project directory with "a navigator can help confirm" copy — the domain ships honest-thin rather than fabricated-full.
 
-**Verification policy:** every seeded entry's `sourceUrl` verified at seed time (automated fetch, or manual browser where the domain bot-blocks); `verifiedAt` ≤ 30 days old on demo day. The named pre-demo human-verify list, in full: **SSI/ssa.gov** (research facts not machine-verified), **STABLE enrollment site** (stablekentucky.com 403s automation), **Sibling Support Project directory** (siblingsupport.org 403s and is the sibling-domain fallback link), and **CHILD waiver enrollment status** (help-desk call, (844) 784-5614). Also note kynect.ky.gov 403-blocks non-browser fetches — automated link checkers will *falsely* report it down. Post-demo cadence belongs to the future navigator role (out of scope now). CHFS has committed to a public waiver-waitlist dashboard by Aug 2026 — when it exists it becomes the canonical waitlist link and the numbers above get refreshed from it.
+**Verification policy:** every seeded entry's `sourceUrl` is verified at seed time (automated fetch, or manual browser where the domain bot-blocks); `verifiedAt` ≤ 30 days old on demo day. When a current primary source conflicts with dated narrative elsewhere in this spec, the seed uses the current primary-source fact and the implementation summary records the discrepancy; verification discipline outranks preserving stale demo copy. The named pre-demo human-verify list, in full: **SSI/ssa.gov** (research facts not machine-verified), **STABLE enrollment site** (stablekentucky.com may block automation), and **Sibling Support Project directory** (siblingsupport.org may block automation and is the sibling-domain fallback link). CHILD status is now published by CHFS; the help desk remains the contact for case-specific questions. Also note kynect.ky.gov may block non-browser fetches — automated link checkers can *falsely* report it down. Post-demo cadence belongs to the future navigator role (out of scope now). CHFS has committed to a public waiver-waitlist dashboard by Aug 2026 — when it exists it becomes the canonical waitlist link and the numbers above get refreshed from it.
 
 ## Staged Timing Engine (P1)
 
@@ -292,9 +295,9 @@ Deliberately **not** a notification system (the app has none — all time checks
 - **FR-11** Resource matching is deterministic: county + domain + age-band, county-first then statewide, honest empty state with statewide fallbacks. Cards render source name, `verifiedAt`, **tappable `sourceUrl`**, age band, and `actNow` when present; already-enrolled resources render badged, without `actNow`, below unenrolled matches.
 - **FR-12** Every seeded entry fetch-verified with dated source; bot-blocked entries carry a human-verify flag; the do-not-seed exclusion list ships in-module with dated reasons.
 - **FR-13** Save persists to the family slice; Share requires a per-share consent checkbox and writes an audit `shared` event.
-- **FR-14** `family` slice persistence: load-time backfill to null, type guard, lenient sanitize; `resetDemo` and `deleteDemoData` handle it; no change to `AiMode`/`isAiMode` in P0.
+- **FR-14** `family` slice persistence: load-time backfill to null, type guard, lenient sanitize (including `interviewDraft` and `latestInterviewDomains` defaults); `resetDemo` and `deleteDemoData` handle it; no change to `AiMode`/`isAiMode` in P0.
 - **FR-15** Waiver/benefit copy: dated + sourced facts and application paths only; no eligibility determinations or likelihood estimates anywhere.
-- **FR-16** A `seedExampleFamily` reducer action (payload `"morgan" | "casey"`) overwrites the family slice with a fixture — profile plus a prefilled interview text ready to crunch, no pre-confirmed facts. Caregiver names are chip labels only (no caregiver-name field exists, on purpose). `resetDemo` and `deleteDemoData` null the slice.
+- **FR-16** A `seedExampleFamily` reducer action (payload `"morgan" | "casey"`) overwrites the family slice with a fixture — profile plus `interviewDraft` prefilled and ready to crunch, no submitted interview and no pre-confirmed facts. Caregiver names are chip labels only (no caregiver-name field exists, on purpose). `resetDemo` and `deleteDemoData` null the slice.
 - **FR-17** All new strings ship en+es via a `FamilyStringKey` table (compile-enforced); es marked demo-grade pending native review.
 - **FR-18 (P1)** Stage engine: pure, date-math-only, backdatable for demo; any nudge copy passes (or deliberately amends) the `PROHIBITED_TERMS` lint; no Today-task integration without an explicit `TaskItem.kind` decision.
 
