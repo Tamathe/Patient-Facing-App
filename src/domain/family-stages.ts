@@ -8,6 +8,12 @@ export type FamilyStage = {
   domains: DevNeedDomain[];
 };
 
+const YEAR_ONLY_TIMING_NOTE = "Timing is shown early because only the birth year is known.";
+
+function ageDescription(profile: FamilyProfile, description: string): string {
+  return profile.birthMonth === undefined ? `${description} ${YEAR_ONLY_TIMING_NOTE}` : description;
+}
+
 function ageInMonths(profile: FamilyProfile, now: Date): number | null {
   if (profile.birthMonth === undefined) {
     return null;
@@ -19,6 +25,16 @@ function ageInMonths(profile: FamilyProfile, now: Date): number | null {
 function hasReachedAge(profile: FamilyProfile, now: Date, years: number): boolean {
   const months = ageInMonths(profile, now);
   return months === null ? now.getUTCFullYear() - profile.birthYear >= years : months >= years * 12;
+}
+
+function isAgeSeventeen(profile: FamilyProfile, now: Date): boolean {
+  const months = ageInMonths(profile, now);
+  if (months !== null) {
+    return months >= 204 && months < 216;
+  }
+
+  const calendarAge = now.getUTCFullYear() - profile.birthYear;
+  return calendarAge === 17 || calendarAge === 18;
 }
 
 function isUnderThree(profile: FamilyProfile, now: Date): boolean {
@@ -54,8 +70,7 @@ function isInSchoolEnrollmentWindow(profile: FamilyProfile, now: Date): boolean 
 function diagnosedSchoolAge(profile: FamilyProfile): boolean {
   return (
     profile.diagnoses.length > 0 &&
-    profile.schoolStage !== "not_school_age" &&
-    profile.schoolStage !== "preschool"
+    (profile.schoolStage === "elementary" || profile.schoolStage === "middle" || profile.schoolStage === "high")
   );
 }
 
@@ -71,9 +86,11 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
     stages.push({
       id: "first-steps",
       timing: "now",
-      title: "Start First Steps before age three",
-      description:
-        "First Steps does not accept a new referral during the final 45 days before a child's third birthday, so contact the local point of entry early.",
+      title: "Contact First Steps now",
+      description: ageDescription(
+        profile,
+        "First Steps does not accept new referrals in the final 45 days before age three. Contact the local point of entry now to confirm whether the referral window remains open and ask about transition options if it does not."
+      ),
       domains: ["early_intervention"]
     });
   }
@@ -83,8 +100,10 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
       id: "age-three-transition",
       timing: "later",
       title: "Plan the transition before age three",
-      description:
-        "Ask for the transition conference and stay enrolled in First Steps so an eligible child can have an IEP in place by the third birthday.",
+      description: ageDescription(
+        profile,
+        "Ask for the transition conference and stay enrolled in First Steps so an eligible child can have an IEP in place by the third birthday."
+      ),
       domains: ["early_intervention", "school_iep"]
     });
   }
@@ -94,7 +113,10 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
       id: "school-enrollment",
       timing: "now",
       title: "Prepare for school enrollment",
-      description: "Learn Kentucky's ARC and IEP process before preschool or kindergarten enrollment.",
+      description: ageDescription(
+        profile,
+        "Learn Kentucky's ARC and IEP process before preschool or kindergarten enrollment."
+      ),
       domains: ["school_iep"]
     });
   }
@@ -104,9 +126,9 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
       {
         id: "waiver-apply",
         timing: "now",
-        title: "Start the Michelle P. Waiver application",
+        title: "Ask about the Michelle P. Waiver application",
         description:
-          "The Michelle P. waiting list is date ordered. Starting now establishes an earlier place while the state reviews the application.",
+          "The Michelle P. waiting list is date ordered, so ask Kentucky how to apply now. Kentucky determines eligibility and waitlist placement.",
         domains: ["waivers_financial"]
       },
       {
@@ -138,18 +160,23 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
       id: "mission-transition",
       timing: "now",
       title: "Start transition planning",
-      description: "Use the school ARC process and Kentucky transition resources to begin planning for adult life.",
+      description: ageDescription(
+        profile,
+        "Use the school ARC process and Kentucky transition resources to begin planning for adult life."
+      ),
       domains: ["future_planning"]
     });
   }
 
-  if (hasReachedAge(profile, now, 17)) {
+  if (isAgeSeventeen(profile, now)) {
     stages.push({
       id: "before-eighteen",
       timing: "next",
       title: "Prepare for age eighteen",
-      description:
-        "Review SSI re-application, supported decision-making versus guardianship, and STABLE account options before age eighteen.",
+      description: ageDescription(
+        profile,
+        "Review SSI re-application, supported decision-making versus guardianship, and STABLE account options before age eighteen."
+      ),
       domains: ["future_planning"]
     });
   }

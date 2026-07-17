@@ -20,6 +20,11 @@ describe("containsFamilyDiagnosisClaim", () => {
     expect(containsFamilyDiagnosisClaim("Avery.* has autism", "Avery.*")).toBe(true);
     expect(containsFamilyDiagnosisClaim("Avery Jordan has autism", "Avery.*")).toBe(false);
   });
+
+  it("uses Unicode-aware whole-name boundaries for dynamic child names", () => {
+    expect(containsFamilyDiagnosisClaim("The summary says Élodie has autism", "Élodie")).toBe(true);
+    expect(containsFamilyDiagnosisClaim("Jo-Ann has autism", "Ann")).toBe(false);
+  });
 });
 
 describe("stripUnsafeFamilyRationales", () => {
