@@ -236,11 +236,11 @@ const STATEWIDE_AND_LOCAL_RESOURCES: FamilyResource[] = [
     domains: ["early_intervention", "school_iep"],
     counties: ["statewide"],
     ages: { min: 2.25, max: 4 },
-    summary: "Kentucky guidance for moving from an active First Steps IFSP into local-school preschool special education, including the transition conference and ARC process.",
+    summary: "Kentucky's First Steps regulation requires the service coordinator to plan the move from an active IFSP to preschool, school, or other appropriate services with the family, IFSP team, and local school district.",
     contact: "Ask the First Steps service coordinator to schedule the transition conference with the local school district",
-    actNow: "Plan the transition conference between 2 years 3 months and 2 years 9 months, at least 90 days before the third birthday.",
-    sourceName: "Kentucky Department of Education",
-    sourceUrl: "https://www.education.ky.gov/specialed/excep/forms/Documents/Assistive_Technology_Manual_and_Matrix.pdf",
+    actNow: "Keep the active IFSP through transition so the IEP by the third birthday protections apply. The service coordinator must hold the conference at least 90 days and, by agreement, no more than nine months before the third birthday.",
+    sourceName: "Kentucky Administrative Regulations — 902 KAR 30:110",
+    sourceUrl: "https://apps.legislature.ky.gov/law/kar/titles/902/030/110/",
     verifiedAt: VERIFIED_AT,
     referralMode: "school_contact"
   },
@@ -276,10 +276,10 @@ const STATEWIDE_AND_LOCAL_RESOURCES: FamilyResource[] = [
     name: "Kentucky Protection & Advocacy",
     domains: ["school_iep", "future_planning"],
     counties: ["statewide"],
-    summary: "Kentucky's federally mandated disability-rights organization provides information, referral, legally based advocacy, and systemic advocacy. Intake does not guarantee legal representation.",
+    summary: "Kentucky's federally mandated disability-rights organization provides information, referral, technical assistance, education, and legal advocacy. It cannot assist with child custody or obtaining SSI, SSDI, or VA benefits; intake does not guarantee representation.",
     contact: "Call 800-372-2988 or use the online intake form",
     sourceName: "Kentucky Protection & Advocacy",
-    sourceUrl: "https://kypa.net/priority-issues/",
+    sourceUrl: "https://kypa.net/what-we-do/",
     verifiedAt: VERIFIED_AT,
     referralMode: "call"
   },
@@ -671,5 +671,6 @@ export function childAgeYears(profile: FamilyProfile, now = new Date()): number 
   const ageAtYearStart = now.getUTCFullYear() - profile.birthYear;
   if (profile.birthMonth === undefined) return ageAtYearStart;
 
-  return now.getUTCMonth() + 1 < profile.birthMonth ? ageAtYearStart - 1 : ageAtYearStart;
+  const ageInMonths = ageAtYearStart * 12 + (now.getUTCMonth() + 1 - profile.birthMonth);
+  return ageInMonths / 12;
 }
