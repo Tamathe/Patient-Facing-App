@@ -2,7 +2,7 @@
 
 import { Mic } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { requestFamilyInterview } from "@/ai/family-interview-provider";
 import { extractFamilyInterviewMock, familyInterviewInputSchema, type FamilyInterviewResult } from "@/domain/family-interview";
 import { stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
@@ -34,17 +34,19 @@ export type SanitizedFamilyInterviewResult = Omit<FamilyInterviewResult, "domain
   domains: Array<{ domain: FamilyInterviewResult["domains"][number]["domain"]; rationale?: string }>;
 };
 
+export type FamilyInterviewSubmissionMeta = {
+  extraction: "live" | "mock";
+  source: "typed" | "voice" | "mixed";
+  rawText: string;
+};
+
 export type FamilyInterviewProps = {
   profile: FamilyProfile;
   draft: string;
   passcode?: string;
   language: Language;
   onDraftChange: (draft: string) => void;
-  onExtracted: (
-    result: SanitizedFamilyInterviewResult,
-    extraction: "live" | "mock",
-    source: "typed" | "voice" | "mixed"
-  ) => void;
+  onExtracted: (result: SanitizedFamilyInterviewResult, meta: FamilyInterviewSubmissionMeta) => void;
 };
 
 const COPY = {
@@ -102,14 +104,43 @@ export function FamilyInterview({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(draft.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const recognitionGenerationRef = useRef(0);
   const inputSourceRef = useRef<"typed" | "voice" | "mixed">("typed");
   const lastLocalDraftRef = useRef(draft);
+  const submittingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  const cleanupRecognition = useCallback(
+    (target = recognitionRef.current, stop = true, updateState = true): void => {
+      if (!target) {
+        if (updateState && mountedRef.current) setListening(false);
+        return;
+      }
+      target.onresult = null;
+      target.onerror = null;
+      target.onend = null;
+      if (recognitionRef.current === target) {
+        recognitionRef.current = null;
+        recognitionGenerationRef.current += 1;
+        if (updateState && mountedRef.current) setListening(false);
+      }
+      if (stop) {
+        try {
+          target.stop();
+        } catch {
+          // The engine may already be stopped; handlers are detached either way.
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     setVoiceSupported(speechRecognitionConstructor() !== null);
   }, []);
 
   useEffect(() => {
+    if (submittingRef.current) return;
     setText(draft);
     setError(draft.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : null);
     if (draft !== lastLocalDraftRef.current) {
@@ -118,15 +149,16 @@ export function FamilyInterview({
     }
   }, [copy.tooLong, draft]);
 
-  useEffect(
-    () => () => {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-    },
-    []
-  );
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      cleanupRecognition(recognitionRef.current, true, false);
+    };
+  }, [cleanupRecognition]);
 
   function updateText(next: string): void {
+    if (submittingRef.current) return;
     inputSourceRef.current = inputSourceRef.current === "voice" || inputSourceRef.current === "mixed" ? "mixed" : "typed";
     lastLocalDraftRef.current = next;
     setText(next);
@@ -135,6 +167,7 @@ export function FamilyInterview({
   }
 
   function appendTranscript(transcript: string): void {
+    if (submittingRef.current) return;
     const spoken = transcript.trim();
     if (!spoken) return;
     setText((current) => {
@@ -152,8 +185,9 @@ export function FamilyInterview({
   }
 
   function toggleVoice(): void {
+    if (submittingRef.current) return;
     if (listening) {
-      recognitionRef.current?.stop();
+      cleanupRecognition();
       return;
     }
     const Recognition = speechRecognitionConstructor();
@@ -162,47 +196,90 @@ export function FamilyInterview({
     recognition.lang = language === "es" ? "es-US" : "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    const generation = recognitionGenerationRef.current + 1;
+    recognitionGenerationRef.current = generation;
     recognition.onresult = (event) => {
+      if (
+        submittingRef.current ||
+        recognitionRef.current !== recognition ||
+        recognitionGenerationRef.current !== generation
+      ) {
+        return;
+      }
       const start = event.resultIndex ?? 0;
       for (let index = start; index < event.results.length; index += 1) {
         const result = event.results[index];
         const first = result?.[0];
-        if (first && result.isFinal !== false) appendTranscript(first.transcript);
+        if (first && result.isFinal === true) appendTranscript(first.transcript);
       }
     };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
+    recognition.onerror = () => cleanupRecognition(recognition, false);
+    recognition.onend = () => cleanupRecognition(recognition, false);
     recognitionRef.current = recognition;
     setListening(true);
     try {
       recognition.start();
     } catch {
-      setListening(false);
+      cleanupRecognition(recognition, false);
     }
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!familyInterviewInputSchema.safeParse(text).success) {
-      setError(text.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : copy.tooShort);
-      return;
-    }
-    if (classifyCrisis(text).matched || classifySafety(text).level !== "allowed" || screenSocialEmergency(text)) {
-      router.push(`/chat?ask=${encodeURIComponent(text)}`);
-      return;
-    }
-
-    setSubmitting(true);
-    let live: FamilyInterviewResult | null = null;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    const snapshot = {
+      rawText: text,
+      profile: {
+        ...profile,
+        diagnoses: profile.diagnoses.map((diagnosis) => ({ ...diagnosis }))
+      },
+      source: inputSourceRef.current,
+      passcode,
+      language
+    } as const;
+    cleanupRecognition();
+    let pending = false;
     try {
-      live = await requestFamilyInterview({ text, profile, passcode, language });
-    } catch {
-      live = null;
+      if (!familyInterviewInputSchema.safeParse(snapshot.rawText).success) {
+        setError(snapshot.rawText.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : copy.tooShort);
+        return;
+      }
+      if (
+        classifyCrisis(snapshot.rawText).matched ||
+        classifySafety(snapshot.rawText).level !== "allowed" ||
+        screenSocialEmergency(snapshot.rawText)
+      ) {
+        router.push(`/chat?ask=${encodeURIComponent(snapshot.rawText)}`);
+        return;
+      }
+
+      pending = true;
+      setSubmitting(true);
+      let live: FamilyInterviewResult | null = null;
+      try {
+        live = await requestFamilyInterview({
+          text: snapshot.rawText,
+          profile: snapshot.profile,
+          passcode: snapshot.passcode,
+          language: snapshot.language
+        });
+      } catch {
+        live = null;
+      }
+      const extraction = live ? "live" : "mock";
+      const result = live ?? extractFamilyInterviewMock(snapshot.rawText, snapshot.profile);
+      if (mountedRef.current) {
+        onExtracted(sanitizeResult(result, snapshot.profile), {
+          extraction,
+          source: snapshot.source,
+          rawText: snapshot.rawText
+        });
+      }
+    } finally {
+      submittingRef.current = false;
+      if (pending && mountedRef.current) setSubmitting(false);
     }
-    const extraction = live ? "live" : "mock";
-    const result = live ?? extractFamilyInterviewMock(text, profile);
-    onExtracted(sanitizeResult(result, profile), extraction, inputSourceRef.current);
-    setSubmitting(false);
   }
 
   return (
@@ -214,6 +291,7 @@ export function FamilyInterview({
         id="family-interview-text"
         aria-describedby="family-interview-count family-interview-status"
         className="min-h-36 w-full rounded-control border border-ink/20 bg-white p-3"
+        disabled={submitting}
         value={text}
         placeholder={copy.placeholder}
         onChange={(event) => updateText(event.target.value)}
@@ -228,7 +306,7 @@ export function FamilyInterview({
               type="button"
               aria-label={listening ? copy.stop : copy.speak}
               aria-pressed={listening}
-              disabled={text.length >= FAMILY_INTERVIEW_MIC_DISABLE_AT}
+              disabled={submitting || text.length >= FAMILY_INTERVIEW_MIC_DISABLE_AT}
               onClick={toggleVoice}
               className="rounded-control bg-calm p-3 text-care disabled:cursor-not-allowed disabled:opacity-50"
             >

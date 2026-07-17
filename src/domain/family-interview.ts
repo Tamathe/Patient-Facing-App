@@ -79,11 +79,7 @@ const DOMAIN_RATIONALES: Record<DevNeedDomain, string> = {
 const DIAGNOSIS_TERM =
   "(?:autism|autistic|ADHD|attention\\s+deficit\\s+hyperactivity\\s+disorder|dyslexia|dyslexic|speech(?:\\s+or|\\s*\\/)?\\s*language\\s+disorder|speech\\s+disorder|language\\s+disorder|developmental\\s+delay|intellectual\\s+disability|Down\\s+syndrome)";
 const DIAGNOSIS_LIST = `${DIAGNOSIS_TERM}(?:(?:\\s*,\\s*|\\s+and\\s+|\\s*,?\\s+and\\s+)${DIAGNOSIS_TERM})*`;
-const DIAGNOSIS_STATEMENT = new RegExp(
-  `\\b(?:he|she|they|my child|our child|my son|our son|my daughter|our daughter|the child)\\s+(?:(?:was|were|is|has been|have been)\\s+(?:just\\s+)?diagnosed\\s+with|has\\s+(?:a\\s+)?diagnosis\\s+of)\\s+(${DIAGNOSIS_LIST})`,
-  "iu"
-);
-const GRADE = /\b(?:kindergarten|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\d{1,2}(?:st|nd|rd|th))\s+grade)\b/i;
+const GRADE = /\b(?:kindergarten|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\d{1,2}(?:st|nd|rd|th))\s+grade|grade\s+(?:[1-9]|1[0-2]))\b/i;
 
 export function parseFamilyInterviewPayload(payload: unknown): FamilyInterviewResult | null {
   const parsed = familyInterviewResultSchema.safeParse(payload);
@@ -99,14 +95,41 @@ function isConservativelyUnderThree(profile: FamilyProfile, now: Date): boolean 
   return months >= 0 && months < 36;
 }
 
-function extractExplicitFacts(text: string): FamilyInterviewFact[] {
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function diagnosisStatement(profile: FamilyProfile): RegExp {
+  const subjects = [
+    "he",
+    "she",
+    "they",
+    "my\\s+child",
+    "our\\s+child",
+    "my\\s+son",
+    "our\\s+son",
+    "my\\s+daughter",
+    "our\\s+daughter",
+    "the\\s+child"
+  ];
+  const childFirstName = profile.childFirstName?.trim();
+  if (childFirstName) {
+    subjects.push(escapeRegExp(childFirstName));
+  }
+  return new RegExp(
+    `(?<![\\p{L}\\p{N}_-])(?:${subjects.join("|")})(?![\\p{L}\\p{N}_-])\\s+(?:(?:was|were|is|has been|have been)\\s+(?:just\\s+)?diagnosed\\s+with|has\\s+(?:a\\s+)?diagnosis\\s+of)\\s+(${DIAGNOSIS_LIST})`,
+    "iu"
+  );
+}
+
+function extractExplicitFacts(text: string, profile: FamilyProfile): FamilyInterviewFact[] {
   const facts: FamilyInterviewFact[] = [];
   const grade = text.match(GRADE)?.[0];
   if (grade) {
     facts.push({ label: "Grade", value: grade, sourceSnippet: grade });
   }
 
-  const diagnosis = text.match(DIAGNOSIS_STATEMENT);
+  const diagnosis = text.match(diagnosisStatement(profile));
   if (diagnosis?.[0] && diagnosis[1]) {
     facts.push({
       label: "Reported diagnosis",
@@ -123,10 +146,11 @@ export function extractFamilyInterviewMock(
   now = new Date()
 ): FamilyInterviewResult {
   const matched = new Set<DevNeedDomain>();
-  const speechConcern = /\b(?:speech|talking|therapy|therapies)\b/i.test(text);
-  if (speechConcern) {
+  const speechConcern = /\b(?:speech|talking)\b/i.test(text);
+  const therapyConcern = /\btherap(?:y|ies)\b/i.test(text);
+  if (speechConcern || therapyConcern) {
     matched.add("therapies");
-    if (isConservativelyUnderThree(profile, now)) {
+    if (speechConcern && isConservativelyUnderThree(profile, now)) {
       matched.add("early_intervention");
     }
   }
@@ -154,7 +178,7 @@ export function extractFamilyInterviewMock(
   }));
 
   return {
-    facts: extractExplicitFacts(text),
+    facts: extractExplicitFacts(text, profile),
     domains: sanitizedDomains,
     followUps: []
   };

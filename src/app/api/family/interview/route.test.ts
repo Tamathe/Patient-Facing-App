@@ -67,10 +67,9 @@ describe("family interview route", () => {
   });
 
   it.each([
-    ["missing DEMO_PASSCODE", { HEALTH_AI_PROVIDER: "openai", HEALTH_AI_API_KEY: "test-key", DEMO_PASSCODE: "" }, "locked"],
     ["wrong passcode", { HEALTH_AI_PROVIDER: "openai", HEALTH_AI_API_KEY: "test-key", DEMO_PASSCODE: "secret" }, "locked"],
-    ["missing provider", { HEALTH_AI_PROVIDER: "", HEALTH_AI_API_KEY: "test-key", DEMO_PASSCODE: "secret" }, "unconfigured"],
-    ["missing key", { HEALTH_AI_PROVIDER: "openai", HEALTH_AI_API_KEY: "", DEMO_PASSCODE: "secret" }, "unconfigured"]
+    ["missing provider before passcode", { HEALTH_AI_PROVIDER: "", HEALTH_AI_API_KEY: "test-key", DEMO_PASSCODE: "secret" }, "unconfigured"],
+    ["missing key before passcode", { HEALTH_AI_PROVIDER: "openai", HEALTH_AI_API_KEY: "", DEMO_PASSCODE: "secret" }, "unconfigured"]
   ])("returns %s without calling the provider", async (_name, env, mode) => {
     vi.stubEnv("HEALTH_AI_PROVIDER", env.HEALTH_AI_PROVIDER);
     vi.stubEnv("HEALTH_AI_API_KEY", env.HEALTH_AI_API_KEY);
@@ -78,9 +77,20 @@ describe("family interview route", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const res = await POST(request(validBody({ passcode: _name === "wrong passcode" ? "wrong" : "secret" })));
+    const res = await POST(request(validBody({ passcode: "wrong" })));
     expect(await res.json()).toEqual({ mode, data: null });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("allows configured local development when DEMO_PASSCODE is unset", async () => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("DEMO_PASSCODE", "");
+    const fetchMock = vi.fn().mockResolvedValue(completion(JSON.stringify(result)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await (await POST(request(validBody({ passcode: undefined })))).json()).toEqual({ mode: "success", data: result });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("calls OpenAI-compatible JSON chat completions with a 15-second abort signal and no catalog names", async () => {
@@ -129,5 +139,41 @@ describe("family interview route", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: "wrong" }), { status: 200 })));
 
     expect(await (await POST(request(validBody()))).json()).toEqual({ mode: "success", data: null });
+  });
+
+  it.each([
+    ["upstream non-OK", vi.fn().mockResolvedValue(new Response("failed", { status: 503 }))],
+    ["rejected fetch", vi.fn().mockRejectedValue(new Error("network"))]
+  ])("returns 502 data null for %s", async (_name, fetchMock) => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("DEMO_PASSCODE", "secret");
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(request(validBody()));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ data: null });
+  });
+
+  it("aborts the provider after 15 seconds and clears its timer", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("DEMO_PASSCODE", "secret");
+    const fetchMock = vi.fn((_url: string, options: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = POST(request(validBody()));
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(15_000);
+    const response = await pending;
+    expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ data: null });
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

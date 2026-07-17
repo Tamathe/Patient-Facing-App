@@ -79,5 +79,20 @@ describe("requestFamilyInterview", () => {
     await vi.advanceTimersByTimeAsync(15_000);
     await expect(pending).resolves.toBeNull();
     expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("returns null when abort-controller setup fails outside a browser", async () => {
+    vi.stubGlobal(
+      "AbortController",
+      class BrokenAbortController {
+        constructor() {
+          throw new Error("unavailable");
+        }
+      }
+    );
+    await expect(
+      requestFamilyInterview({ text: morganFamilyState.interviewDraft, profile: morganFamilyState.profile!, language: "en" })
+    ).resolves.toBeNull();
   });
 });

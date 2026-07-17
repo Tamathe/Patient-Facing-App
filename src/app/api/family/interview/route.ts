@@ -103,15 +103,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ data: null }, { status: 400 });
   }
   const body = parsedBody.data;
-  const requiredPasscode = process.env.DEMO_PASSCODE;
-  if (!requiredPasscode || body.passcode !== requiredPasscode) {
-    return Response.json({ mode: "locked", data: null });
-  }
-
   const provider = process.env.HEALTH_AI_PROVIDER;
   const apiKey = process.env.HEALTH_AI_API_KEY;
   if (provider !== "openai" || !apiKey) {
     return Response.json({ mode: "unconfigured", data: null });
+  }
+
+  const requiredPasscode = process.env.DEMO_PASSCODE;
+  if (requiredPasscode && body.passcode !== requiredPasscode) {
+    return Response.json({ mode: "locked", data: null });
   }
 
   const controller = new AbortController();

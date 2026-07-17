@@ -95,6 +95,17 @@ describe("deterministic family interview extraction", () => {
     expect(extractFamilyInterviewMock("My child has trouble talking.", older, new Date("2026-07-17T12:00:00Z")).domains.map(({ domain }) => domain)).toEqual(["therapies"]);
   });
 
+  it("adds early intervention only for toddler speech or talking concerns, not therapy alone", () => {
+    const toddler = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 8 };
+    const now = new Date("2026-07-17T12:00:00Z");
+
+    expect(extractFamilyInterviewMock("We need physical therapy.", toddler, now).domains.map(({ domain }) => domain)).toEqual(["therapies"]);
+    expect(extractFamilyInterviewMock("We need speech therapy.", toddler, now).domains.map(({ domain }) => domain)).toEqual([
+      "early_intervention",
+      "therapies"
+    ]);
+  });
+
   it("does not turn a concern into a diagnosis fact", () => {
     const result = extractFamilyInterviewMock("I wonder whether this could be autism.", morganFamilyState.profile!);
     expect(result.facts).toEqual([]);
@@ -111,6 +122,45 @@ describe("deterministic family interview extraction", () => {
         label: "Reported diagnosis",
         value: "dyslexia, ADHD, and autism",
         sourceSnippet: "She was diagnosed with dyslexia, ADHD, and autism"
+      }
+    ]);
+  });
+
+  it("extracts grade-number order and the profile child's explicit diagnosis without suffix collisions", () => {
+    const profile = { ...morganFamilyState.profile!, childFirstName: "Riley" };
+    expect(extractFamilyInterviewMock("Riley is in grade 4. Riley was diagnosed with dyslexia.", profile).facts).toEqual([
+      { label: "Grade", value: "grade 4", sourceSnippet: "grade 4" },
+      {
+        label: "Reported diagnosis",
+        value: "dyslexia",
+        sourceSnippet: "Riley was diagnosed with dyslexia"
+      }
+    ]);
+    expect(extractFamilyInterviewMock("NotRiley was diagnosed with dyslexia.", profile).facts).toEqual([]);
+  });
+
+  it("escapes punctuation in a profile child name before diagnosis matching", () => {
+    const profile = { ...morganFamilyState.profile!, childFirstName: "Ri.ley" };
+    expect(extractFamilyInterviewMock("Ri.ley was diagnosed with ADHD.", profile).facts).toEqual([
+      {
+        label: "Reported diagnosis",
+        value: "ADHD",
+        sourceSnippet: "Ri.ley was diagnosed with ADHD"
+      }
+    ]);
+  });
+
+  it("treats hyphenated child names as whole names instead of suffix matches", () => {
+    const annProfile = { ...morganFamilyState.profile!, childFirstName: "Ann" };
+    const joAnnProfile = { ...morganFamilyState.profile!, childFirstName: "Jo-Ann" };
+    const text = "Jo-Ann was diagnosed with ADHD.";
+
+    expect(extractFamilyInterviewMock(text, annProfile).facts).toEqual([]);
+    expect(extractFamilyInterviewMock(text, joAnnProfile).facts).toEqual([
+      {
+        label: "Reported diagnosis",
+        value: "ADHD",
+        sourceSnippet: "Jo-Ann was diagnosed with ADHD"
       }
     ]);
   });

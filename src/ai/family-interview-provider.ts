@@ -22,9 +22,10 @@ export async function requestFamilyInterview(request: FamilyInterviewRequest): P
     return null;
   }
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  let timeout: ReturnType<typeof globalThis.setTimeout> | undefined;
   try {
+    const controller = new AbortController();
+    timeout = globalThis.setTimeout(() => controller.abort(), 15_000);
     const response = await fetch("/api/family/interview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,6 +40,8 @@ export async function requestFamilyInterview(request: FamilyInterviewRequest): P
   } catch {
     return null;
   } finally {
-    window.clearTimeout(timeout);
+    if (timeout !== undefined) {
+      globalThis.clearTimeout(timeout);
+    }
   }
 }
