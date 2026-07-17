@@ -68,6 +68,8 @@ export type HomeStringKey =
   | "menuCheckinDesc"
   | "menuSupportLabel"
   | "menuSupportDesc"
+  | "menuFamilyLabel"
+  | "menuFamilyDesc"
   | "menuIntakeLabel"
   | "menuIntakeDesc"
   | "menuPrivacyLabel"
@@ -148,6 +150,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuCheckinDesc: "A short, private mood check-in",
     menuSupportLabel: "Support",
     menuSupportDesc: "Find local food, housing, and utility help",
+    menuFamilyLabel: "Family Navigator",
+    menuFamilyDesc: "Find developmental resources for your child",
     menuIntakeLabel: "Add Instructions",
     menuIntakeDesc: "Paste care instructions to review",
     menuPrivacyLabel: "Privacy",
@@ -228,6 +232,8 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuCheckinDesc: "Un chequeo de ánimo breve y privado",
     menuSupportLabel: "Apoyo",
     menuSupportDesc: "Encuentra ayuda local de comida, vivienda y servicios",
+    menuFamilyLabel: "Navegador para familias",
+    menuFamilyDesc: "Encuentra recursos de desarrollo para tu hijo o hija",
     menuIntakeLabel: "Agregar Instrucciones",
     menuIntakeDesc: "Pega instrucciones de cuidado para revisar",
     menuPrivacyLabel: "Privacidad",

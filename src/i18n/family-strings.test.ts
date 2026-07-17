@@ -1,0 +1,100 @@
+import { describe, expect, it } from "vitest";
+import { familyStrings, tFamily, type FamilyStringKey } from "./family-strings";
+
+const TASK_7_REQUIRED_KEYS = [
+  "pageTitle",
+  "demoBadge",
+  "intro",
+  "spanishReviewNotice",
+  "setupTitle",
+  "profileCountyLabel",
+  "profileChildNameLabel",
+  "profileBirthYearLabel",
+  "profileBirthMonthLabel",
+  "profileSchoolStageLabel",
+  "profileDiagnosesLabel",
+  "diagnosisAutism",
+  "diagnosisAdhd",
+  "diagnosisDyslexia",
+  "diagnosisSpeechLanguage",
+  "diagnosisDevelopmentalDelay",
+  "diagnosisIntellectualDisability",
+  "diagnosisDownSyndrome",
+  "diagnosisOther",
+  "diagnosisAdd",
+  "diagnosisRemove",
+  "schoolNotSchoolAge",
+  "schoolPreschool",
+  "schoolElementary",
+  "schoolMiddle",
+  "schoolHigh",
+  "schoolPostHigh",
+  "exampleMorgan",
+  "exampleCasey",
+  "entryQuestionsTitle",
+  "entryInterviewTitle",
+  "screenEarlyIntervention",
+  "screenTherapies",
+  "screenSchoolIep",
+  "screenWaiversFinancial",
+  "screenRespite",
+  "screenParentSupport",
+  "screenSiblingSupport",
+  "screenTransportation",
+  "answerYes",
+  "answerNo",
+  "answerDeclined",
+  "interviewLabel",
+  "interviewPlaceholder",
+  "interviewMicStart",
+  "interviewSubmit",
+  "interviewWorking",
+  "interviewErrorTooShort",
+  "interviewErrorTooLong",
+  "interviewCount",
+  "interviewSafetyRedirect",
+  "interviewSafetyRedirectTitle",
+  "interviewSafetyRedirectBody",
+  "evidencePatientReported",
+  "evidenceInferred",
+  "evidenceConfirmed",
+  "factConfirm",
+  "followUpsTitle",
+  "domainRationaleTitle",
+  "resourceSource",
+  "resourceVerified",
+  "resourceReferralMode",
+  "resourceSave",
+  "resourceSaved",
+  "resourceShare",
+  "resourceShareConsent",
+  "resourceShareConsentRequired",
+  "resourceOpenSource",
+  "resourceAlreadyEnrolled",
+  "resourceActNow",
+  "emptyFallbackTitle",
+  "emptyFallbackBody",
+  "emptyNavigatorHonesty",
+  "timelineNow",
+  "timelineNext",
+  "timelineLater"
+] satisfies FamilyStringKey[];
+
+describe("familyStrings", () => {
+  it("keeps English and Spanish key sets identical and Task 7 ready", () => {
+    expect(Object.keys(familyStrings.es).sort()).toEqual(Object.keys(familyStrings.en).sort());
+    expect(Object.keys(familyStrings.en)).toEqual(expect.arrayContaining(TASK_7_REQUIRED_KEYS));
+  });
+
+  it("marks Spanish as demo-grade pending native review", () => {
+    expect(familyStrings.es.spanishReviewNotice).toMatch(/demostraci[oó]n/i);
+    expect(familyStrings.es.spanishReviewNotice).toMatch(/revisi[oó]n.*hablante nativ/i);
+  });
+
+  it("keeps the demo honest and interpolates family copy", () => {
+    expect(tFamily("en", "demoBadge")).toBe("Demo — fictional data");
+    expect(tFamily("es", "demoBadge")).toBe("Demo — datos ficticios");
+    expect(tFamily("en", "interviewCount", { count: 42, max: 5000 })).toBe("42 of 5000 characters");
+    expect(familyStrings.en.intro).toMatch(/does not diagnose/i);
+  });
+});

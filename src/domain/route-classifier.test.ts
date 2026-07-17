@@ -25,6 +25,20 @@ describe("mockRouteClassifier", () => {
     });
   });
 
+  it.each([
+    "help for my daughter",
+    "resources for my child",
+    "support for my son",
+    "developmental resources for my kid",
+    "ayuda para mi hija",
+    "recursos para mi hijo"
+  ])("routes family-specific help intent to the family navigator: %s", (utterance) => {
+    expect(mockRouteClassifier.classify(utterance, CLASSIFIER_HREFS)).toMatchObject({
+      kind: "navigate",
+      href: "/family"
+    });
+  });
+
   it("defers questions and concerns to the Coach", () => {
     expect(mockRouteClassifier.classify("why does my medicine matter?", CLASSIFIER_HREFS).kind).toBe("coach");
     expect(mockRouteClassifier.classify("my prescriptions are confusing me", CLASSIFIER_HREFS).kind).toBe("coach");

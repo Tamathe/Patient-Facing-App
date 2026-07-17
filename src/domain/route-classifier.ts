@@ -24,6 +24,23 @@ const ROUTE_SYNONYMS: Record<string, string[]> = {
   "/chat": ["coach"],
   "/checkin": ["mood", "check in", "check-in", "how i feel", "how i'm feeling"],
   "/support": ["support", "resource", "resources", "rent", "housing", "utilities", "food stamps"],
+  "/family": [
+    "family navigator",
+    "help for my daughter",
+    "help for my son",
+    "help for my child",
+    "support for my daughter",
+    "support for my son",
+    "support for my child",
+    "resources for my daughter",
+    "resources for my son",
+    "resources for my child",
+    "developmental resources for my kid",
+    "ayuda para mi hija",
+    "ayuda para mi hijo",
+    "recursos para mi hija",
+    "recursos para mi hijo"
+  ],
   "/intake": ["add instructions", "paste", "upload instructions"],
   "/privacy": ["privacy", "my data", "delete my", "export my", "download my"],
   "/screening": ["eye", "eyes", "eye check", "eye exam", "eye screening", "eye photo", "vision check", "eye doctor"],
@@ -46,18 +63,31 @@ export const mockRouteClassifier: RouteClassifier = {
     }
 
     const matches = allowedHrefs
-      .map((href) => ({ href, score: (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn)).length }))
+      .map((href) => {
+        const matched = (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn));
+        return {
+          href,
+          phraseScore: matched.filter((syn) => syn.includes(" ")).length,
+          score: matched.length
+        };
+      })
       .filter((entry) => entry.score > 0)
-      .sort((left, right) => right.score - left.score);
+      .sort((left, right) => right.phraseScore - left.phraseScore || right.score - left.score);
 
     if (matches.length === 0) {
       return { kind: "coach", confidence: 0.3 };
     }
 
-    if (matches.length > 1 && matches[1].score === matches[0].score) {
+    if (
+      matches.length > 1 &&
+      matches[1].phraseScore === matches[0].phraseScore &&
+      matches[1].score === matches[0].score
+    ) {
       return {
         kind: "clarify",
-        candidates: matches.filter((entry) => entry.score === matches[0].score).map((entry) => entry.href),
+        candidates: matches
+          .filter((entry) => entry.phraseScore === matches[0].phraseScore && entry.score === matches[0].score)
+          .map((entry) => entry.href),
         confidence: 0.5
       };
     }

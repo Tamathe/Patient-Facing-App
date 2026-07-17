@@ -18,6 +18,7 @@ const REQUIRED_ROUTES = [
   "/chat",
   "/checkin",
   "/support",
+  "/family",
   "/intake",
   "/privacy"
 ];
@@ -35,5 +36,15 @@ describe("MenuGrid reachability", () => {
     const flat = MENU_GROUPS.flatMap((group) => group.items.map((item) => item.href));
     expect(flat.length).toBe(REQUIRED_ROUTES.length);
     expect(new Set(flat)).toEqual(new Set(REQUIRED_ROUTES));
+  });
+
+  it("renders the localized family navigator entry", () => {
+    const { rerender } = render(<MenuGrid language="en" />);
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Family Navigator");
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Find developmental resources for your child");
+
+    rerender(<MenuGrid language="es" />);
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Navegador para familias");
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Encuentra recursos de desarrollo para tu hijo o hija");
   });
 });

@@ -37,6 +37,13 @@ describe("decideFrontDoor — safety first", () => {
       reason: "safety"
     });
   });
+
+  it("keeps family help language behind the crisis gate", () => {
+    expect(decideFrontDoor("help for my daughter, she says she wants to die", en)).toMatchObject({
+      kind: "coach",
+      reason: "safety"
+    });
+  });
 });
 
 describe("decideFrontDoor — deterministic navigation (English)", () => {
@@ -79,6 +86,28 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
     expect(decideFrontDoor("retinopathy", en)).toMatchObject({ kind: "navigate", href: "/learn/retinopathy" });
     expect(decideFrontDoor("book a retinopathy screening", en)).toMatchObject({ kind: "navigate", href: "/screening" });
   });
+
+  it.each(["help for my daughter", "resources for my child", "support for my son"])(
+    "routes family-specific help intent with the public navigator label: %s",
+    (utterance) => {
+      expect(decideFrontDoor(utterance, en)).toEqual({
+        kind: "navigate",
+        href: "/family",
+        label: "Family navigator"
+      });
+    }
+  );
+
+  it.each([
+    "how do I help my daughter with homework?",
+    "I support my daughter at soccer"
+  ])("does not steal ordinary parenting language for the family route: %s", (utterance) => {
+    expect(decideFrontDoor(utterance, en)).toMatchObject({ kind: "coach", reason: "no_match" });
+  });
+
+  it("keeps bare resources on general support", () => {
+    expect(decideFrontDoor("resources", en)).toMatchObject({ kind: "navigate", href: "/support" });
+  });
 });
 
 describe("decideFrontDoor — constrained classifier stage", () => {
@@ -120,6 +149,17 @@ describe("decideFrontDoor — Spanish", () => {
       kind: "navigate",
       href: "/learn/retinopathy"
     });
+  });
+
+  it.each(["ayuda para mi hija", "recursos para mi hijo"])(
+    "routes Spanish family-specific help intent deterministically: %s",
+    (utterance) => {
+      expect(decideFrontDoor(utterance, es)).toMatchObject({ kind: "navigate", href: "/family" });
+    }
+  );
+
+  it("does not steal ordinary Spanish parenting language for the family route", () => {
+    expect(decideFrontDoor("apoyo a mi hija en fútbol", es)).toMatchObject({ kind: "coach", reason: "no_match" });
   });
 
   it("does not match the English lexicon for a Spanish patient", () => {
