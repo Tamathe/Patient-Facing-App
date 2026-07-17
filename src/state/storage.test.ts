@@ -1,12 +1,142 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { clearStoredState, loadStoredState, saveStoredState } from "./storage";
+import type { FamilyNavigatorState } from "@/domain/types";
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
 
 describe("storage", () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  const validFamily: FamilyNavigatorState = {
+    profile: {
+      childFirstName: "Riley",
+      birthYear: 2017,
+      birthMonth: 5,
+      schoolStage: "elementary",
+      county: "Scott",
+      diagnoses: [
+        { id: "diagnosis-dyslexia", label: "dyslexia", diagnosedAt: "2026-05" },
+        { id: "diagnosis-adhd", label: "adhd" }
+      ]
+    },
+    interviewDraft: "Riley is in fourth grade.",
+    screenAnswers: [{ questionId: "school", domain: "school_iep", response: "yes" }],
+    interviews: [
+      {
+        id: "interview-1",
+        rawText: "Reading homework is hard.",
+        source: "typed",
+        createdAt: "2026-07-17T12:00:00.000Z",
+        extraction: "mock"
+      }
+    ],
+    facts: [
+      {
+        id: "fact-1",
+        interviewId: "interview-1",
+        label: "Homework",
+        value: "hard",
+        status: "patient_reported",
+        sourceSnippet: "Reading homework is hard."
+      }
+    ],
+    latestInterviewDomains: ["school_iep"],
+    activeDomains: ["school_iep", "school_iep"],
+    saved: [
+      { resourceId: "ky-spin", savedAt: "2026-07-17T12:00:00.000Z", domain: "parent_support" }
+    ],
+    alreadyEnrolled: ["first-steps", "first-steps"]
+  };
+
+  it("backfills a pre-family payload to null without resetting adult state", () => {
+    const original: Record<string, unknown> = {
+      ...demoState,
+      patient: { ...demoState.patient, name: "Original Adult", preferredName: "Original" }
+    };
+    delete original.family;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(original));
+
+    expect(loadStoredState()).toMatchObject({ patient: original.patient, family: null });
+  });
+
+  it("round-trips a valid family slice and writes sanitized arrays", () => {
+    saveStoredState({ ...demoState, family: validFamily });
+
+    const loaded = loadStoredState();
+
+    expect(loaded.family).toMatchObject({
+      profile: validFamily.profile,
+      interviewDraft: validFamily.interviewDraft,
+      interviews: validFamily.interviews,
+      facts: validFamily.facts
+    });
+    expect(loaded.family?.activeDomains).toEqual(["school_iep"]);
+    expect(loaded.family?.alreadyEnrolled).toEqual(["first-steps"]);
+    const persisted = JSON.parse(window.localStorage.getItem(STORAGE_KEY) as string);
+    expect(persisted.family.activeDomains).toEqual(["school_iep"]);
+  });
+
+  it("drops malformed family entries while retaining valid entries", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        family: {
+          ...validFamily,
+          profile: {
+            ...validFamily.profile,
+            diagnoses: [...(validFamily.profile?.diagnoses ?? []), { id: "bad", label: "not-a-diagnosis" }]
+          },
+          screenAnswers: [...validFamily.screenAnswers, { questionId: "bad", domain: "school_iep", response: "maybe" }],
+          interviews: [...validFamily.interviews, { id: "bad" }],
+          facts: [
+            ...validFamily.facts,
+            { id: "bad-status", label: "Imported", value: "bad", status: "imported", sourceSnippet: "bad" }
+          ],
+          saved: [...validFamily.saved, { resourceId: 123, savedAt: "bad", domain: "therapies" }]
+        }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.family?.profile?.diagnoses).toHaveLength(2);
+    expect(loaded.family?.screenAnswers).toHaveLength(1);
+    expect(loaded.family?.interviews).toHaveLength(1);
+    expect(loaded.family?.facts).toHaveLength(1);
+    expect(loaded.family?.saved).toHaveLength(1);
+    expect(loaded.patient.id).toBe(demoState.patient.id);
+  });
+
+  it("turns an invalid family container into null without resetting adult state", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        patient: { ...demoState.patient, name: "Kept Adult", preferredName: "Kept" },
+        family: { profile: "invalid" }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Kept Adult");
+    expect(loaded.family).toBeNull();
+  });
+
+  it("backfills missing draft and latest interview domains in an otherwise valid family slice", () => {
+    const legacyFamily: Record<string, unknown> = { ...validFamily };
+    delete legacyFamily.interviewDraft;
+    delete legacyFamily.latestInterviewDomains;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, family: legacyFamily }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.family?.interviewDraft).toBe("");
+    expect(loaded.family?.latestInterviewDomains).toEqual([]);
   });
 
   it("starts a fresh browser on the retinopathy-due demo state", () => {

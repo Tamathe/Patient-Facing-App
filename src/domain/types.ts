@@ -296,6 +296,88 @@ export type RecallReminder = {
   id: string; dueAt: string; reason: "annual_rescreen" | "annual_rescreen_mild";
 };
 
+export type DevDiagnosis =
+  | "autism"
+  | "adhd"
+  | "dyslexia"
+  | "speech_language"
+  | "developmental_delay"
+  | "intellectual_disability"
+  | "down_syndrome"
+  | "other";
+
+export type DevNeedDomain =
+  | "early_intervention"
+  | "therapies"
+  | "school_iep"
+  | "waivers_financial"
+  | "respite"
+  | "parent_support"
+  | "sibling_support"
+  | "transportation"
+  | "future_planning"
+  | "diagnosis_education"
+  | "recreation";
+
+export type ChildDiagnosis = {
+  id: string;
+  label: DevDiagnosis;
+  otherLabel?: string;
+  diagnosedAt?: string;
+};
+
+export type FamilyProfile = {
+  childFirstName?: string;
+  birthYear: number;
+  birthMonth?: number;
+  schoolStage: "not_school_age" | "preschool" | "elementary" | "middle" | "high" | "post_high";
+  county: string;
+  diagnoses: ChildDiagnosis[];
+};
+
+export type FamilyScreenAnswer = {
+  questionId: string;
+  domain: DevNeedDomain;
+  response: "yes" | "no" | "declined";
+};
+
+export type FamilyInterview = {
+  id: string;
+  rawText: string;
+  source: "typed" | "voice" | "mixed";
+  createdAt: string;
+  extraction: "live" | "mock";
+};
+
+export type FamilyEvidenceStatus = Extract<EvidenceStatus, "patient_reported" | "inferred" | "confirmed">;
+
+export type FamilyFact = {
+  id: string;
+  interviewId?: string;
+  label: string;
+  value: string;
+  status: FamilyEvidenceStatus;
+  sourceSnippet: string;
+};
+
+export type SavedFamilyResource = {
+  resourceId: string;
+  savedAt: string;
+  domain: DevNeedDomain;
+};
+
+export type FamilyNavigatorState = {
+  profile: FamilyProfile | null;
+  interviewDraft: string;
+  screenAnswers: FamilyScreenAnswer[];
+  interviews: FamilyInterview[];
+  facts: FamilyFact[];
+  latestInterviewDomains: DevNeedDomain[];
+  activeDomains: DevNeedDomain[];
+  saved: SavedFamilyResource[];
+  alreadyEnrolled: string[];
+};
+
 export type AppState = {
   patient: PatientProfile;
   carePlan: CarePlan;
@@ -315,4 +397,5 @@ export type AppState = {
   screeningResults: ScreeningResult[];
   referrals: Referral[];
   recallReminders: RecallReminder[];
+  family: FamilyNavigatorState | null;
 };

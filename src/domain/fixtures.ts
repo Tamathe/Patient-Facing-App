@@ -119,7 +119,8 @@ export const demoState: AppState = {
   ],
   screeningResults: [],
   referrals: [],
-  recallReminders: []
+  recallReminders: [],
+  family: null
 };
 
 export const deletedDemoState: AppState = {
@@ -159,7 +160,8 @@ export const deletedDemoState: AppState = {
   screeningGaps: [],
   screeningResults: [],
   referrals: [],
-  recallReminders: []
+  recallReminders: [],
+  family: null
 };
 
 export const brentState: AppState = {
@@ -1073,7 +1075,8 @@ export const brentState: AppState = {
   ],
   screeningResults: [],
   referrals: [],
-  recallReminders: []
+  recallReminders: [],
+  family: null
 };
 
 export const defaultDemoState: AppState = brentState;

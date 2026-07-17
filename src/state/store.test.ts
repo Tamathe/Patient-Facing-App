@@ -2,9 +2,182 @@ import { describe, expect, it } from "vitest";
 import { brentState, demoState } from "@/domain/fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { healthReducer } from "./store";
-import type { GlucoseReading } from "@/domain/types";
+import type {
+  FamilyFact,
+  FamilyInterview,
+  FamilyScreenAnswer,
+  GlucoseReading,
+  SavedFamilyResource
+} from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("seeds Morgan and Casey by replacing only the family slice", () => {
+    const morgan = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const casey = healthReducer(morgan, { type: "seedExampleFamily", example: "casey" });
+
+    expect(morgan.family).toMatchObject({
+      profile: { birthYear: 2017, county: "Scott", schoolStage: "elementary" },
+      interviewDraft: expect.stringContaining("fourth grade"),
+      interviews: [],
+      facts: []
+    });
+    expect(casey.family).toMatchObject({
+      profile: { birthYear: 2024, county: "Perry", schoolStage: "not_school_age" },
+      interviewDraft: expect.stringContaining("First Steps"),
+      interviews: [],
+      facts: []
+    });
+    expect(casey.patient).toEqual(demoState.patient);
+  });
+
+  it("saves a family profile and interview draft", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const profiled = healthReducer(seeded, {
+      type: "saveFamilyProfile",
+      profile: {
+        childFirstName: "Avery",
+        birthYear: 2020,
+        birthMonth: 6,
+        schoolStage: "preschool",
+        county: "Fayette",
+        diagnoses: []
+      }
+    });
+    const drafted = healthReducer(profiled, { type: "setFamilyInterviewDraft", draft: "School is hard." });
+
+    expect(profiled.family?.profile?.childFirstName).toBe("Avery");
+    expect(drafted.family?.interviewDraft).toBe("School is hard.");
+  });
+
+  it("replaces screen answers and screen facts while retracting yes-to-no domains", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const interviewFact: FamilyFact = {
+      id: "interview-fact",
+      interviewId: "interview-1",
+      label: "Homework",
+      value: "hard",
+      status: "patient_reported",
+      sourceSnippet: "homework is hard"
+    };
+    const firstAnswers: FamilyScreenAnswer[] = [
+      { questionId: "school", domain: "school_iep", response: "yes" }
+    ];
+    const first = healthReducer(
+      { ...seeded, family: seeded.family && { ...seeded.family, facts: [interviewFact] } },
+      {
+        type: "submitFamilyScreen",
+        answers: firstAnswers,
+        facts: [
+          {
+            id: "screen-fact-1",
+            label: "School help",
+            value: "yes",
+            status: "patient_reported",
+            sourceSnippet: "Do you need school help?"
+          }
+        ]
+      }
+    );
+    const second = healthReducer(first, {
+      type: "submitFamilyScreen",
+      answers: [{ questionId: "school", domain: "school_iep", response: "no" }],
+      facts: [
+        {
+          id: "screen-fact-2",
+          label: "School help",
+          value: "no",
+          status: "patient_reported",
+          sourceSnippet: "Do you need school help?"
+        }
+      ]
+    });
+
+    expect(second.family?.screenAnswers[0].response).toBe("no");
+    expect(second.family?.facts.map((fact) => fact.id)).toEqual(["interview-fact", "screen-fact-2"]);
+    expect(second.family?.activeDomains).not.toContain("school_iep");
+  });
+
+  it("appends interviews, clears the draft, and replaces the latest interview domains", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const firstInterview: FamilyInterview = {
+      id: "interview-1",
+      rawText: "I need school help.",
+      source: "typed",
+      createdAt: "2026-07-17T12:00:00.000Z",
+      extraction: "mock"
+    };
+    const first = healthReducer(seeded, {
+      type: "addFamilyInterview",
+      interview: firstInterview,
+      facts: [],
+      domains: ["school_iep"]
+    });
+    const drafted = healthReducer(first, { type: "setFamilyInterviewDraft", draft: "We need speech therapy." });
+    const second = healthReducer(drafted, {
+      type: "addFamilyInterview",
+      interview: { ...firstInterview, id: "interview-2", rawText: "We need speech therapy." },
+      facts: [],
+      domains: ["therapies"]
+    });
+
+    expect(second.family?.interviews.map((interview) => interview.id)).toEqual(["interview-1", "interview-2"]);
+    expect(second.family?.interviewDraft).toBe("");
+    expect(second.family?.latestInterviewDomains).toEqual(["therapies"]);
+    expect(second.family?.activeDomains).toContain("therapies");
+    expect(second.family?.activeDomains).not.toContain("school_iep");
+  });
+
+  it("confirms only family facts and leaves adult extracted facts untouched", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const before = {
+      ...seeded,
+      family: seeded.family && {
+        ...seeded.family,
+        facts: [
+          {
+            id: "family-fact",
+            interviewId: "interview-1",
+            label: "Grade",
+            value: "fourth",
+            status: "inferred" as const,
+            sourceSnippet: "fourth grade"
+          }
+        ]
+      }
+    };
+    const afterConfirm = healthReducer(before, { type: "confirmFamilyFact", factId: "family-fact" });
+
+    expect(afterConfirm.family?.facts[0].status).toBe("confirmed");
+    expect(afterConfirm.extractedFacts).toEqual(before.extractedFacts);
+  });
+
+  it("saves a resource idempotently and toggles enrollment", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const resource: SavedFamilyResource = {
+      resourceId: "ky-spin",
+      savedAt: "2026-07-17T12:00:00.000Z",
+      domain: "parent_support"
+    };
+    const saved = healthReducer(seeded, { type: "saveFamilyResource", resource });
+    const savedTwice = healthReducer(saved, {
+      type: "saveFamilyResource",
+      resource: { ...resource, savedAt: "2026-07-17T13:00:00.000Z" }
+    });
+    const enrolled = healthReducer(savedTwice, { type: "toggleFamilyEnrollment", resourceId: "ky-spin" });
+    const unenrolled = healthReducer(enrolled, { type: "toggleFamilyEnrollment", resourceId: "ky-spin" });
+
+    expect(savedTwice.family?.saved).toEqual([resource]);
+    expect(enrolled.family?.alreadyEnrolled).toEqual(["ky-spin"]);
+    expect(unenrolled.family?.alreadyEnrolled).toEqual([]);
+  });
+
+  it("clears family data on reset and deletion", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+
+    expect(healthReducer(seeded, { type: "resetDemo" }).family).toBeNull();
+    expect(healthReducer(seeded, { type: "deleteDemoData" }).family).toBeNull();
+  });
+
   it("completeOnboarding sets the primary and full conditions, preserving the plan relationship", () => {
     const next = healthReducer(demoState, { type: "completeOnboarding", conditions: ["diabetes", "hypertension"] });
 

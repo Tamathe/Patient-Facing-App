@@ -10,6 +10,7 @@ import {
   type ReactNode
 } from "react";
 import { brentState, defaultDemoState, deletedDemoState, demoState } from "@/domain/fixtures";
+import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
 import { canTransition, outcomeToStatus, transition } from "@/domain/screening-gap";
@@ -28,12 +29,18 @@ import type {
   DoseEvent,
   DrReportExtraction,
   ExtractedFact,
+  FamilyFact,
+  FamilyInterview,
+  FamilyNavigatorState,
+  FamilyProfile,
+  FamilyScreenAnswer,
   GlucoseReading,
   HomeReading,
   MealLogEntry,
   MedicationBarrier,
   MedicationFill,
   ResultCaptureSource,
+  SavedFamilyResource,
   ScreeningResult
 } from "@/domain/types";
 import { loadStoredState, saveStoredState } from "./storage";
@@ -66,8 +73,41 @@ export type HealthAction =
   | { type: "markClinicConfirmed"; referralId: string }
   | { type: "bookReferralSlot"; referralId: string; slot: string }
   | { type: "markReferralCompleted"; referralId: string }
+  | { type: "saveFamilyProfile"; profile: FamilyProfile }
+  | { type: "setFamilyInterviewDraft"; draft: string }
+  | { type: "submitFamilyScreen"; answers: FamilyScreenAnswer[]; facts: FamilyFact[] }
+  | { type: "addFamilyInterview"; interview: FamilyInterview; facts: FamilyFact[]; domains: FamilyNavigatorState["activeDomains"] }
+  | { type: "confirmFamilyFact"; factId: string }
+  | { type: "saveFamilyResource"; resource: SavedFamilyResource }
+  | { type: "toggleFamilyEnrollment"; resourceId: string }
+  | { type: "seedExampleFamily"; example: "morgan" | "casey" }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
+
+function emptyFamilyState(profile: FamilyProfile): FamilyNavigatorState {
+  return {
+    profile,
+    interviewDraft: "",
+    screenAnswers: [],
+    interviews: [],
+    facts: [],
+    latestInterviewDomains: [],
+    activeDomains: [],
+    saved: [],
+    alreadyEnrolled: []
+  };
+}
+
+function computeActiveFamilyDomains(
+  answers: FamilyScreenAnswer[],
+  latestInterviewDomains: FamilyNavigatorState["latestInterviewDomains"]
+): FamilyNavigatorState["activeDomains"] {
+  const screenDomains = answers
+    .filter(({ response }) => response === "yes")
+    .map(({ domain }) => domain);
+
+  return [...new Set([...screenDomains, ...latestInterviewDomains])];
+}
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
   switch (action.type) {
@@ -451,6 +491,90 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ]
       };
     }
+    case "saveFamilyProfile":
+      return {
+        ...state,
+        family: state.family ? { ...state.family, profile: action.profile } : emptyFamilyState(action.profile)
+      };
+    case "setFamilyInterviewDraft":
+      if (!state.family) {
+        return state;
+      }
+      return { ...state, family: { ...state.family, interviewDraft: action.draft } };
+    case "submitFamilyScreen": {
+      if (!state.family) {
+        return state;
+      }
+      const interviewFacts = state.family.facts.filter((fact) => fact.interviewId !== undefined);
+      return {
+        ...state,
+        family: {
+          ...state.family,
+          screenAnswers: action.answers,
+          facts: [...interviewFacts, ...action.facts.map(({ interviewId: _interviewId, ...fact }) => fact)],
+          activeDomains: computeActiveFamilyDomains(action.answers, state.family.latestInterviewDomains)
+        }
+      };
+    }
+    case "addFamilyInterview": {
+      if (!state.family) {
+        return state;
+      }
+      const latestInterviewDomains = [...new Set(action.domains)];
+      return {
+        ...state,
+        family: {
+          ...state.family,
+          interviewDraft: "",
+          interviews: [...state.family.interviews, action.interview],
+          facts: [
+            ...state.family.facts,
+            ...action.facts.map((fact) => ({ ...fact, interviewId: action.interview.id }))
+          ],
+          latestInterviewDomains,
+          activeDomains: computeActiveFamilyDomains(state.family.screenAnswers, latestInterviewDomains)
+        }
+      };
+    }
+    case "confirmFamilyFact":
+      if (!state.family) {
+        return state;
+      }
+      return {
+        ...state,
+        family: {
+          ...state.family,
+          facts: state.family.facts.map((fact) =>
+            fact.id === action.factId ? { ...fact, status: "confirmed" } : fact
+          )
+        }
+      };
+    case "saveFamilyResource":
+      if (!state.family || state.family.saved.some(({ resourceId }) => resourceId === action.resource.resourceId)) {
+        return state;
+      }
+      return {
+        ...state,
+        family: { ...state.family, saved: [...state.family.saved, action.resource] }
+      };
+    case "toggleFamilyEnrollment":
+      if (!state.family) {
+        return state;
+      }
+      return {
+        ...state,
+        family: {
+          ...state.family,
+          alreadyEnrolled: state.family.alreadyEnrolled.includes(action.resourceId)
+            ? state.family.alreadyEnrolled.filter((resourceId) => resourceId !== action.resourceId)
+            : [...state.family.alreadyEnrolled, action.resourceId]
+        }
+      };
+    case "seedExampleFamily":
+      return {
+        ...state,
+        family: action.example === "morgan" ? morganFamilyState : caseyFamilyState
+      };
     case "resetDemo":
       if (action.patient === "jordan") {
         return demoState;

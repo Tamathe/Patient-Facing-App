@@ -11,6 +11,12 @@ import type {
   DoseEvent,
   EvidenceStatus,
   ExtractedFact,
+  FamilyEvidenceStatus,
+  FamilyFact,
+  FamilyInterview,
+  FamilyNavigatorState,
+  FamilyProfile,
+  FamilyScreenAnswer,
   FoodSource,
   GlucoseReading,
   HomeReading,
@@ -25,6 +31,7 @@ import type {
   RecallReminder,
   Referral,
   ReferralStageEntry,
+  SavedFamilyResource,
   ScreeningGap,
   ScreeningResult,
   TaskItem,
@@ -633,6 +640,198 @@ function isPatient(value: unknown): value is PatientProfile {
   );
 }
 
+function isDevDiagnosis(value: unknown): value is FamilyProfile["diagnoses"][number]["label"] {
+  return (
+    value === "autism" ||
+    value === "adhd" ||
+    value === "dyslexia" ||
+    value === "speech_language" ||
+    value === "developmental_delay" ||
+    value === "intellectual_disability" ||
+    value === "down_syndrome" ||
+    value === "other"
+  );
+}
+
+function isDevNeedDomain(value: unknown): value is FamilyScreenAnswer["domain"] {
+  return (
+    value === "early_intervention" ||
+    value === "therapies" ||
+    value === "school_iep" ||
+    value === "waivers_financial" ||
+    value === "respite" ||
+    value === "parent_support" ||
+    value === "sibling_support" ||
+    value === "transportation" ||
+    value === "future_planning" ||
+    value === "diagnosis_education" ||
+    value === "recreation"
+  );
+}
+
+function isSchoolStage(value: unknown): value is FamilyProfile["schoolStage"] {
+  return (
+    value === "not_school_age" ||
+    value === "preschool" ||
+    value === "elementary" ||
+    value === "middle" ||
+    value === "high" ||
+    value === "post_high"
+  );
+}
+
+function isChildDiagnosis(value: unknown): value is FamilyProfile["diagnoses"][number] {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    isDevDiagnosis(value.label) &&
+    (value.otherLabel === undefined || typeof value.otherLabel === "string") &&
+    (value.diagnosedAt === undefined || typeof value.diagnosedAt === "string")
+  );
+}
+
+function sanitizeFamilyProfile(value: unknown): FamilyProfile | null | undefined {
+  if (value === null) {
+    return null;
+  }
+  if (
+    !isObject(value) ||
+    (value.childFirstName !== undefined && typeof value.childFirstName !== "string") ||
+    !hasNumber(value, "birthYear") ||
+    !Number.isInteger(value.birthYear) ||
+    (value.birthMonth !== undefined &&
+      (typeof value.birthMonth !== "number" ||
+        !Number.isInteger(value.birthMonth) ||
+        value.birthMonth < 1 ||
+        value.birthMonth > 12)) ||
+    !isSchoolStage(value.schoolStage) ||
+    !hasString(value, "county") ||
+    !Array.isArray(value.diagnoses)
+  ) {
+    return undefined;
+  }
+
+  return {
+    ...(typeof value.childFirstName === "string" ? { childFirstName: value.childFirstName } : {}),
+    birthYear: value.birthYear,
+    ...(typeof value.birthMonth === "number" ? { birthMonth: value.birthMonth } : {}),
+    schoolStage: value.schoolStage,
+    county: value.county,
+    diagnoses: value.diagnoses.filter(isChildDiagnosis)
+  };
+}
+
+function isFamilyScreenAnswer(value: unknown): value is FamilyScreenAnswer {
+  return (
+    isObject(value) &&
+    hasString(value, "questionId") &&
+    isDevNeedDomain(value.domain) &&
+    (value.response === "yes" || value.response === "no" || value.response === "declined")
+  );
+}
+
+function isFamilyInterview(value: unknown): value is FamilyInterview {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    hasString(value, "rawText") &&
+    (value.source === "typed" || value.source === "voice" || value.source === "mixed") &&
+    hasString(value, "createdAt") &&
+    (value.extraction === "live" || value.extraction === "mock")
+  );
+}
+
+function isFamilyEvidenceStatus(value: unknown): value is FamilyEvidenceStatus {
+  return value === "patient_reported" || value === "inferred" || value === "confirmed";
+}
+
+function isFamilyFact(value: unknown): value is FamilyFact {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    (value.interviewId === undefined || typeof value.interviewId === "string") &&
+    hasString(value, "label") &&
+    hasString(value, "value") &&
+    isFamilyEvidenceStatus(value.status) &&
+    hasString(value, "sourceSnippet")
+  );
+}
+
+function isSavedFamilyResource(value: unknown): value is SavedFamilyResource {
+  return (
+    isObject(value) &&
+    hasString(value, "resourceId") &&
+    hasString(value, "savedAt") &&
+    isDevNeedDomain(value.domain)
+  );
+}
+
+function uniqueStrings<T extends string>(values: T[]): T[] {
+  return [...new Set(values)];
+}
+
+function uniqueSavedFamilyResources(resources: SavedFamilyResource[]): SavedFamilyResource[] {
+  const seen = new Set<string>();
+  return resources.filter(({ resourceId }) => {
+    if (seen.has(resourceId)) {
+      return false;
+    }
+    seen.add(resourceId);
+    return true;
+  });
+}
+
+function isFamilyNavigatorState(value: unknown): value is FamilyNavigatorState {
+  return (
+    isObject(value) &&
+    (value.profile === null || sanitizeFamilyProfile(value.profile) !== undefined) &&
+    typeof value.interviewDraft === "string" &&
+    isArrayOfObjects(value.screenAnswers, isFamilyScreenAnswer) &&
+    isArrayOfObjects(value.interviews, isFamilyInterview) &&
+    isArrayOfObjects(value.facts, isFamilyFact) &&
+    Array.isArray(value.latestInterviewDomains) &&
+    value.latestInterviewDomains.every(isDevNeedDomain) &&
+    Array.isArray(value.activeDomains) &&
+    value.activeDomains.every(isDevNeedDomain) &&
+    isArrayOfObjects(value.saved, isSavedFamilyResource) &&
+    isArrayOfStrings(value.alreadyEnrolled)
+  );
+}
+
+function sanitizeFamilyNavigatorState(value: unknown): FamilyNavigatorState | null {
+  if (!isObject(value)) {
+    return null;
+  }
+  const profile = sanitizeFamilyProfile(value.profile);
+  if (
+    profile === undefined ||
+    !Array.isArray(value.screenAnswers) ||
+    !Array.isArray(value.interviews) ||
+    !Array.isArray(value.facts) ||
+    !Array.isArray(value.activeDomains) ||
+    !Array.isArray(value.saved) ||
+    !Array.isArray(value.alreadyEnrolled)
+  ) {
+    return null;
+  }
+
+  const latestInterviewDomains = Array.isArray(value.latestInterviewDomains)
+    ? value.latestInterviewDomains.filter(isDevNeedDomain)
+    : [];
+
+  return {
+    profile,
+    interviewDraft: typeof value.interviewDraft === "string" ? value.interviewDraft : "",
+    screenAnswers: value.screenAnswers.filter(isFamilyScreenAnswer),
+    interviews: value.interviews.filter(isFamilyInterview),
+    facts: value.facts.filter(isFamilyFact),
+    latestInterviewDomains: uniqueStrings(latestInterviewDomains),
+    activeDomains: uniqueStrings(value.activeDomains.filter(isDevNeedDomain)),
+    saved: uniqueSavedFamilyResources(value.saved.filter(isSavedFamilyResource)),
+    alreadyEnrolled: uniqueStrings(value.alreadyEnrolled.filter((entry): entry is string => typeof entry === "string"))
+  };
+}
+
 type PersistedAppState = Omit<
   AppState,
   | "tasks"
@@ -645,6 +844,7 @@ type PersistedAppState = Omit<
   | "screeningResults"
   | "referrals"
   | "recallReminders"
+  | "family"
 > & {
   tasks: unknown;
   mealLog: unknown;
@@ -656,6 +856,7 @@ type PersistedAppState = Omit<
   screeningResults: unknown;
   referrals: unknown;
   recallReminders: unknown;
+  family: unknown;
 };
 
 function sanitizeTasks(tasks: unknown): TaskItem[] {
@@ -816,7 +1017,11 @@ function isValidAppState(value: unknown): value is AppState {
     return false;
   }
 
-  return Array.isArray(value.recallReminders) && value.recallReminders.every(isRecallReminder);
+  return (
+    Array.isArray(value.recallReminders) &&
+    value.recallReminders.every(isRecallReminder) &&
+    (value.family === null || isFamilyNavigatorState(value.family))
+  );
 }
 
 export function loadStoredState(): AppState {
@@ -873,6 +1078,7 @@ export function loadStoredState(): AppState {
       const resultIds = new Set(sanitizedScreeningResults.map((result) => result.id));
       const sanitizedReferrals = sanitizeReferrals(parsed.referrals, resultIds);
       const sanitizedRecallReminders = sanitizeRecallReminders(parsed.recallReminders);
+      const sanitizedFamily = sanitizeFamilyNavigatorState(parsed.family);
       const sanitizedState: AppState = {
         ...parsed,
         tasks: sanitizedTasks,
@@ -885,7 +1091,8 @@ export function loadStoredState(): AppState {
         screeningGaps: sanitizedScreeningGaps,
         screeningResults: sanitizedScreeningResults,
         referrals: sanitizedReferrals,
-        recallReminders: sanitizedRecallReminders
+        recallReminders: sanitizedRecallReminders,
+        family: sanitizedFamily
       };
 
       if (!isValidAppState(sanitizedState)) {
@@ -904,7 +1111,8 @@ export function loadStoredState(): AppState {
         JSON.stringify(parsed.screeningGaps) !== JSON.stringify(sanitizedState.screeningGaps) ||
         JSON.stringify(parsed.screeningResults) !== JSON.stringify(sanitizedState.screeningResults) ||
         JSON.stringify(parsed.referrals) !== JSON.stringify(sanitizedState.referrals) ||
-        JSON.stringify(parsed.recallReminders) !== JSON.stringify(sanitizedState.recallReminders)
+        JSON.stringify(parsed.recallReminders) !== JSON.stringify(sanitizedState.recallReminders) ||
+        JSON.stringify(parsed.family) !== JSON.stringify(sanitizedState.family)
       ) {
         safeSetItem(STORAGE_KEY, JSON.stringify(sanitizedState));
       }
