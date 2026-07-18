@@ -115,6 +115,11 @@ describe("familyAnswersToFacts", () => {
     const facts = familyAnswersToFacts([answers[0]], "es");
 
     expect(facts[0].sourceSnippet).toBe(FAMILY_SCREEN_QUESTIONS[0].es);
+    expect(facts[0]).toMatchObject({
+      label: "Necesidad familiar — Intervención temprana",
+      value: "No se reportó una necesidad"
+    });
+    expect(facts[0].label).not.toContain("Family need");
   });
 });
 

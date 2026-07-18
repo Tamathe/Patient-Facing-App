@@ -109,6 +109,10 @@ export type FamilyStringKey =
   | "resourceReferralMode"
   | "resourceHumanVerify"
   | "resourceActNow"
+  | "resourceAllAges"
+  | "resourceAgeFrom"
+  | "resourceAgeThrough"
+  | "resourceAgeBetween"
   | "referralSelfServe"
   | "referralCall"
   | "referralProvider"
@@ -265,6 +269,10 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     resourceReferralMode: "Referral path",
     resourceHumanVerify: "Please confirm current details with a person before acting.",
     resourceActNow: "Why to act now",
+    resourceAllAges: "All ages",
+    resourceAgeFrom: "Age {min} and older",
+    resourceAgeThrough: "Birth through age {max}",
+    resourceAgeBetween: "Ages {min}–{max}",
     referralSelfServe: "Start online",
     referralCall: "Call directly",
     referralProvider: "Ask a provider for a referral",
@@ -420,6 +428,10 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     resourceReferralMode: "Ruta de referido",
     resourceHumanVerify: "Confirma los datos actuales con una persona antes de actuar.",
     resourceActNow: "Por qué actuar ahora",
+    resourceAllAges: "Todas las edades",
+    resourceAgeFrom: "Desde los {min} años",
+    resourceAgeThrough: "Desde el nacimiento hasta los {max} años",
+    resourceAgeBetween: "Edades de {min} a {max} años",
     referralSelfServe: "Empezar en línea",
     referralCall: "Llamar directamente",
     referralProvider: "Pedir un referido a un profesional",

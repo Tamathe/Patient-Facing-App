@@ -9,6 +9,7 @@ import { stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
 import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { screenSocialEmergency } from "@/domain/social-screen";
 import type { FamilyProfile } from "@/domain/types";
+import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
 
 export const FAMILY_INTERVIEW_MAX_CHARS = 5000;
@@ -47,30 +48,8 @@ export type FamilyInterviewProps = {
   language: Language;
   onDraftChange: (draft: string) => void;
   onExtracted: (result: SanitizedFamilyInterviewResult, meta: FamilyInterviewSubmissionMeta) => void;
+  onSafetyEscalation?: () => void;
 };
-
-const COPY = {
-  en: {
-    label: "Family interview",
-    placeholder: "Tell us what support your family is looking for.",
-    submit: "Crunch interview",
-    speak: "Speak family interview",
-    stop: "Stop listening",
-    tooLong: "The interview is too long. The maximum is 5000 characters.",
-    tooShort: "Please enter at least 10 characters.",
-    working: "Reviewing your interview…"
-  },
-  es: {
-    label: "Entrevista familiar",
-    placeholder: "Cuéntenos qué apoyo busca su familia.",
-    submit: "Revisar entrevista",
-    speak: "Hablar la entrevista familiar",
-    stop: "Dejar de escuchar",
-    tooLong: "La entrevista es demasiado larga. El máximo es de 5000 caracteres.",
-    tooShort: "Escriba al menos 10 caracteres.",
-    working: "Revisando su entrevista…"
-  }
-} as const;
 
 function speechRecognitionConstructor(): (new () => SpeechRecognitionLike) | null {
   if (typeof window === "undefined") return null;
@@ -94,10 +73,20 @@ export function FamilyInterview({
   passcode,
   language,
   onDraftChange,
-  onExtracted
+  onExtracted,
+  onSafetyEscalation
 }: FamilyInterviewProps) {
   const router = useRouter();
-  const copy = COPY[language];
+  const copy = {
+    label: tFamily(language, "interviewLabel"),
+    placeholder: tFamily(language, "interviewPlaceholder"),
+    submit: tFamily(language, "interviewSubmit"),
+    speak: tFamily(language, "interviewMicStart"),
+    stop: tFamily(language, "interviewMicStop"),
+    tooLong: tFamily(language, "interviewErrorTooLong"),
+    tooShort: tFamily(language, "interviewErrorTooShort"),
+    working: tFamily(language, "interviewWorking")
+  };
   const [text, setText] = useState(draft);
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [listening, setListening] = useState(false);
@@ -250,6 +239,7 @@ export function FamilyInterview({
         classifySafety(snapshot.rawText).level !== "allowed" ||
         screenSocialEmergency(snapshot.rawText)
       ) {
+        onSafetyEscalation?.();
         router.push(`/chat?ask=${encodeURIComponent(snapshot.rawText)}`);
         return;
       }
@@ -290,7 +280,8 @@ export function FamilyInterview({
       <textarea
         id="family-interview-text"
         aria-describedby="family-interview-count family-interview-status"
-        className="min-h-36 w-full rounded-control border border-ink/20 bg-white p-3"
+        aria-invalid={error !== null}
+        className="min-h-36 w-full rounded-control border border-ink/20 bg-white p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
         disabled={submitting}
         value={text}
         placeholder={copy.placeholder}
@@ -298,7 +289,7 @@ export function FamilyInterview({
       />
       <div className="flex items-center justify-between gap-3">
         <p id="family-interview-count" className="text-sm text-ink/65" aria-live="polite">
-          {text.length} / {FAMILY_INTERVIEW_MAX_CHARS}
+          {tFamily(language, "interviewCount", { count: text.length, max: FAMILY_INTERVIEW_MAX_CHARS })}
         </p>
         <div className="flex items-center gap-2">
           {voiceSupported ? (
@@ -308,7 +299,7 @@ export function FamilyInterview({
               aria-pressed={listening}
               disabled={submitting || text.length >= FAMILY_INTERVIEW_MIC_DISABLE_AT}
               onClick={toggleVoice}
-              className="rounded-control bg-calm p-3 text-care disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-control bg-calm p-3 text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Mic aria-hidden="true" className="h-5 w-5" />
             </button>
@@ -316,7 +307,7 @@ export function FamilyInterview({
           <button
             type="submit"
             disabled={submitting || !familyInterviewInputSchema.safeParse(text).success}
-            className="rounded-control bg-care px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-w-0 break-words rounded-control bg-care px-4 py-3 font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care disabled:cursor-not-allowed disabled:opacity-50"
           >
             {copy.submit}
           </button>

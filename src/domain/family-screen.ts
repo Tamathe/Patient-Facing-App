@@ -84,17 +84,20 @@ export function computeFamilyFlags(answers: FamilyScreenAnswer[]): DevNeedDomain
 export function familyAnswersToFacts(answers: FamilyScreenAnswer[], language: Language): FamilyFact[] {
   return answers.map((answer) => {
     const question = FAMILY_SCREEN_QUESTIONS.find(({ id }) => id === answer.questionId);
-    const value =
-      answer.response === "yes"
-        ? "Reported a need"
-        : answer.response === "no"
-          ? "No need reported"
-          : "Declined to answer";
+    const values: Record<Language, Record<FamilyScreenAnswer["response"], string>> = {
+      en: { yes: "Reported a need", no: "No need reported", declined: "Declined to answer" },
+      es: {
+        yes: "Necesidad reportada",
+        no: "No se reportó una necesidad",
+        declined: "Prefirió no responder"
+      }
+    };
+    const labelPrefix: Record<Language, string> = { en: "Family need", es: "Necesidad familiar" };
 
     return {
       id: crypto.randomUUID(),
-      label: `Family need — ${FAMILY_DOMAIN_LABELS[answer.domain].en}`,
-      value,
+      label: `${labelPrefix[language]} — ${FAMILY_DOMAIN_LABELS[answer.domain][language]}`,
+      value: values[language][answer.response],
       status: "patient_reported",
       sourceSnippet: question ? question[language] : answer.questionId
     };

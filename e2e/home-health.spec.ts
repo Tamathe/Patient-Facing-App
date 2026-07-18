@@ -24,8 +24,11 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   await page.getByRole("link", { name: "All my health" }).click();
   await page.getByRole("link", { name: /^My Medicines/ }).click();
   await expect(page.getByRole("heading", { name: "My Medicines" })).toBeVisible();
-  await page.getByLabel("It costs too much").check();
-  await expect(page.getByRole("checkbox", { name: "It costs too much" })).toBeChecked();
+  const lisinoprilCard = page
+    .getByRole("article")
+    .filter({ has: page.getByRole("heading", { name: "Lisinopril" }) });
+  await lisinoprilCard.getByLabel("It costs too much").check();
+  await expect(lisinoprilCard.getByRole("checkbox", { name: "It costs too much" })).toBeChecked();
 
   await page.getByRole("link", { name: "All my health" }).click();
   await page.getByRole("link", { name: /^Coach/ }).click();
@@ -45,7 +48,9 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
 
   const medicationSection = page.getByRole("heading", { name: "Medicines and barriers" });
   await expect(medicationSection).toBeVisible();
-  await expect(medicationSection.locator("..").locator("..").getByText(/Barriers:|It costs too much|cost/i)).toBeVisible();
+  await expect(
+    medicationSection.locator("..").locator("..").getByText(/Lisinopril.*Barriers: cost/i)
+  ).toBeVisible();
 });
 
 test("the collapsed nav reaches a feature through the All my health menu", async ({ page }) => {
@@ -148,7 +153,7 @@ test("loading the Brent demo from the privacy page is reachable", async ({ page 
   await page.addInitScript(() => window.localStorage.clear());
 
   await page.goto("/privacy");
-  await expect(page.getByRole("button", { name: /Load Brent demo/ })).toBeVisible();
-  await page.getByRole("button", { name: /Load Brent demo/ }).click();
+  await expect(page.getByRole("button", { name: "Restore retinopathy walkthrough" })).toBeVisible();
+  await page.getByRole("button", { name: "Restore retinopathy walkthrough" }).click();
   await expect(page.getByText(/Recorded a skipped metformin dose/i)).toBeVisible();
 });

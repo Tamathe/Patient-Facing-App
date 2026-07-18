@@ -29,14 +29,18 @@ test("tier-2 diabetes loop: dose-log tags and editable portion scaling", async (
   await stubFoodLens(page);
 
   await page.goto("/privacy");
-  await page.getByRole("button", { name: /Load Brent demo/ }).click();
+  await page.getByRole("button", { name: "Restore retinopathy walkthrough" }).click();
 
   await page.goto("/glucose");
   await expect(page.getByText(/Tags show what your dose log says/)).toBeVisible();
   await expect(page.getByText("Metformin taken").first()).toBeVisible();
   await expect(page.getByText("Metformin missed").first()).toBeVisible();
 
+  const foodLookupResponse = page.waitForResponse(
+    (response) => response.url().includes(`/api/food/lookup?barcode=${SOUP_BARCODE}`) && response.ok()
+  );
   await page.goto("/food");
+  await foodLookupResponse;
   await expect(page.getByRole("heading", { name: /Condensed Chicken Noodle Soup/ })).toBeVisible();
   await expect(page.getByText("Assuming 1 serving(s) - tap to change.")).toBeVisible();
   await expect(page.getByText("60")).toBeVisible();

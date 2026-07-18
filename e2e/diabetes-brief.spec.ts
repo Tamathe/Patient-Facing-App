@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
 test("diabetes-legible loop: time-in-range, food pattern, and a diabetes-complete brief", async ({ page }) => {
   // Load the Brent demo (blood pressure + diabetes) from the privacy controls.
   await page.goto("/privacy");
-  await page.getByRole("button", { name: /Load Brent demo/ }).click();
+  await page.getByRole("button", { name: "Restore retinopathy walkthrough" }).click();
 
   // Blood-sugar page: the time-in-range band and the food<->glucose pattern card.
   await page.goto("/glucose");

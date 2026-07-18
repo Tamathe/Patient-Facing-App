@@ -74,7 +74,7 @@ describe("FamilyInterview", () => {
   it("uses the deterministic fallback whenever live extraction returns null", async () => {
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(onExtracted.mock.calls[0][0].domains.map(({ domain }: { domain: string }) => domain)).toEqual([
@@ -91,7 +91,7 @@ describe("FamilyInterview", () => {
     requestFamilyInterview.mockRejectedValueOnce(new Error("unexpected"));
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
     await waitFor(() =>
       expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
         extraction: "mock",
@@ -105,7 +105,7 @@ describe("FamilyInterview", () => {
       domains: [{ domain: "school_iep", rationale: "Riley has dyslexia." }],
       followUps: []
     });
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
     expect(onExtracted.mock.calls[1]).toEqual([
       { facts: [], domains: [{ domain: "school_iep" }], followUps: [] },
@@ -119,12 +119,25 @@ describe("FamilyInterview", () => {
     "There is no food today"
   ])("routes safety text before networking or extraction: %s", async (text) => {
     const onExtracted = vi.fn();
-    renderInterview({ draft: text, onExtracted });
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    const onSafetyEscalation = vi.fn();
+    push.mockImplementationOnce(() => {
+      expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
+    });
+    renderInterview({ draft: text, onExtracted, onSafetyEscalation });
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(text)}`));
+    expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
     expect(requestFamilyInterview).not.toHaveBeenCalled();
     expect(onExtracted).not.toHaveBeenCalled();
+  });
+
+  it("uses compile-enforced family strings for its static chrome", () => {
+    renderInterview({ draft: "A usable family interview" });
+
+    expect(screen.getByLabelText("What would you like help with?")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Find support areas" })).toBeVisible();
+    expect(screen.getByText("25 of 5000 characters")).toBeVisible();
   });
 
   it("appends repeated final speech transcripts with one space and never auto-submits", async () => {
@@ -132,13 +145,13 @@ describe("FamilyInterview", () => {
     const onDraftChange = vi.fn();
     const onExtracted = vi.fn();
     renderInterview({ draft: "Existing words", onDraftChange, onExtracted });
-    const mic = await screen.findByRole("button", { name: /speak|mic|voice/i });
+    const mic = await screen.findByRole("button", { name: /start speaking|stop listening/i });
     fireEvent.click(mic);
 
     act(() => recognition?.onresult?.(speechResult("first final")));
     act(() => recognition?.onresult?.(speechResult("second final")));
 
-    expect(screen.getByLabelText(/family|tell us|interview/i)).toHaveValue("Existing words first final second final");
+    expect(screen.getByLabelText(/what would you like help with/i)).toHaveValue("Existing words first final second final");
     expect(onDraftChange).toHaveBeenLastCalledWith("Existing words first final second final");
     expect(requestFamilyInterview).not.toHaveBeenCalled();
     expect(onExtracted).not.toHaveBeenCalled();
@@ -147,9 +160,9 @@ describe("FamilyInterview", () => {
   it("ignores interim speech results", async () => {
     installSpeech();
     renderInterview({ draft: "Existing words" });
-    fireEvent.click(await screen.findByRole("button", { name: /speak|mic|voice/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
     act(() => recognition?.onresult?.(speechResult("not final", false)));
-    expect(screen.getByLabelText(/family|tell us|interview/i)).toHaveValue("Existing words");
+    expect(screen.getByLabelText(/what would you like help with/i)).toHaveValue("Existing words");
   });
 
   it.each([
@@ -159,9 +172,9 @@ describe("FamilyInterview", () => {
     installSpeech();
     const onExtracted = vi.fn();
     renderInterview({ draft, onExtracted });
-    fireEvent.click(await screen.findByRole("button", { name: /speak|mic|voice/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
     act(() => recognition?.onresult?.(speechResult(transcript)));
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
     await waitFor(() =>
       expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
         extraction: "mock",
@@ -175,33 +188,33 @@ describe("FamilyInterview", () => {
     installSpeech();
     const nearCap = "x".repeat(4950);
     const { unmount } = renderInterview({ draft: nearCap });
-    const mic = await screen.findByRole("button", { name: /speak|mic|voice/i });
+    const mic = await screen.findByRole("button", { name: /start speaking|stop listening/i });
     expect(mic).toBeDisabled();
-    expect(screen.getByText(/4950\s*\/\s*5000/)).toBeInTheDocument();
+    expect(screen.getByText("4950 of 5000 characters")).toBeInTheDocument();
     unmount();
 
     renderInterview({ draft: "x".repeat(4940) });
-    const activeMic = await screen.findByRole("button", { name: /speak|mic|voice/i });
+    const activeMic = await screen.findByRole("button", { name: /start speaking|stop listening/i });
     fireEvent.click(activeMic);
     act(() => recognition?.onresult?.(speechResult("y".repeat(100))));
     expect(screen.getByRole("alert")).toHaveTextContent(/5000|too long|maximum/i);
-    expect(screen.getByLabelText(/family|tell us|interview/i)).toHaveValue("x".repeat(4940));
+    expect(screen.getByLabelText(/what would you like help with/i)).toHaveValue("x".repeat(4940));
   });
 
   it("shows typed over-cap errors without truncating and keeps typed entry usable without speech", () => {
     renderInterview({ draft: "Typed entry works" });
-    expect(screen.queryByRole("button", { name: /speak|mic|voice/i })).not.toBeInTheDocument();
-    const input = screen.getByLabelText(/family|tell us|interview/i);
+    expect(screen.queryByRole("button", { name: /start speaking|stop listening/i })).not.toBeInTheDocument();
+    const input = screen.getByLabelText(/what would you like help with/i);
     fireEvent.change(input, { target: { value: "x".repeat(5001) } });
     expect(input).toHaveValue("x".repeat(5001));
     expect(screen.getByRole("alert")).toHaveTextContent(/5000|too long|maximum/i);
-    expect(screen.getByRole("button", { name: /crunch|extract/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /find support areas/i })).toBeDisabled();
   });
 
   it("stops speech recognition on unmount", async () => {
     installSpeech();
     const { unmount } = renderInterview({ draft: "A usable interview draft" });
-    fireEvent.click(await screen.findByRole("button", { name: /speak|mic|voice/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
     const lateResult = recognition?.onresult;
     unmount();
     expect(recognition?.stop).toHaveBeenCalled();
@@ -223,19 +236,19 @@ describe("FamilyInterview", () => {
     const onDraftChange = vi.fn();
     const onExtracted = vi.fn();
     renderInterview({ draft: "Existing fourth grade", onDraftChange, onExtracted });
-    fireEvent.click(await screen.findByRole("button", { name: /speak|mic|voice/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
     act(() => recognition?.onresult?.(speechResult("spoken concern")));
     const rawText = "Existing fourth grade spoken concern";
     const lateResult = recognition?.onresult;
 
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
-    expect(screen.getByRole("textbox", { name: /family interview/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /speak|mic|voice/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /start speaking|stop listening/i })).toBeDisabled();
     expect(recognition?.stop).toHaveBeenCalledTimes(1);
     expect(recognition?.onresult).toBeNull();
-    fireEvent.change(screen.getByRole("textbox", { name: /family interview/i }), { target: { value: "changed while pending" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /what would you like help with/i }), { target: { value: "changed while pending" } });
     act(() => lateResult?.(speechResult("late final")));
-    expect(screen.getByRole("textbox", { name: /family interview/i })).toHaveValue(rawText);
+    expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(rawText);
 
     await act(async () => pending.resolve(liveResult));
     await waitFor(() =>
@@ -255,7 +268,7 @@ describe("FamilyInterview", () => {
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
-    const form = screen.getByLabelText(/family|tell us|interview/i).closest("form") as HTMLFormElement;
+    const form = screen.getByLabelText(/what would you like help with/i).closest("form") as HTMLFormElement;
     fireEvent.submit(form);
     fireEvent.submit(form);
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
@@ -286,9 +299,9 @@ describe("FamilyInterview", () => {
     };
     const { rerender } = render(<FamilyInterview {...baseProps} draft={draftA} profile={profileA} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
     rerender(<FamilyInterview {...baseProps} draft={draftB} profile={profileB} />);
-    expect(screen.getByRole("textbox", { name: /family interview/i })).toHaveValue(draftA);
+    expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftA);
 
     await act(async () => pending.resolve(null));
     await waitFor(() =>
@@ -310,9 +323,9 @@ describe("FamilyInterview", () => {
     expect(requestFamilyInterview.mock.calls[0][0]).toEqual(
       expect.objectContaining({ text: draftA, profile: profileA })
     );
-    await waitFor(() => expect(screen.getByRole("textbox", { name: /family interview/i })).toHaveValue(draftB));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftB));
 
-    fireEvent.click(screen.getByRole("button", { name: /crunch|extract/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
     expect(requestFamilyInterview.mock.calls[1][0]).toEqual(
       expect.objectContaining({ text: draftB, profile: profileB })

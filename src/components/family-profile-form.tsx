@@ -1,0 +1,325 @@
+"use client";
+
+import React, { useState } from "react";
+import { KY_COUNTIES } from "@/domain/family-resources";
+import type { ChildDiagnosis, DevDiagnosis, FamilyProfile } from "@/domain/types";
+import { tFamily, type FamilyStringKey } from "@/i18n/family-strings";
+import type { Language } from "@/i18n/strings";
+
+export type FamilyProfileFormProps = {
+  language: Language;
+  initialProfile: FamilyProfile | null;
+  defaultCounty?: string;
+  onSave: (profile: FamilyProfile) => void;
+  onSeedExample: (example: "morgan" | "casey") => void;
+};
+
+const DIAGNOSIS_OPTIONS: ReadonlyArray<{ label: DevDiagnosis; key: FamilyStringKey }> = [
+  { label: "autism", key: "diagnosisAutism" },
+  { label: "adhd", key: "diagnosisAdhd" },
+  { label: "dyslexia", key: "diagnosisDyslexia" },
+  { label: "speech_language", key: "diagnosisSpeechLanguage" },
+  { label: "developmental_delay", key: "diagnosisDevelopmentalDelay" },
+  { label: "intellectual_disability", key: "diagnosisIntellectualDisability" },
+  { label: "down_syndrome", key: "diagnosisDownSyndrome" },
+  { label: "other", key: "diagnosisOther" }
+];
+
+const SCHOOL_OPTIONS: ReadonlyArray<{ value: FamilyProfile["schoolStage"]; key: FamilyStringKey }> = [
+  { value: "not_school_age", key: "schoolNotSchoolAge" },
+  { value: "preschool", key: "schoolPreschool" },
+  { value: "elementary", key: "schoolElementary" },
+  { value: "middle", key: "schoolMiddle" },
+  { value: "high", key: "schoolHigh" },
+  { value: "post_high", key: "schoolPostHigh" }
+];
+
+const CONTROL_FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
+
+function normalizedCounty(value?: string): string {
+  const normalized = value?.trim().replace(/\s+County$/i, "") ?? "";
+  return KY_COUNTIES.includes(normalized) ? normalized : "";
+}
+
+function monthLabel(language: Language, diagnosisLabel: string): string {
+  const suffix = tFamily(language, "profileDiagnosisDateLabel");
+  return `${diagnosisLabel} ${suffix.charAt(0).toLocaleLowerCase(language === "es" ? "es" : "en")}${suffix.slice(1)}`;
+}
+
+export function FamilyProfileForm({
+  language,
+  initialProfile,
+  defaultCounty,
+  onSave,
+  onSeedExample
+}: FamilyProfileFormProps) {
+  const [county, setCounty] = useState(
+    normalizedCounty(initialProfile?.county) || normalizedCounty(defaultCounty)
+  );
+  const [childFirstName, setChildFirstName] = useState(initialProfile?.childFirstName ?? "");
+  const [birthYear, setBirthYear] = useState(initialProfile ? String(initialProfile.birthYear) : "");
+  const [birthMonth, setBirthMonth] = useState(
+    initialProfile?.birthMonth === undefined ? "" : String(initialProfile.birthMonth)
+  );
+  const [schoolStage, setSchoolStage] = useState<FamilyProfile["schoolStage"]>(
+    initialProfile?.schoolStage ?? "not_school_age"
+  );
+  const [diagnoses, setDiagnoses] = useState<ChildDiagnosis[]>(
+    () => initialProfile?.diagnoses.map((diagnosis) => ({ ...diagnosis })) ?? []
+  );
+  const [birthYearError, setBirthYearError] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function markEdited(): void {
+    setSaved(false);
+  }
+
+  function toggleDiagnosis(label: DevDiagnosis): void {
+    markEdited();
+    setDiagnoses((current) => {
+      const existing = current.find((diagnosis) => diagnosis.label === label);
+      if (existing) {
+        return current.filter((diagnosis) => diagnosis.id !== existing.id);
+      }
+      return [...current, { id: crypto.randomUUID(), label }];
+    });
+  }
+
+  function updateDiagnosis(label: DevDiagnosis, update: Partial<ChildDiagnosis>): void {
+    markEdited();
+    setDiagnoses((current) =>
+      current.map((diagnosis) => (diagnosis.label === label ? { ...diagnosis, ...update } : diagnosis))
+    );
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const parsedBirthYear = Number(birthYear);
+    const currentYear = new Date().getFullYear();
+    const invalidBirthYear =
+      !/^\d{4}$/.test(birthYear) ||
+      !Number.isInteger(parsedBirthYear) ||
+      parsedBirthYear < 1900 ||
+      parsedBirthYear > currentYear;
+    setBirthYearError(invalidBirthYear);
+    if (invalidBirthYear || county.length === 0) {
+      return;
+    }
+
+    const trimmedFirstName = childFirstName.trim();
+    const normalizedDiagnoses = diagnoses.map((diagnosis) => {
+      const diagnosedAt = diagnosis.diagnosedAt?.trim();
+      const otherLabel = diagnosis.otherLabel?.trim();
+      return {
+        id: diagnosis.id,
+        label: diagnosis.label,
+        ...(diagnosis.label === "other" && otherLabel ? { otherLabel } : {}),
+        ...(diagnosedAt ? { diagnosedAt } : {})
+      };
+    });
+    onSave({
+      ...(trimmedFirstName ? { childFirstName: trimmedFirstName } : {}),
+      birthYear: parsedBirthYear,
+      ...(birthMonth ? { birthMonth: Number(birthMonth) } : {}),
+      schoolStage,
+      county,
+      diagnoses: normalizedDiagnoses
+    });
+    setSaved(true);
+  }
+
+  return (
+    <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-profile-title">
+      <h2 id="family-profile-title" className="text-xl font-semibold">
+        {tFamily(language, "setupTitle")}
+      </h2>
+      <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "setupIntro")}</p>
+
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold">{tFamily(language, "examplesTitle")}</h3>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
+            onClick={() => onSeedExample("morgan")}
+          >
+            {tFamily(language, "exampleMorgan")}
+          </button>
+          <button
+            type="button"
+            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
+            onClick={() => onSeedExample("casey")}
+          >
+            {tFamily(language, "exampleCasey")}
+          </button>
+        </div>
+      </div>
+
+      <form className="mt-5 grid gap-4" onSubmit={submit}>
+        <label className="grid gap-1 text-sm font-medium" htmlFor="family-county">
+          {tFamily(language, "profileCountyLabel")}
+          <select
+            id="family-county"
+            required
+            value={county}
+            onChange={(event) => {
+              markEdited();
+              setCounty(event.target.value);
+            }}
+            className={`min-h-12 rounded-control border border-ink/20 bg-white px-3 py-2 ${CONTROL_FOCUS}`}
+          >
+            <option value="">{tFamily(language, "profileCountyPlaceholder")}</option>
+            {KY_COUNTIES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-1 text-sm font-medium" htmlFor="family-child-first-name">
+          {tFamily(language, "profileChildNameLabel")}
+          <input
+            id="family-child-first-name"
+            value={childFirstName}
+            placeholder={tFamily(language, "profileChildNamePlaceholder")}
+            onChange={(event) => {
+              markEdited();
+              setChildFirstName(event.target.value);
+            }}
+            className={`min-h-12 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+          />
+        </label>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-medium" htmlFor="family-birth-year">
+            {tFamily(language, "profileBirthYearLabel")}
+            <input
+              id="family-birth-year"
+              inputMode="numeric"
+              aria-invalid={birthYearError}
+              aria-describedby={birthYearError ? "family-birth-year-error" : undefined}
+              value={birthYear}
+              placeholder={tFamily(language, "profileBirthYearPlaceholder")}
+              onChange={(event) => {
+                markEdited();
+                setBirthYearError(false);
+                setBirthYear(event.target.value);
+              }}
+              className={`min-h-12 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+            />
+            {birthYearError ? (
+              <span id="family-birth-year-error" role="alert" className="text-sm font-medium text-rose-700">
+                {tFamily(language, "profileBirthYearError")}
+              </span>
+            ) : null}
+          </label>
+
+          <label className="grid gap-1 text-sm font-medium" htmlFor="family-birth-month">
+            {tFamily(language, "profileBirthMonthLabel")}
+            <select
+              id="family-birth-month"
+              value={birthMonth}
+              onChange={(event) => {
+                markEdited();
+                setBirthMonth(event.target.value);
+              }}
+              className={`min-h-12 rounded-control border border-ink/20 bg-white px-3 py-2 ${CONTROL_FOCUS}`}
+            >
+              <option value="">{tFamily(language, "profileBirthMonthOptional")}</option>
+              {Array.from({ length: 12 }, (_, offset) => String(offset + 1)).map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label className="grid gap-1 text-sm font-medium" htmlFor="family-school-stage">
+          {tFamily(language, "profileSchoolStageLabel")}
+          <select
+            id="family-school-stage"
+            value={schoolStage}
+            onChange={(event) => {
+              markEdited();
+              setSchoolStage(event.target.value as FamilyProfile["schoolStage"]);
+            }}
+            className={`min-h-12 rounded-control border border-ink/20 bg-white px-3 py-2 ${CONTROL_FOCUS}`}
+          >
+            {SCHOOL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {tFamily(language, option.key)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <fieldset className="grid gap-3 rounded-control border border-ink/10 p-3">
+          <legend className="px-1 text-sm font-semibold">{tFamily(language, "profileDiagnosesLabel")}</legend>
+          {DIAGNOSIS_OPTIONS.map((option) => {
+            const diagnosis = diagnoses.find((candidate) => candidate.label === option.label);
+            const diagnosisLabel = tFamily(language, option.key);
+            const checkboxId = `family-diagnosis-${option.label}`;
+            return (
+              <div key={option.label} className="grid gap-2 rounded-control bg-paper p-3">
+                <label className="flex min-h-12 items-center gap-2 text-sm font-medium" htmlFor={checkboxId}>
+                  <input
+                    id={checkboxId}
+                    type="checkbox"
+                    checked={diagnosis !== undefined}
+                    onChange={() => toggleDiagnosis(option.label)}
+                    className={CONTROL_FOCUS}
+                  />
+                  <span className="min-w-0 break-words">{diagnosisLabel}</span>
+                </label>
+                {diagnosis ? (
+                  <div className="grid gap-3 pl-6 sm:grid-cols-2">
+                    {option.label === "other" ? (
+                      <label className="grid gap-1 text-sm" htmlFor="family-other-diagnosis-label">
+                        {tFamily(language, "profileOtherDiagnosisLabel")}
+                        <input
+                          id="family-other-diagnosis-label"
+                          required
+                          value={diagnosis.otherLabel ?? ""}
+                          placeholder={tFamily(language, "profileOtherDiagnosisPlaceholder")}
+                          onChange={(event) => updateDiagnosis(option.label, { otherLabel: event.target.value })}
+                          className={`min-h-12 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+                        />
+                      </label>
+                    ) : null}
+                    <label className="grid gap-1 text-sm">
+                      {monthLabel(language, diagnosisLabel)}
+                      <input
+                        type="month"
+                        aria-label={monthLabel(language, diagnosisLabel)}
+                        min="1900-01"
+                        max={`${new Date().getFullYear()}-12`}
+                        value={diagnosis.diagnosedAt ?? ""}
+                        onChange={(event) => updateDiagnosis(option.label, { diagnosedAt: event.target.value })}
+                        className={`min-h-12 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </fieldset>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="submit"
+            className={`min-h-12 min-w-0 break-words rounded-control bg-care px-4 py-2 font-semibold text-white ${CONTROL_FOCUS}`}
+          >
+            {tFamily(language, "profileSave")}
+          </button>
+          <p role="status" aria-live="polite" className="text-sm font-medium text-care">
+            {saved ? tFamily(language, "profileSaved") : ""}
+          </p>
+        </div>
+      </form>
+    </section>
+  );
+}
