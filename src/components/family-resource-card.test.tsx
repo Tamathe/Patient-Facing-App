@@ -63,6 +63,7 @@ describe("FamilyResourceCard", () => {
     await user.dblClick(save);
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith(michelle, "waivers_financial");
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
 
     const share = screen.getByRole("button", { name: /Share.*Michelle P/i });
     expect(share).toBeDisabled();
@@ -71,6 +72,13 @@ describe("FamilyResourceCard", () => {
     await user.dblClick(share);
     expect(onShare).toHaveBeenCalledTimes(1);
     expect(onShare).toHaveBeenCalledWith(michelle);
+  });
+
+  it("does not announce a persisted saved state as though it were a current action", () => {
+    renderCard({ isSaved: true });
+
+    expect(screen.getByRole("button", { name: /Saved.*Michelle P/i })).toBeDisabled();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 
   it("uses unique consent controls when the same resource appears in matched and saved sections", () => {

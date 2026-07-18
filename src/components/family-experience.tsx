@@ -20,6 +20,7 @@ import { FamilyStageTimeline } from "@/components/family-stage-timeline";
 import { recordAuditEvent } from "@/domain/audit";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
+  FAMILY_RESOURCE_CATALOG,
   childAgeYears,
   findFamilyResources,
   getFamilyResourceById,
@@ -68,6 +69,24 @@ const DOMAIN_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
 
 const FALLBACK_IDS = ["ky_spin", "hdi_resource_guide", "kynect_resources", "kentucky_211"] as const;
 const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
+const normalizeCounty = (county: string): string => county.trim().replace(/\s+County$/i, "");
+
+function prioritizeDomainCandidates(
+  resources: FamilyResource[],
+  county: string
+): FamilyResource[] {
+  const normalizedCounty = normalizeCounty(county);
+  return resources
+    .map((resource, catalogPosition) => ({ resource, catalogPosition }))
+    .sort(
+      (left, right) =>
+        Number(!left.resource.counties.includes(normalizedCounty)) -
+          Number(!right.resource.counties.includes(normalizedCounty)) ||
+        Number(!left.resource.actNow) - Number(!right.resource.actNow) ||
+        left.catalogPosition - right.catalogPosition
+    )
+    .map(({ resource }) => resource);
+}
 
 function buildResourceMatches(
   profile: FamilyProfile,
@@ -80,15 +99,22 @@ function buildResourceMatches(
 
   const seen = new Set<string>();
   const matches: MatchedResource[] = [];
+  const enrolled = new Set(alreadyEnrolled);
   for (const domain of domains) {
-    const resources = findFamilyResources({
-      county: profile.county,
-      domain,
-      childAgeYears: childAgeYears(profile),
-      limit: 4
-    });
-    for (const resource of resources) {
-      if (seen.has(resource.id)) continue;
+    const candidates = prioritizeDomainCandidates(
+      findFamilyResources({
+        county: profile.county,
+        domain,
+        childAgeYears: childAgeYears(profile),
+        limit: FAMILY_RESOURCE_CATALOG.length
+      }).filter(({ id }) => !seen.has(id)),
+      profile.county
+    );
+    const selected = [
+      ...candidates.filter(({ id }) => !enrolled.has(id)).slice(0, 4),
+      ...candidates.filter(({ id }) => enrolled.has(id))
+    ];
+    for (const resource of selected) {
       seen.add(resource.id);
       matches.push({ resource, domain, position: matches.length });
     }
@@ -106,7 +132,6 @@ function buildResourceMatches(
     };
   }
 
-  const enrolled = new Set(alreadyEnrolled);
   return {
     isFallback: false,
     resources: [...matches].sort(
@@ -117,6 +142,34 @@ function buildResourceMatches(
   };
 }
 
+function buildNearbyTherapeuticRecreation(
+  profile: FamilyProfile,
+  primaryResourceIds: Set<string>,
+  alreadyEnrolled: string[]
+): MatchedResource[] {
+  const normalizedCounty = normalizeCounty(profile.county);
+  const enrolled = new Set(alreadyEnrolled);
+  return findFamilyResources({
+    county: profile.county,
+    domain: "recreation",
+    childAgeYears: childAgeYears(profile),
+    limit: FAMILY_RESOURCE_CATALOG.length
+  })
+    .filter(
+      (resource) =>
+        resource.counties.includes(normalizedCounty) &&
+        resource.domains.includes("therapies") &&
+        !primaryResourceIds.has(resource.id)
+    )
+    .map((resource, position) => ({ resource, domain: "recreation" as const, position }))
+    .sort(
+      (left, right) =>
+        Number(enrolled.has(left.resource.id)) - Number(enrolled.has(right.resource.id)) ||
+        left.position - right.position
+    )
+    .slice(0, 2);
+}
+
 export function FamilyExperience({ state, dispatch, passcode }: FamilyExperienceProps) {
   const language = state.patient.language;
   const family = state.family;
@@ -124,13 +177,23 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const [safetySuppressed, setSafetySuppressed] = useState(false);
   const [seedVersion, setSeedVersion] = useState(0);
   const reviewRef = useRef<HTMLElement>(null);
+  const pendingReviewFocusRef = useRef(false);
   const latestInterview = family?.interviews.at(-1);
   const latestInterviewId = latestInterview?.id;
   const reviewFacts = family?.facts.filter(({ interviewId }) => interviewId === latestInterviewId) ?? [];
 
   useEffect(() => {
-    if (latestInterviewId && !safetySuppressed) {
+    const previousLanguage = document.documentElement.lang;
+    document.documentElement.lang = language;
+    return () => {
+      document.documentElement.lang = previousLanguage;
+    };
+  }, [language]);
+
+  useEffect(() => {
+    if (pendingReviewFocusRef.current && latestInterviewId && !safetySuppressed) {
       reviewRef.current?.focus();
+      pendingReviewFocusRef.current = false;
     }
   }, [latestInterviewId, safetySuppressed]);
 
@@ -140,6 +203,17 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     }
     return buildResourceMatches(family.profile, family.activeDomains, family.alreadyEnrolled);
   }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile, safetySuppressed]);
+
+  const nearbyTherapeuticRecreation = useMemo(() => {
+    if (!family?.profile || safetySuppressed || family.activeDomains.length === 0) {
+      return [];
+    }
+    return buildNearbyTherapeuticRecreation(
+      family.profile,
+      new Set(matchResult.resources.map(({ resource }) => resource.id)),
+      family.alreadyEnrolled
+    );
+  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile, matchResult.resources, safetySuppressed]);
 
   const savedResources = useMemo(
     () =>
@@ -151,6 +225,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   );
 
   function seedExample(example: "morgan" | "casey"): void {
+    pendingReviewFocusRef.current = false;
     setReviewDetails(null);
     setSafetySuppressed(false);
     setSeedVersion((current) => current + 1);
@@ -171,6 +246,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     result: SanitizedFamilyInterviewResult,
     meta: FamilyInterviewSubmissionMeta
   ): void {
+    pendingReviewFocusRef.current = true;
     const interviewId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const facts: FamilyFact[] = result.facts.map((fact) => ({
@@ -182,13 +258,9 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       sourceSnippet: fact.sourceSnippet
     }));
     const domains = result.domains.map(({ domain }) => domain);
-    const visibleDomains =
-      language === "es" && meta.extraction === "mock"
-        ? result.domains.map(({ domain }) => ({ domain }))
-        : result.domains;
 
     setSafetySuppressed(false);
-    setReviewDetails({ domains: visibleDomains, followUps: result.followUps });
+    setReviewDetails({ domains: result.domains, followUps: result.followUps });
     dispatch({
       type: "addFamilyInterview",
       interview: {
@@ -218,6 +290,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   }
 
   function suppressForSafety(): void {
+    pendingReviewFocusRef.current = false;
     setReviewDetails(null);
     setSafetySuppressed(true);
   }
@@ -250,6 +323,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
           <section className="grid gap-3 sm:grid-cols-2" aria-label={tFamily(language, "pageTitle")}>
             <a
               href="#family-screen-title"
+              onClick={() => document.getElementById("family-screen-title")?.focus()}
               className="min-w-0 rounded-control border border-care/20 bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
             >
               <h2 className="break-words text-lg font-semibold">{tFamily(language, "entryQuestionsTitle")}</h2>
@@ -259,6 +333,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             </a>
             <a
               href="#family-interview-title"
+              onClick={() => document.getElementById("family-interview-title")?.focus()}
               className="min-w-0 rounded-control border border-care/20 bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
             >
               <h2 className="break-words text-lg font-semibold">{tFamily(language, "entryInterviewTitle")}</h2>
@@ -276,7 +351,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
           />
 
           <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-interview-title">
-            <h2 id="family-interview-title" className="text-xl font-semibold">
+            <h2 id="family-interview-title" tabIndex={-1} className="text-xl font-semibold">
               {tFamily(language, "interviewTitle")}
             </h2>
             <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "interviewIntro")}</p>
@@ -347,6 +422,11 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                 {tFamily(language, "resourcesTitle")}
               </h2>
               <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "resourcesIntro")}</p>
+              {language === "es" ? (
+                <p className="mt-2 rounded-control bg-note/30 p-3 text-sm leading-6 text-ink/75">
+                  {tFamily(language, "resourceSourceLanguageNotice")}
+                </p>
+              ) : null}
               {matchResult.isFallback ? (
                 <section
                   aria-label={tFamily(language, "emptyFallbackTitle")}
@@ -392,6 +472,37 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                   ))}
                 </div>
               )}
+              {nearbyTherapeuticRecreation.length > 0 ? (
+                <section
+                  role="region"
+                  aria-label={tFamily(language, "nearbyTherapeuticRecreationTitle")}
+                  className="mt-5 border-t border-care/20 pt-4"
+                >
+                  <h3 className="text-lg font-semibold">
+                    {tFamily(language, "nearbyTherapeuticRecreationTitle")}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-ink/75">
+                    {tFamily(language, "nearbyTherapeuticRecreationIntro")}
+                  </p>
+                  <div className="mt-3 grid gap-3">
+                    {nearbyTherapeuticRecreation.map(({ resource, domain }) => (
+                      <FamilyResourceCard
+                        key={`nearby-recreation-${resource.id}`}
+                        resource={resource}
+                        domain={domain}
+                        language={language}
+                        isSaved={family.saved.some(({ resourceId }) => resourceId === resource.id)}
+                        isEnrolled={family.alreadyEnrolled.includes(resource.id)}
+                        onSave={saveResource}
+                        onShare={shareResource}
+                        onToggleEnrollment={(resourceId) =>
+                          dispatch({ type: "toggleFamilyEnrollment", resourceId })
+                        }
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </section>
           ) : null}
 
@@ -404,23 +515,29 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             {savedResources.length === 0 ? (
               <p className="mt-2 text-sm text-ink/70">{tFamily(language, "savedResourcesEmpty")}</p>
             ) : (
-              <div className="mt-4 grid gap-3">
+              <ul className="mt-4 grid gap-3">
                 {savedResources.map(({ resource, domain }) => (
-                  <FamilyResourceCard
+                  <li
                     key={`saved-${resource.id}`}
-                    resource={resource}
-                    domain={domain}
-                    language={language}
-                    isSaved
-                    isEnrolled={family.alreadyEnrolled.includes(resource.id)}
-                    onSave={saveResource}
-                    onShare={shareResource}
-                    onToggleEnrollment={(resourceId) =>
-                      dispatch({ type: "toggleFamilyEnrollment", resourceId })
-                    }
-                  />
+                    data-testid="saved-family-resource-summary"
+                    className="rounded-control border border-ink/10 bg-white p-4"
+                  >
+                    <h3 className="break-words text-lg font-semibold">{resource.name}</h3>
+                    <p className="mt-1 text-sm text-ink/70">
+                      {tFamily(language, DOMAIN_KEYS[domain])}
+                    </p>
+                    <a
+                      href={resource.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`${tFamily(language, "resourceOpenSource")}: ${resource.name}`}
+                      className="mt-3 inline-flex min-h-12 min-w-0 items-center rounded-control border border-care px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+                    >
+                      {tFamily(language, "resourceOpenSource")}
+                    </a>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
 

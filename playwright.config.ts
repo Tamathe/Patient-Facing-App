@@ -9,7 +9,7 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${port}`,
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120000
   },
   use: {

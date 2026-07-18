@@ -1,9 +1,9 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { useReducer } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState } from "@/domain/fixtures";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
 import type { AppState, FamilyNavigatorState } from "@/domain/types";
 import { healthReducer } from "@/state/store";
 import { FamilyExperience } from "@/components/family-experience";
@@ -11,6 +11,14 @@ import { FamilyExperience } from "@/components/family-experience";
 const { push, requestFamilyInterview } = vi.hoisted(() => ({ push: vi.fn(), requestFamilyInterview: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/ai/family-interview-provider", () => ({ requestFamilyInterview }));
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
 
 function withFamily(family: FamilyNavigatorState | null, language: "en" | "es" = "en"): AppState {
   return { ...brentState, patient: { ...brentState.patient, language }, family };
@@ -35,6 +43,61 @@ beforeEach(() => {
 });
 
 describe("FamilyExperience", () => {
+  it("synchronizes the document language and restores the prior value on unmount", () => {
+    const originalLanguage = document.documentElement.lang;
+    document.documentElement.lang = "fr";
+    const { rerender, unmount } = render(
+      <FamilyExperience state={withFamily(morganFamilyState, "es")} dispatch={vi.fn()} passcode="" />
+    );
+
+    expect(document.documentElement.lang).toBe("es");
+    rerender(<FamilyExperience state={withFamily(morganFamilyState, "en")} dispatch={vi.fn()} passcode="" />);
+    expect(document.documentElement.lang).toBe("en");
+    unmount();
+    expect(document.documentElement.lang).toBe("fr");
+    document.documentElement.lang = originalLanguage;
+  });
+
+  it("does not steal focus for a persisted interview from an earlier visit", () => {
+    const persistedFamily: FamilyNavigatorState = {
+      ...morganFamilyState,
+      interviews: [
+        {
+          id: "persisted-interview",
+          rawText: "Riley is in fourth grade.",
+          source: "typed",
+          createdAt: "2026-07-16T12:00:00.000Z",
+          extraction: "mock"
+        }
+      ],
+      facts: [
+        {
+          id: "persisted-fact",
+          interviewId: "persisted-interview",
+          label: "Grade",
+          value: "fourth grade",
+          status: "patient_reported",
+          sourceSnippet: "fourth grade"
+        }
+      ]
+    };
+
+    render(<FamilyExperience state={withFamily(persistedFamily)} dispatch={vi.fn()} passcode="" />);
+
+    expect(screen.getByRole("heading", { name: "Review what we heard" }).closest("section")).not.toHaveFocus();
+  });
+
+  it("moves focus to each shortcut destination when activated", async () => {
+    const user = userEvent.setup();
+    render(<FamilyExperience state={withFamily(morganFamilyState)} dispatch={vi.fn()} passcode="" />);
+
+    await user.click(screen.getByRole("link", { name: /Answer a few questions/i }));
+    expect(screen.getByRole("heading", { name: "What support would help?" })).toHaveFocus();
+
+    await user.click(screen.getByRole("link", { name: /Tell us about your child/i }));
+    expect(screen.getByRole("heading", { name: "Tell us what is happening" })).toHaveFocus();
+  });
+
   it("runs the Morgan mock path with atomic family facts, confirmation, deterministic Scott-first resources, saved return state, and timeline", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness />);
@@ -60,9 +123,13 @@ describe("FamilyExperience", () => {
 
     const stateAfterCrunch = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
     expect(stateAfterCrunch.interviews).toHaveLength(1);
-    expect(stateAfterCrunch.facts).toHaveLength(2);
+    expect(stateAfterCrunch.facts).toHaveLength(3);
     expect(stateAfterCrunch.facts.every(({ interviewId }) => interviewId === stateAfterCrunch.interviews[0].id)).toBe(true);
-    expect(stateAfterCrunch.facts.every(({ status }) => status === "patient_reported")).toBe(true);
+    expect(stateAfterCrunch.facts.map(({ label, status }) => ({ label, status }))).toEqual([
+      { label: "Grade", status: "patient_reported" },
+      { label: "Reported diagnosis", status: "patient_reported" },
+      { label: "School concern", status: "inferred" }
+    ]);
     expect(stateAfterCrunch.activeDomains).toEqual(["school_iep", "waivers_financial", "parent_support"]);
 
     await user.click(screen.getAllByRole("button", { name: /Confirm this detail/ })[0]);
@@ -73,6 +140,9 @@ describe("FamilyExperience", () => {
     const matched = screen.getByTestId("matched-family-resources");
     const resourceCards = within(matched).getAllByTestId("family-resource-card");
     expect(resourceCards[0]).toHaveAttribute("data-resource-id", "scott_county_exceptional_child_services");
+    const resourceIds = resourceCards.map((card) => card.getAttribute("data-resource-id"));
+    expect(resourceIds).toContain("child_waiver");
+    expect(new Set(resourceIds).size).toBe(resourceIds.length);
     const source = within(resourceCards[0]).getByRole("link", { name: /Open source link.*Scott County Schools/i });
     expect(source).toHaveAttribute(
       "href",
@@ -80,14 +150,55 @@ describe("FamilyExperience", () => {
     );
     expect(source).toHaveAttribute("target", "_blank");
 
+    const nearby = screen.getByRole("region", { name: "Nearby therapeutic recreation" });
+    expect(within(nearby).getByTestId("family-resource-card")).toHaveAttribute(
+      "data-resource-id",
+      "central_kentucky_riding_for_hope"
+    );
+    expect(screen.getAllByText("Central Kentucky Riding for Hope")).toHaveLength(1);
+    expect(stateAfterCrunch.activeDomains).not.toContain("recreation");
+
     await user.click(within(resourceCards[0]).getByRole("button", { name: /Save.*Scott County Schools/i }));
     const saved = screen.getByRole("region", { name: "Saved resources" });
     expect(within(saved).getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();
+    expect(
+      screen
+        .getAllByTestId("family-resource-card")
+        .filter((card) => card.getAttribute("data-resource-id") === "scott_county_exceptional_child_services")
+    ).toHaveLength(1);
+    expect(within(saved).queryByRole("button", { name: /Share.*Scott County Schools/i })).not.toBeInTheDocument();
 
     expect(screen.getByRole("heading", { name: "Now" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Next" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Later" })).toBeVisible();
     expect(screen.getByText("Timing is shown early because only the birth year is known.")).toBeVisible();
+  });
+
+  it("does not attach a late Morgan extraction after the family is reseeded to Casey", async () => {
+    const user = userEvent.setup();
+    const pending = deferred<null>();
+    requestFamilyInterview.mockReturnValueOnce(pending.promise);
+    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+
+    await user.click(screen.getByRole("button", { name: "Find support areas" }));
+    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
+    const stateAfterReseed = JSON.parse(
+      screen.getByTestId("family-state").textContent || "null"
+    ) as FamilyNavigatorState;
+    expect(stateAfterReseed.profile?.county).toBe("Perry");
+    expect(stateAfterReseed.interviews).toEqual([]);
+
+    await act(async () => pending.resolve(null));
+    await waitFor(() =>
+      expect(screen.getByLabelText("What would you like help with?")).toHaveValue(caseyFamilyState.interviewDraft)
+    );
+    const stateAfterLateResponse = JSON.parse(
+      screen.getByTestId("family-state").textContent || "null"
+    ) as FamilyNavigatorState;
+    expect(stateAfterLateResponse.profile?.county).toBe("Perry");
+    expect(stateAfterLateResponse.interviews).toEqual([]);
+    expect(stateAfterLateResponse.facts).toEqual([]);
+    expect(stateAfterLateResponse.activeDomains).toEqual([]);
   });
 
   it("uses exact fallback resources only for an honest domain zero-match, not for no selected domains", () => {
@@ -131,7 +242,7 @@ describe("FamilyExperience", () => {
     };
     render(<FamilyExperience state={withFamily(family)} dispatch={vi.fn()} passcode="" />);
 
-    expect(screen.getByText("Add a family profile to see planning moments.")).toBeVisible();
+    expect(screen.getByText("No planning moments match the current profile yet.")).toBeVisible();
   });
 
   it("requires consent for sharing, writes one shared audit event, and sinks enrolled resources without urgency", async () => {
@@ -161,15 +272,84 @@ describe("FamilyExperience", () => {
     expect(orderedCards.at(-1)).toHaveAttribute("data-resource-id", "michelle_p_waiver");
   });
 
-  it("renders Spanish-only chrome and suppresses English mock rationales", async () => {
+  it("keeps enrolled CHILD visible after the four unenrolled waiver choices and suppresses its urgency", () => {
+    const family: FamilyNavigatorState = {
+      ...morganFamilyState,
+      activeDomains: ["waivers_financial"],
+      alreadyEnrolled: ["child_waiver"]
+    };
+    render(<FamilyExperience state={withFamily(family)} dispatch={vi.fn()} passcode="" />);
+
+    const matched = screen.getByTestId("matched-family-resources");
+    const cards = within(matched).getAllByTestId("family-resource-card");
+    const ids = cards.map((card) => card.getAttribute("data-resource-id"));
+    expect(ids).toContain("child_waiver");
+    expect(ids.at(-1)).toBe("child_waiver");
+    const child = matched.querySelector('[data-resource-id="child_waiver"]') as HTMLElement;
+    expect(within(child).getByText("Already receiving this")).toBeVisible();
+    expect(within(child).queryByText(/Why to act now/i)).not.toBeInTheDocument();
+  });
+
+  it("does not duplicate CKRH when recreation is primary and hides therapeutic recreation outside age or county", () => {
+    const recreationFamily: FamilyNavigatorState = {
+      ...morganFamilyState,
+      activeDomains: ["recreation"]
+    };
+    const { rerender } = render(
+      <FamilyExperience state={withFamily(recreationFamily)} dispatch={vi.fn()} passcode="" />
+    );
+
+    expect(screen.getAllByText("Central Kentucky Riding for Hope")).toHaveLength(1);
+    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+
+    rerender(
+      <FamilyExperience
+        state={withFamily({
+          ...morganFamilyState,
+          profile: { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 1 },
+          activeDomains: ["school_iep"]
+        })}
+        dispatch={vi.fn()}
+        passcode=""
+      />
+    );
+    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+
+    rerender(
+      <FamilyExperience
+        state={withFamily({
+          ...morganFamilyState,
+          profile: { ...morganFamilyState.profile!, county: "Boone" },
+          activeDomains: ["school_iep"]
+        })}
+        dispatch={vi.fn()}
+        passcode=""
+      />
+    );
+    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+  });
+
+  it("renders substantive localized Spanish mock facts, rationales, resources, and source-language notice", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily(morganFamilyState, "es")} />);
+    const spanishFamily: FamilyNavigatorState = {
+      ...morganFamilyState,
+      interviewDraft:
+        "Mi hija está en cuarto grado en Georgetown. A mi hija le diagnosticaron dislexia y TDAH hace un par de meses. La tarea de lectura es una batalla cada noche y no sé qué pedirle a la escuela. El dinero está escaso y sigo escuchando sobre exenciones, pero no tengo idea de por dónde empezar."
+    };
+    render(<ReducerHarness initialState={withFamily(spanishFamily, "es")} />);
 
     expect(screen.getByTestId("family-experience")).toHaveAttribute("lang", "es");
     expect(screen.getByText(/pendiente de revisi.*hablante nativ/i)).toBeVisible();
     await user.click(screen.getByRole("button", { name: /Buscar.*reas de apoyo/i }));
     await screen.findByRole("heading", { name: /Revisa lo que entendimos/i });
-    expect(screen.queryByText("The caregiver described school, IEP, or reading support needs.")).not.toBeInTheDocument();
+    expect(screen.getByText("Grado")).toBeVisible();
+    expect(screen.getAllByText("cuarto grado")[0]).toBeVisible();
+    expect(screen.getByText("Diagnóstico informado")).toBeVisible();
+    expect(screen.getByText("dislexia y TDAH")).toBeVisible();
+    expect(screen.getByText("Preocupación escolar")).toBeVisible();
+    expect(screen.getByText(/La persona cuidadora describió necesidades de apoyo escolar/)).toBeVisible();
+    expect(screen.getByText(/detalles proporcionados por las organizaciones.*idioma original/i)).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();
   });
 
   it("clears review and resource presentation before a safety redirect", async () => {

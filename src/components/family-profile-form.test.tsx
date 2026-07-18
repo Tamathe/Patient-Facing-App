@@ -105,6 +105,37 @@ describe("FamilyProfileForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/valid four-digit birth year/i);
   });
 
+  it.each([
+    ["en" as const, "", "Other diagnosis label", /enter the other diagnosis wording/i],
+    ["en" as const, "   ", "Other diagnosis label", /enter the other diagnosis wording/i],
+    ["es" as const, "", "Otro diagnóstico", /ingresa las palabras del otro diagnóstico/i],
+    ["es" as const, "   ", "Otro diagnóstico", /ingresa las palabras del otro diagnóstico/i]
+  ])("rejects an empty or whitespace-only Other diagnosis with a localized linked error in %s", async (language, value, label, error) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <FamilyProfileForm
+        language={language}
+        initialProfile={existingProfile}
+        onSave={onSave}
+        onSeedExample={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: language === "es" ? "Otro" : "Other" }));
+    const input = screen.getByLabelText(label);
+    if (value) {
+      await user.type(input, value);
+    }
+    await user.click(screen.getByRole("button", { name: language === "es" ? "Guardar perfil familiar" : "Save family profile" }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(error);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", alert.id);
+  });
+
   it("keeps Morgan and Casey as example-button labels and dispatches only the selected fixture", async () => {
     const user = userEvent.setup();
     const onSeedExample = vi.fn();

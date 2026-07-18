@@ -113,16 +113,86 @@ describe("FamilyInterview", () => {
     ]);
   });
 
+  it("drops every live model-authored follow-up before it can render", async () => {
+    requestFamilyInterview.mockResolvedValueOnce({
+      facts: [],
+      domains: [{ domain: "school_iep" }],
+      followUps: [
+        "Ask Riley's pediatrician whether this is autism.",
+        "Apply to an unverified resource called FastTrack Supports.",
+        "What has the teacher noticed?"
+      ]
+    });
+    const onExtracted = vi.fn();
+    renderInterview({ onExtracted });
+
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+
+    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
+    expect(onExtracted.mock.calls[0][0].followUps).toEqual([]);
+  });
+
+  it("drops an unsupported live diagnosis fact even when its source snippet is verbatim", async () => {
+    requestFamilyInterview.mockResolvedValueOnce({
+      facts: [
+        { label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" },
+        { label: "Reported diagnosis", value: "autism", sourceSnippet: "fourth grade" },
+        { label: "Observation", value: "autism", sourceSnippet: "fourth grade" },
+        { label: "Reported diagnosis", value: "dyslexia", sourceSnippet: "fourth grade" },
+        {
+          label: "Reported diagnosis",
+          value: "dyslexia and ADHD",
+          sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+        },
+        {
+          label: "School concern",
+          value: "Reading and homework may need support",
+          sourceSnippet: "Reading homework … nightly battle"
+        }
+      ],
+      domains: [{ domain: "school_iep", rationale: "The caregiver described school concerns." }],
+      followUps: []
+    });
+    const onExtracted = vi.fn();
+    renderInterview({
+      profile: {
+        ...morganFamilyState.profile!,
+        diagnoses: [...morganFamilyState.profile!.diagnoses, { id: "profile-autism", label: "autism" }]
+      },
+      onExtracted
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+
+    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
+    expect(onExtracted.mock.calls[0][0].facts).toEqual([
+      { label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" },
+      {
+        label: "Reported diagnosis",
+        value: "dyslexia and ADHD",
+        sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+      },
+      {
+        label: "School concern",
+        value: "Reading and homework may need support",
+        sourceSnippet: "Reading homework … nightly battle"
+      }
+    ]);
+  });
+
   it.each([
     "honestly she's been saying she wants to die",
+    "mi hija dice que quiere morir",
+    "quiero morir",
+    "me quiero matar",
+    "ya no quiero vivir",
+    "mi hijo dice que ya no quiere vivir",
+    "mi hija se está cortando",
     "I have chest pain and cannot breathe",
     "There is no food today"
   ])("routes safety text before networking or extraction: %s", async (text) => {
     const onExtracted = vi.fn();
     const onSafetyEscalation = vi.fn();
-    push.mockImplementationOnce(() => {
-      expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
-    });
     renderInterview({ draft: text, onExtracted, onSafetyEscalation });
     fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
 
@@ -155,6 +225,22 @@ describe("FamilyInterview", () => {
     expect(onDraftChange).toHaveBeenLastCalledWith("Existing words first final second final");
     expect(requestFamilyInterview).not.toHaveBeenCalled();
     expect(onExtracted).not.toHaveBeenCalled();
+  });
+
+  it("ignores a browser replay of the same final speech result index", async () => {
+    installSpeech();
+    const onDraftChange = vi.fn();
+    renderInterview({ draft: "Existing words", onDraftChange });
+    fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
+    const repeatedFinal = speechResult("one final phrase");
+
+    act(() => recognition?.onresult?.(repeatedFinal));
+    act(() => recognition?.onresult?.(repeatedFinal));
+
+    expect(screen.getByLabelText(/what would you like help with/i)).toHaveValue(
+      "Existing words one final phrase"
+    );
+    expect(onDraftChange).toHaveBeenCalledTimes(1);
   });
 
   it("ignores interim speech results", async () => {
@@ -282,11 +368,11 @@ describe("FamilyInterview", () => {
     });
   });
 
-  it("reconciles the latest external draft after an atomic pending submission", async () => {
+  it("invalidates a pending submission when its external draft is replaced and reconciles the latest draft", async () => {
     const draftA = "Riley was diagnosed with dyslexia.";
     const draftB = "Casey is in grade 4.";
     const profileA = { ...morganFamilyState.profile!, childFirstName: "Riley" };
-    const profileB = { ...morganFamilyState.profile!, childFirstName: "Casey" };
+    const profileB = profileA;
     const pending = deferred<null>();
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
     const onDraftChange = vi.fn();
@@ -304,33 +390,18 @@ describe("FamilyInterview", () => {
     expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftA);
 
     await act(async () => pending.resolve(null));
-    await waitFor(() =>
-      expect(onExtracted).toHaveBeenCalledWith(
-        {
-          facts: [
-            {
-              label: "Reported diagnosis",
-              value: "dyslexia",
-              sourceSnippet: "Riley was diagnosed with dyslexia"
-            }
-          ],
-          domains: [],
-          followUps: []
-        },
-        { extraction: "mock", source: "typed", rawText: draftA }
-      )
-    );
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftB));
+    expect(onExtracted).not.toHaveBeenCalled();
     expect(requestFamilyInterview.mock.calls[0][0]).toEqual(
       expect.objectContaining({ text: draftA, profile: profileA })
     );
-    await waitFor(() => expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftB));
 
     fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
-    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(requestFamilyInterview.mock.calls[1][0]).toEqual(
       expect.objectContaining({ text: draftB, profile: profileB })
     );
-    expect(onExtracted.mock.calls[1]).toEqual([
+    expect(onExtracted.mock.calls[0]).toEqual([
       {
         facts: [{ label: "Grade", value: "grade 4", sourceSnippet: "grade 4" }],
         domains: [],
@@ -338,5 +409,29 @@ describe("FamilyInterview", () => {
       },
       { extraction: "mock", source: "typed", rawText: draftB }
     ]);
+  });
+
+  it("invalidates a pending submission when the profile is replaced without changing the draft", async () => {
+    const draft = "Riley is in fourth grade.";
+    const profileA = { ...morganFamilyState.profile!, childFirstName: "Riley" };
+    const profileB = { ...morganFamilyState.profile!, childFirstName: "Casey", county: "Perry" };
+    const pending = deferred<null>();
+    requestFamilyInterview.mockReturnValueOnce(pending.promise);
+    const onExtracted = vi.fn();
+    const baseProps = {
+      draft,
+      passcode: "secret",
+      language: "en" as const,
+      onDraftChange: vi.fn(),
+      onExtracted
+    };
+    const { rerender } = render(<FamilyInterview {...baseProps} profile={profileA} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    rerender(<FamilyInterview {...baseProps} profile={profileB} />);
+    await act(async () => pending.resolve(null));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /find support areas/i })).toBeEnabled());
+    expect(onExtracted).not.toHaveBeenCalled();
   });
 });

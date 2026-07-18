@@ -49,7 +49,7 @@ export function FamilyStageTimeline({ family, language, now = new Date() }: Fami
       </h2>
       <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "timelineIntro")}</p>
       {!family.profile ? (
-        <p className="mt-4 text-sm text-ink/70">{tFamily(language, "timelineEmpty")}</p>
+        <p className="mt-4 text-sm text-ink/70">{tFamily(language, "timelineNoProfile")}</p>
       ) : (
         <>
           {family.profile.birthMonth === undefined ? (

@@ -25,6 +25,7 @@ export type FamilyStringKey =
   | "profileEdit"
   | "profileBirthYearError"
   | "profileBirthMonthError"
+  | "profileOtherDiagnosisError"
   | "diagnosisAutism"
   | "diagnosisAdhd"
   | "diagnosisDyslexia"
@@ -100,8 +101,26 @@ export type FamilyStringKey =
   | "factConfirmed"
   | "followUpsTitle"
   | "domainRationaleTitle"
+  | "factGradeLabel"
+  | "factReportedDiagnosisLabel"
+  | "factSchoolConcernLabel"
+  | "factSchoolConcernValue"
+  | "rationaleEarlyIntervention"
+  | "rationaleTherapies"
+  | "rationaleSchoolIep"
+  | "rationaleWaiversFinancial"
+  | "rationaleRespite"
+  | "rationaleParentSupport"
+  | "rationaleSiblingSupport"
+  | "rationaleTransportation"
+  | "rationaleFuturePlanning"
+  | "rationaleDiagnosisEducation"
+  | "rationaleRecreation"
   | "resourcesTitle"
   | "resourcesIntro"
+  | "resourceSourceLanguageNotice"
+  | "nearbyTherapeuticRecreationTitle"
+  | "nearbyTherapeuticRecreationIntro"
   | "resourceSource"
   | "resourceVerified"
   | "resourceAgeBand"
@@ -138,6 +157,7 @@ export type FamilyStringKey =
   | "timelineNow"
   | "timelineNext"
   | "timelineLater"
+  | "timelineNoProfile"
   | "timelineEmpty"
   | "timelineYearOnlyNotice"
   | "timelineFirstStepsTitle"
@@ -185,6 +205,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     profileEdit: "Edit family profile",
     profileBirthYearError: "Enter a valid four-digit birth year.",
     profileBirthMonthError: "Choose a birth month from 1 through 12.",
+    profileOtherDiagnosisError: "Enter the other diagnosis wording your family was given.",
     diagnosisAutism: "Autism",
     diagnosisAdhd: "ADHD",
     diagnosisDyslexia: "Dyslexia",
@@ -260,8 +281,26 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factConfirmed: "Detail confirmed",
     followUpsTitle: "Questions to consider",
     domainRationaleTitle: "Why this support area appeared",
+    factGradeLabel: "Grade",
+    factReportedDiagnosisLabel: "Reported diagnosis",
+    factSchoolConcernLabel: "School concern",
+    factSchoolConcernValue: "Reading and homework may need support",
+    rationaleEarlyIntervention: "The caregiver described speech or talking concerns for a child under age three.",
+    rationaleTherapies: "The caregiver described speech, talking, or therapy needs.",
+    rationaleSchoolIep: "The caregiver described school, IEP, or reading support needs.",
+    rationaleWaiversFinancial: "The caregiver asked about waivers or financial support.",
+    rationaleRespite: "The caregiver described needing a break from caregiving.",
+    rationaleParentSupport: "The caregiver described feeling overwhelmed or unsure where to start.",
+    rationaleSiblingSupport: "The caregiver asked about support for a sibling.",
+    rationaleTransportation: "The caregiver described a ride or transportation need.",
+    rationaleFuturePlanning: "The caregiver asked about transition to adulthood or future planning.",
+    rationaleDiagnosisEducation: "The caregiver asked for general information about a reported diagnosis.",
+    rationaleRecreation: "The caregiver asked about clubs, sports, horses, or recreation.",
     resourcesTitle: "Matched resources",
     resourcesIntro: "These options are matched by county, age, and the support areas you selected. The source link is the authority for current rules.",
+    resourceSourceLanguageNotice: "Details supplied by resource organizations may remain in their original language while a reviewed translation is pending.",
+    nearbyTherapeuticRecreationTitle: "Nearby therapeutic recreation",
+    nearbyTherapeuticRecreationIntro: "This separate local option matches the child's county and age and offers both recreation and therapeutic support. It did not create a new support-area inference.",
     resourceSource: "Source",
     resourceVerified: "Checked on {date}",
     resourceAgeBand: "Age range",
@@ -298,7 +337,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelineNow: "Now",
     timelineNext: "Next",
     timelineLater: "Later",
-    timelineEmpty: "Add a family profile to see planning moments.",
+    timelineNoProfile: "Add a family profile to see planning moments.",
+    timelineEmpty: "No planning moments match the current profile yet.",
     timelineYearOnlyNotice: "Timing is shown early because only the birth year is known.",
     timelineFirstStepsTitle: "Contact First Steps now",
     timelineFirstStepsBody: "First Steps does not accept new referrals in the final 45 days before age three. Contact the local point of entry to confirm whether the referral window remains open and ask about transition options if it does not.",
@@ -344,6 +384,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     profileEdit: "Editar perfil familiar",
     profileBirthYearError: "Ingresa un año de nacimiento válido de cuatro dígitos.",
     profileBirthMonthError: "Elige un mes de nacimiento del 1 al 12.",
+    profileOtherDiagnosisError: "Ingresa las palabras del otro diagnóstico que recibió tu familia.",
     diagnosisAutism: "Autismo",
     diagnosisAdhd: "TDAH",
     diagnosisDyslexia: "Dislexia",
@@ -419,8 +460,26 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factConfirmed: "Dato confirmado",
     followUpsTitle: "Preguntas para considerar",
     domainRationaleTitle: "Por qué apareció esta área de apoyo",
+    factGradeLabel: "Grado",
+    factReportedDiagnosisLabel: "Diagnóstico informado",
+    factSchoolConcernLabel: "Preocupación escolar",
+    factSchoolConcernValue: "La lectura y la tarea podrían necesitar apoyo",
+    rationaleEarlyIntervention: "La persona cuidadora describió preocupaciones sobre el habla de un niño menor de tres años.",
+    rationaleTherapies: "La persona cuidadora describió necesidades de habla, lenguaje o terapia.",
+    rationaleSchoolIep: "La persona cuidadora describió necesidades de apoyo escolar, del IEP o de lectura.",
+    rationaleWaiversFinancial: "La persona cuidadora preguntó por exenciones o apoyo económico.",
+    rationaleRespite: "La persona cuidadora describió la necesidad de un descanso del cuidado.",
+    rationaleParentSupport: "La persona cuidadora describió sentirse abrumada o no saber por dónde empezar.",
+    rationaleSiblingSupport: "La persona cuidadora preguntó por apoyo para un hermano o hermana.",
+    rationaleTransportation: "La persona cuidadora describió una necesidad de transporte.",
+    rationaleFuturePlanning: "La persona cuidadora preguntó por la transición a la adultez o la planificación futura.",
+    rationaleDiagnosisEducation: "La persona cuidadora pidió información general sobre un diagnóstico informado.",
+    rationaleRecreation: "La persona cuidadora preguntó por clubes, deportes, caballos o recreación.",
     resourcesTitle: "Recursos encontrados",
     resourcesIntro: "Estas opciones coinciden con el condado, la edad y las áreas elegidas. El enlace de la fuente es la autoridad para las reglas actuales.",
+    resourceSourceLanguageNotice: "Los detalles proporcionados por las organizaciones pueden permanecer en su idioma original mientras esperan una traducción revisada.",
+    nearbyTherapeuticRecreationTitle: "Recreación terapéutica cercana",
+    nearbyTherapeuticRecreationIntro: "Esta opción local separada coincide con el condado y la edad del niño y ofrece recreación y apoyo terapéutico. No creó una nueva inferencia de área de apoyo.",
     resourceSource: "Fuente",
     resourceVerified: "Revisado el {date}",
     resourceAgeBand: "Rango de edad",
@@ -457,7 +516,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelineNow: "Ahora",
     timelineNext: "Próximo",
     timelineLater: "Más adelante",
-    timelineEmpty: "Agrega un perfil familiar para ver momentos de planificación.",
+    timelineNoProfile: "Agrega un perfil familiar para ver momentos de planificación.",
+    timelineEmpty: "Aún no hay momentos de planificación que coincidan con el perfil actual.",
     timelineYearOnlyNotice: "El momento se muestra temprano porque solo se conoce el año de nacimiento.",
     timelineFirstStepsTitle: "Contacta a First Steps ahora",
     timelineFirstStepsBody: "First Steps no acepta referidos nuevos durante los últimos 45 días antes de los tres años. Contacta el punto de entrada local para confirmar si la ventana sigue abierta y pregunta por opciones de transición si ya cerró.",

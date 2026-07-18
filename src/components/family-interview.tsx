@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { requestFamilyInterview } from "@/ai/family-interview-provider";
 import { extractFamilyInterviewMock, familyInterviewInputSchema, type FamilyInterviewResult } from "@/domain/family-interview";
-import { stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
+import { filterUnsupportedDiagnosisFacts, stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
 import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { screenSocialEmergency } from "@/domain/social-screen";
 import type { FamilyProfile } from "@/domain/types";
@@ -60,11 +60,21 @@ function speechRecognitionConstructor(): (new () => SpeechRecognitionLike) | nul
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
 }
 
-function sanitizeResult(result: FamilyInterviewResult, profile: FamilyProfile): SanitizedFamilyInterviewResult {
+function sanitizeResult(
+  result: FamilyInterviewResult,
+  profile: FamilyProfile,
+  rawText: string
+): SanitizedFamilyInterviewResult {
   return {
     ...result,
-    domains: stripUnsafeFamilyRationales(result.domains, profile.childFirstName)
+    facts: filterUnsupportedDiagnosisFacts(result.facts, rawText, profile),
+    domains: stripUnsafeFamilyRationales(result.domains, profile.childFirstName),
+    followUps: []
   };
+}
+
+function familyContextKey(profile: FamilyProfile, draft: string, language: Language): string {
+  return JSON.stringify({ profile, draft, language });
 }
 
 export function FamilyInterview({
@@ -94,10 +104,13 @@ export function FamilyInterview({
   const [error, setError] = useState<string | null>(draft.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recognitionGenerationRef = useRef(0);
+  const acceptedSpeechResultsRef = useRef(new Set<string>());
   const inputSourceRef = useRef<"typed" | "voice" | "mixed">("typed");
   const lastLocalDraftRef = useRef(draft);
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
+  const latestContextKeyRef = useRef(familyContextKey(profile, draft, language));
+  latestContextKeyRef.current = familyContextKey(profile, draft, language);
 
   const cleanupRecognition = useCallback(
     (target = recognitionRef.current, stop = true, updateState = true): void => {
@@ -182,6 +195,7 @@ export function FamilyInterview({
     const Recognition = speechRecognitionConstructor();
     if (!Recognition || text.length >= FAMILY_INTERVIEW_MIC_DISABLE_AT) return;
     const recognition = new Recognition();
+    acceptedSpeechResultsRef.current.clear();
     recognition.lang = language === "es" ? "es-US" : "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -199,7 +213,12 @@ export function FamilyInterview({
       for (let index = start; index < event.results.length; index += 1) {
         const result = event.results[index];
         const first = result?.[0];
-        if (first && result.isFinal === true) appendTranscript(first.transcript);
+        if (first && result.isFinal === true) {
+          const resultKey = `${index}:${first.transcript.trim()}`;
+          if (acceptedSpeechResultsRef.current.has(resultKey)) continue;
+          acceptedSpeechResultsRef.current.add(resultKey);
+          appendTranscript(first.transcript);
+        }
       }
     };
     recognition.onerror = () => cleanupRecognition(recognition, false);
@@ -225,7 +244,8 @@ export function FamilyInterview({
       },
       source: inputSourceRef.current,
       passcode,
-      language
+      language,
+      contextKey: latestContextKeyRef.current
     } as const;
     cleanupRecognition();
     let pending = false;
@@ -257,10 +277,12 @@ export function FamilyInterview({
       } catch {
         live = null;
       }
+      if (!mountedRef.current || latestContextKeyRef.current !== snapshot.contextKey) return;
       const extraction = live ? "live" : "mock";
-      const result = live ?? extractFamilyInterviewMock(snapshot.rawText, snapshot.profile);
+      const result =
+        live ?? extractFamilyInterviewMock(snapshot.rawText, snapshot.profile, new Date(), snapshot.language);
       if (mountedRef.current) {
-        onExtracted(sanitizeResult(result, snapshot.profile), {
+        onExtracted(sanitizeResult(result, snapshot.profile, snapshot.rawText), {
           extraction,
           source: snapshot.source,
           rawText: snapshot.rawText

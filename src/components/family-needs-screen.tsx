@@ -65,7 +65,7 @@ export function FamilyNeedsScreen({ language, initialAnswers, onSubmit }: Family
 
   return (
     <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-screen-title">
-      <h2 id="family-screen-title" className="text-xl font-semibold">
+      <h2 id="family-screen-title" tabIndex={-1} className="text-xl font-semibold">
         {tFamily(language, "screenTitle")}
       </h2>
       <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "screenIntro")}</p>

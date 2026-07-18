@@ -202,7 +202,11 @@ export function FamilyResourceCard({
           {tFamily(language, "resourceShare")}
         </button>
         <p role="status" aria-live="polite" className="mt-2 text-sm font-medium text-care">
-          {shared ? tFamily(language, "resourceShareComplete") : saved ? tFamily(language, "resourceSaved") : ""}
+          {shared
+            ? tFamily(language, "resourceShareComplete")
+            : saveRequested
+              ? tFamily(language, "resourceSaved")
+              : ""}
         </p>
       </div>
     </article>

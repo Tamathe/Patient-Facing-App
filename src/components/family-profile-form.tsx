@@ -69,6 +69,7 @@ export function FamilyProfileForm({
     () => initialProfile?.diagnoses.map((diagnosis) => ({ ...diagnosis })) ?? []
   );
   const [birthYearError, setBirthYearError] = useState(false);
+  const [otherDiagnosisError, setOtherDiagnosisError] = useState(false);
   const [saved, setSaved] = useState(false);
 
   function markEdited(): void {
@@ -77,6 +78,9 @@ export function FamilyProfileForm({
 
   function toggleDiagnosis(label: DevDiagnosis): void {
     markEdited();
+    if (label === "other") {
+      setOtherDiagnosisError(false);
+    }
     setDiagnoses((current) => {
       const existing = current.find((diagnosis) => diagnosis.label === label);
       if (existing) {
@@ -102,8 +106,12 @@ export function FamilyProfileForm({
       !Number.isInteger(parsedBirthYear) ||
       parsedBirthYear < 1900 ||
       parsedBirthYear > currentYear;
+    const invalidOtherDiagnosis = diagnoses.some(
+      (diagnosis) => diagnosis.label === "other" && !diagnosis.otherLabel?.trim()
+    );
     setBirthYearError(invalidBirthYear);
-    if (invalidBirthYear || county.length === 0) {
+    setOtherDiagnosisError(invalidOtherDiagnosis);
+    if (invalidBirthYear || invalidOtherDiagnosis || county.length === 0) {
       return;
     }
 
@@ -281,12 +289,26 @@ export function FamilyProfileForm({
                         {tFamily(language, "profileOtherDiagnosisLabel")}
                         <input
                           id="family-other-diagnosis-label"
-                          required
+                          aria-required="true"
+                          aria-invalid={otherDiagnosisError}
+                          aria-describedby={otherDiagnosisError ? "family-other-diagnosis-error" : undefined}
                           value={diagnosis.otherLabel ?? ""}
                           placeholder={tFamily(language, "profileOtherDiagnosisPlaceholder")}
-                          onChange={(event) => updateDiagnosis(option.label, { otherLabel: event.target.value })}
+                          onChange={(event) => {
+                            setOtherDiagnosisError(false);
+                            updateDiagnosis(option.label, { otherLabel: event.target.value });
+                          }}
                           className={`min-h-12 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
                         />
+                        {otherDiagnosisError ? (
+                          <span
+                            id="family-other-diagnosis-error"
+                            role="alert"
+                            className="text-sm font-medium text-rose-700"
+                          >
+                            {tFamily(language, "profileOtherDiagnosisError")}
+                          </span>
+                        ) : null}
                       </label>
                     ) : null}
                     <label className="grid gap-1 text-sm">

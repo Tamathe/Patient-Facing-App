@@ -308,7 +308,7 @@ Deliberately **not** a notification system (the app has none — all time checks
 3. **Crunch** (the live LLM path — mock is the offline contingency) → facts render (grade: 4th — patient_reported; diagnoses — patient_reported; school concern — inferred) → confirm one → domains: school_iep, waivers_financial, parent_support.
 4. **Resources** → Scott-first cards: the district's named special-ed contacts, "ARC is Kentucky's word for the IEP meeting" primer, KY-SPIN's free helpline, Michelle P. with the dated waitlist line ("for Michelle P., 8 years is the tail — average ~3.5 — though an ~8-year *average* is real for the SCL waiver; either way the Michelle P. list is date-ordered, so applying now is the move"), CKRH at the Horse Park. Tap a `sourceUrl` — it's real, it loads. Then scroll to the **timeline card**: *now* — apply Michelle P., prep the ARC meeting; *next month* — parent group; *later* — sibling support. "This is the 'right thing at the right time' part of your idea."
 5. **The safety beat** — type *"honestly she's been saying she wants to die"* → crisis UI, 988 call/text buttons, no resources, composer locked until acknowledged. "This is what a healthcare-grade version of this idea has that a prototype doesn't."
-6. **The currency beat** — CHILD waiver card: "approved to launch this January — CHFS doesn't publish slot or waitlist status yet, so we phone-confirmed enrollment status at the waiver help desk before today" (never assert the aggregator's ~100-slots figure unattributed). Add the future-planning example: "STABLE's age-of-onset ceiling moved from 26 to 46 on January 1 — most Kentucky decks are still stale on that." Then the do-not-seed list: "and here's what we *removed* that the state's own directory still lists."
+6. **The currency beat** — CHILD waiver card: "CHFS currently accepts applications through kynect, an ADRC, or a community mental health center. CHFS does not publish a slot count on the program page, so this demo makes no phone-confirmed global enrollment-status claim" (never assert the aggregator's ~100-slots figure unattributed). Add the future-planning example: "STABLE's age-of-onset ceiling moved from 26 to 46 on January 1 — most Kentucky decks are still stale on that." Then the do-not-seed list: "and here's what we *removed* that the state's own directory still lists."
 7. **Perry variant** (Casey chip): age-2 speech delay → First Steps front and center with the 45-days-before-3 cutoff — "same tool, opposite corner of the state, different right-now answer."
 8. **Zoom out** — Menu: food lens, eye screening, glucose, the same safety gate everywhere. "One platform; this took days, not a vendor contract."
 
@@ -316,7 +316,7 @@ Deliberately **not** a notification system (the app has none — all time checks
 
 - `npm run check` (lint + vitest + build), `npm run crisis:gate`, and the e2e suite green with the new corpus cases.
 - Full golden path works with zero API key (mock extractor) and live with `?k=` passcode on the deployed app.
-- Every seeded `sourceUrl` verified within 30 days of demo day; the four named human-verify items (SSI, STABLE, Sibling Support directory, CHILD enrollment status) checked by hand.
+- Every seeded `sourceUrl` verified within 30 days of demo day; the three named human-verify items (SSI, STABLE, Sibling Support directory) checked by hand.
 - The six caregiver-voice regression strings hard-escalate on every free-text surface (family interview, home composer, chat).
 - The 8 demo-script beats execute on a phone without dev tools.
 

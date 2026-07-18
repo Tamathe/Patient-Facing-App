@@ -53,7 +53,7 @@ describe("family interview contract", () => {
 });
 
 describe("deterministic family interview extraction", () => {
-  it("extracts Morgan's explicit grade and diagnoses with expected domains", () => {
+  it("extracts Morgan's explicit grade and diagnoses plus an inferred school concern", () => {
     const profile = morganFamilyState.profile;
     expect(profile).not.toBeNull();
     const result = extractFamilyInterviewMock(morganFamilyState.interviewDraft, profile!, new Date("2026-07-17T12:00:00Z"));
@@ -64,10 +64,68 @@ describe("deterministic family interview extraction", () => {
         label: "Reported diagnosis",
         value: "dyslexia and ADHD",
         sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+      },
+      {
+        label: "School concern",
+        value: "Reading and homework may need support",
+        sourceSnippet: "Reading homework … nightly battle"
       }
     ]);
     expect(result.domains.map(({ domain }) => domain)).toEqual(["school_iep", "waivers_financial", "parent_support"]);
     expect(result.domains.every(({ rationale }) => !/Riley has|your child has|sounds like/i.test(rationale))).toBe(true);
+  });
+
+  it("extracts the exact Spanish Morgan path with localized facts and rationales", () => {
+    const text =
+      "Mi hija está en cuarto grado en Georgetown. A mi hija le diagnosticaron dislexia y TDAH hace un par de meses. La tarea de lectura es una batalla cada noche y no sé qué pedirle a la escuela. El dinero está escaso y sigo escuchando sobre exenciones, pero no tengo idea de por dónde empezar.";
+    const result = extractFamilyInterviewMock(text, morganFamilyState.profile!, new Date("2026-07-17T12:00:00Z"), "es");
+
+    expect(result.facts).toEqual([
+      { label: "Grado", value: "cuarto grado", sourceSnippet: "cuarto grado" },
+      {
+        label: "Diagnóstico informado",
+        value: "dislexia y TDAH",
+        sourceSnippet: "A mi hija le diagnosticaron dislexia y TDAH"
+      },
+      {
+        label: "Preocupación escolar",
+        value: "La lectura y la tarea podrían necesitar apoyo",
+        sourceSnippet: "La tarea de lectura … una batalla cada noche"
+      }
+    ]);
+    expect(result.domains).toEqual([
+      {
+        domain: "school_iep",
+        rationale: "La persona cuidadora describió necesidades de apoyo escolar, del IEP o de lectura."
+      },
+      {
+        domain: "waivers_financial",
+        rationale: "La persona cuidadora preguntó por exenciones o apoyo económico."
+      },
+      {
+        domain: "parent_support",
+        rationale: "La persona cuidadora describió sentirse abrumada o no saber por dónde empezar."
+      }
+    ]);
+  });
+
+  it.each([
+    ["necesita apoyo con el habla y terapia", ["early_intervention", "therapies"]],
+    ["necesito ayuda con la escuela, el IEP y la lectura", ["school_iep"]],
+    ["preguntas sobre exenciones y apoyo económico", ["waivers_financial"]],
+    ["estoy agotada y necesito un descanso", ["respite", "parent_support"]],
+    ["apoyo para su hermana", ["sibling_support"]],
+    ["necesitamos transporte para las citas", ["transportation"]],
+    ["transición a la adultez y tutela", ["future_planning"]],
+    ["clubes, deportes y recreación", ["recreation"]],
+    ["no sé por dónde empezar", ["parent_support"]]
+  ])("maps Spanish interview %s to the required domains", (text, expected) => {
+    const profile = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 1 };
+    expect(
+      extractFamilyInterviewMock(text, profile, new Date("2026-07-17T12:00:00Z"), "es").domains.map(
+        ({ domain }) => domain
+      )
+    ).toEqual(expected);
   });
 
   it.each([
