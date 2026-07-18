@@ -45,7 +45,7 @@ const FAMILY_RESOURCE_SEARCH_ES = /\b(?:encontrar|buscar|necesito)\b.*\brecursos
 const FAMILY_ORDINARY_CONTEXT_EN = /\b(?:homework|schoolwork|soccer|football|baseball|basketball|sports?|practice|game|activities?)\b/;
 const FAMILY_ORDINARY_CONTEXT_ES = /\b(?:tarea|f[uú]tbol|b[eé]isbol|baloncesto|deportes?|pr[aá]ctica|juego|actividades?)\b/;
 const FAMILY_SDOH_EN = /\b(?:rent|housing|utilit(?:y|ies)|food stamps?|electric(?:ity)? bill|water bill)\b/;
-const FAMILY_SDOH_ES = /\b(?:renta|alquiler|vivienda|servicios|facturas?|luz|agua|comida)\b/;
+const FAMILY_SDOH_ES = /\b(?:renta|alquiler|vivienda|servicios p[uú]blicos|facturas?|luz|agua|comida)\b/;
 
 // Verb rules land the patient on the real feature screen (chat proposes, the
 // form commits) — never a silent write. Checked before the broader nav lexicon.

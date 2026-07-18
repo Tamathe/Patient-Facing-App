@@ -36,15 +36,12 @@ const ROUTE_SYNONYMS: Record<string, string[]> = {
   ],
   "/family": [
     "family navigator",
-    "help for my",
     "help for my daughter",
     "help for my son",
     "help for my child",
-    "support for my",
     "support for my daughter",
     "support for my son",
     "support for my child",
-    "resources for my",
     "resources for my daughter",
     "resources for my son",
     "resources for my child",
@@ -60,6 +57,8 @@ export const CLASSIFIER_HREFS: readonly string[] = Object.keys(ROUTE_SYNONYMS);
 
 const QUESTION_START = /^(why|what|how|should|could|would|does|is|are|when|do)\b/;
 const CONCERN = /\b(confus|understand|worried|worry|scared|nervous|explain)/;
+const ENGLISH_CAREGIVER_RELATIONSHIP =
+  /\b(?:help|support|resources?|services?)\s+(?:for|with)\s+my\s+(?:child|daughter|son|kid)\b/;
 
 export const mockRouteClassifier: RouteClassifier = {
   classify(utterance, allowedHrefs) {
@@ -71,8 +70,15 @@ export const mockRouteClassifier: RouteClassifier = {
       return { kind: "coach", confidence: 0.3 };
     }
 
+    const caregiverRelationship = ENGLISH_CAREGIVER_RELATIONSHIP.test(text);
     const matches = allowedHrefs
-      .map((href) => ({ href, score: (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn)).length }))
+      .map((href) => {
+        const synonymScore = (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn)).length;
+        return {
+          href,
+          score: href === "/family" && caregiverRelationship && synonymScore === 0 ? 1 : synonymScore
+        };
+      })
       .filter((entry) => entry.score > 0)
       .sort((left, right) => right.score - left.score);
 
@@ -81,9 +87,19 @@ export const mockRouteClassifier: RouteClassifier = {
     }
 
     if (matches.length > 1 && matches[1].score === matches[0].score) {
+      const tiedMatches = matches.filter((entry) => entry.score === matches[0].score);
+      const isFamilySupportTie =
+        tiedMatches.length === 2 &&
+        tiedMatches.some((entry) => entry.href === "/family") &&
+        tiedMatches.some((entry) => entry.href === "/support");
+
+      if (caregiverRelationship && isFamilySupportTie) {
+        return { kind: "navigate", href: "/family", confidence: 0.8 };
+      }
+
       return {
         kind: "clarify",
-        candidates: matches.filter((entry) => entry.score === matches[0].score).map((entry) => entry.href),
+        candidates: tiedMatches.map((entry) => entry.href),
         confidence: 0.5
       };
     }

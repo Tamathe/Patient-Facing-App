@@ -29,6 +29,7 @@ describe("mockRouteClassifier", () => {
     "help for my daughter",
     "resources for my child",
     "support for my son",
+    "services with my kid",
     "developmental resources for my kid"
   ])("routes family-specific help intent to the family navigator: %s", (utterance) => {
     expect(mockRouteClassifier.classify(utterance, CLASSIFIER_HREFS)).toMatchObject({
@@ -43,6 +44,16 @@ describe("mockRouteClassifier", () => {
       confidence: 0.3
     });
   });
+
+  it.each(["help for myself", "help for my anxiety"])(
+    "does not treat an incomplete possessive prefix as a caregiver relationship: %s",
+    (utterance) => {
+      expect(mockRouteClassifier.classify(utterance, CLASSIFIER_HREFS)).toEqual({
+        kind: "coach",
+        confidence: 0.3
+      });
+    }
+  );
 
   it("prefers general support when a family phrase also names an SDOH need", () => {
     expect(mockRouteClassifier.classify("housing resources for my child", CLASSIFIER_HREFS)).toMatchObject({

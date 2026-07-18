@@ -194,6 +194,22 @@ describe("decideFrontDoor — Spanish", () => {
     });
   });
 
+  it("keeps generic child services on the family navigator", () => {
+    expect(decideFrontDoor("servicios para mi hijo", es)).toEqual({
+      kind: "navigate",
+      href: "/family",
+      label: "Navegador para familias"
+    });
+  });
+
+  it("routes Spanish public-utility help to general support", () => {
+    expect(decideFrontDoor("ayuda para mi hijo con servicios públicos", es)).toEqual({
+      kind: "navigate",
+      href: "/support",
+      label: "Apoyo"
+    });
+  });
+
   it("routes explicit Spanish developmental intent in alternate word order", () => {
     expect(decideFrontDoor("ayuda a mi hija a encontrar recursos de desarrollo", es)).toEqual({
       kind: "navigate",
