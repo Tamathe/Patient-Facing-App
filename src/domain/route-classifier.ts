@@ -23,17 +23,7 @@ const ROUTE_SYNONYMS: Record<string, string[]> = {
   "/visits": ["visit", "visits", "appointment", "appointments", "checkup"],
   "/chat": ["coach"],
   "/checkin": ["mood", "check in", "check-in", "how i feel", "how i'm feeling"],
-  "/support": [
-    "support",
-    "resource",
-    "rent",
-    "housing",
-    "utilities",
-    "food stamps",
-    "rent support",
-    "housing resources",
-    "utility help"
-  ],
+  "/support": ["support", "resource", "resources", "rent", "housing", "utilities", "food stamps"],
   "/family": [
     "family navigator",
     "help for my daughter",
@@ -59,6 +49,8 @@ const QUESTION_START = /^(why|what|how|should|could|would|does|is|are|when|do)\b
 const CONCERN = /\b(confus|understand|worried|worry|scared|nervous|explain)/;
 const ENGLISH_CAREGIVER_RELATIONSHIP =
   /\b(?:help|support|resources?|services?)\s+(?:for|with)\s+my\s+(?:child|daughter|son|kid)\b/;
+const ENGLISH_CAREGIVER_SDOH =
+  /\b(?:rent|housing|utilit(?:y|ies)|food stamps?|electric(?:ity)? bill|water bill)\b/;
 
 export const mockRouteClassifier: RouteClassifier = {
   classify(utterance, allowedHrefs) {
@@ -70,15 +62,17 @@ export const mockRouteClassifier: RouteClassifier = {
       return { kind: "coach", confidence: 0.3 };
     }
 
-    const caregiverRelationship = ENGLISH_CAREGIVER_RELATIONSHIP.test(text);
+    if (ENGLISH_CAREGIVER_RELATIONSHIP.test(text)) {
+      if (ENGLISH_CAREGIVER_SDOH.test(text) && allowedHrefs.includes("/support")) {
+        return { kind: "navigate", href: "/support", confidence: 0.8 };
+      }
+      if (allowedHrefs.includes("/family")) {
+        return { kind: "navigate", href: "/family", confidence: 0.8 };
+      }
+    }
+
     const matches = allowedHrefs
-      .map((href) => {
-        const synonymScore = (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn)).length;
-        return {
-          href,
-          score: href === "/family" && caregiverRelationship && synonymScore === 0 ? 1 : synonymScore
-        };
-      })
+      .map((href) => ({ href, score: (ROUTE_SYNONYMS[href] ?? []).filter((syn) => text.includes(syn)).length }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => right.score - left.score);
 
@@ -87,19 +81,9 @@ export const mockRouteClassifier: RouteClassifier = {
     }
 
     if (matches.length > 1 && matches[1].score === matches[0].score) {
-      const tiedMatches = matches.filter((entry) => entry.score === matches[0].score);
-      const isFamilySupportTie =
-        tiedMatches.length === 2 &&
-        tiedMatches.some((entry) => entry.href === "/family") &&
-        tiedMatches.some((entry) => entry.href === "/support");
-
-      if (caregiverRelationship && isFamilySupportTie) {
-        return { kind: "navigate", href: "/family", confidence: 0.8 };
-      }
-
       return {
         kind: "clarify",
-        candidates: tiedMatches.map((entry) => entry.href),
+        candidates: matches.filter((entry) => entry.score === matches[0].score).map((entry) => entry.href),
         confidence: 0.5
       };
     }

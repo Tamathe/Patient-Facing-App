@@ -62,6 +62,17 @@ describe("mockRouteClassifier", () => {
     });
   });
 
+  it("keeps caregiver routing inside the allowed href set", () => {
+    expect(mockRouteClassifier.classify("help for my child", ["/numbers"])).toEqual({
+      kind: "coach",
+      confidence: 0.3
+    });
+    expect(mockRouteClassifier.classify("housing resources for my child", ["/family"])).toMatchObject({
+      kind: "navigate",
+      href: "/family"
+    });
+  });
+
   it("defers questions and concerns to the Coach", () => {
     expect(mockRouteClassifier.classify("why does my medicine matter?", CLASSIFIER_HREFS).kind).toBe("coach");
     expect(mockRouteClassifier.classify("my prescriptions are confusing me", CLASSIFIER_HREFS).kind).toBe("coach");
@@ -83,6 +94,14 @@ describe("mockRouteClassifier", () => {
     expect(mockRouteClassifier.classify("care plan and prescriptions", CLASSIFIER_HREFS)).toEqual({
       kind: "navigate",
       href: "/medicines",
+      confidence: 0.8
+    });
+  });
+
+  it("preserves legacy support ranking for plural resources alongside medication", () => {
+    expect(mockRouteClassifier.classify("I need resources and medication", CLASSIFIER_HREFS)).toEqual({
+      kind: "navigate",
+      href: "/support",
       confidence: 0.8
     });
   });
