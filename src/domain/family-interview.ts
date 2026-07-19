@@ -38,16 +38,24 @@ const familyInterviewDomainSchema = z
   })
   .strict();
 
+const familyFollowUpSchema = z
+  .object({
+    question: z.string().min(1).max(200),
+    options: z.array(z.string().min(1).max(60)).max(4)
+  })
+  .strict();
+
 export const familyInterviewResultSchema = z
   .object({
     facts: z.array(familyInterviewFactSchema),
     domains: z.array(familyInterviewDomainSchema),
-    followUps: z.array(z.string())
+    followUps: z.array(familyFollowUpSchema).max(3)
   })
   .strict();
 
 export type FamilyInterviewFact = z.infer<typeof familyInterviewFactSchema>;
 export type FamilyInterviewDomain = z.infer<typeof familyInterviewDomainSchema>;
+export type FamilyFollowUp = z.infer<typeof familyFollowUpSchema>;
 export type FamilyInterviewResult = z.infer<typeof familyInterviewResultSchema>;
 
 const DOMAIN_ORDER: readonly DevNeedDomain[] = [
@@ -77,6 +85,71 @@ const DOMAIN_RATIONALE_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
   diagnosis_education: "rationaleDiagnosisEducation",
   recreation: "rationaleRecreation"
 };
+
+type MockFollowUpKeySet = {
+  question: FamilyStringKey;
+  options: [FamilyStringKey, FamilyStringKey, FamilyStringKey];
+};
+
+const MOCK_FOLLOW_UPS: Array<{ domains: DevNeedDomain[]; keys: MockFollowUpKeySet }> = [
+  {
+    domains: ["school_iep"],
+    keys: {
+      question: "followUpSchoolIepQuestion",
+      options: ["followUpSchoolIepChip1", "followUpSchoolIepChip2", "followUpSchoolIepChip3"]
+    }
+  },
+  {
+    domains: ["therapies"],
+    keys: {
+      question: "followUpTherapiesQuestion",
+      options: ["followUpTherapiesChip1", "followUpTherapiesChip2", "followUpTherapiesChip3"]
+    }
+  },
+  {
+    domains: ["waivers_financial"],
+    keys: {
+      question: "followUpWaiversQuestion",
+      options: ["followUpWaiversChip1", "followUpWaiversChip2", "followUpWaiversChip3"]
+    }
+  },
+  {
+    domains: ["respite", "parent_support"],
+    keys: {
+      question: "followUpRespiteQuestion",
+      options: ["followUpRespiteChip1", "followUpRespiteChip2", "followUpRespiteChip3"]
+    }
+  }
+];
+
+const GENERIC_MOCK_FOLLOW_UPS: MockFollowUpKeySet[] = [
+  {
+    question: "followUpGenericDayQuestion",
+    options: ["followUpGenericDayChip1", "followUpGenericDayChip2", "followUpGenericDayChip3"]
+  },
+  {
+    question: "followUpGenericHelpQuestion",
+    options: ["followUpGenericHelpChip1", "followUpGenericHelpChip2", "followUpGenericHelpChip3"]
+  }
+];
+
+function localizeMockFollowUp(keys: MockFollowUpKeySet, language: Language): FamilyFollowUp {
+  return {
+    question: tFamily(language, keys.question),
+    options: keys.options.map((key) => tFamily(language, key))
+  };
+}
+
+export function buildMockFollowUps(domains: DevNeedDomain[], language: Language): FamilyFollowUp[] {
+  const matched = new Set(domains);
+  const keys = domains.length
+    ? MOCK_FOLLOW_UPS.filter(({ domains: candidateDomains }) => candidateDomains.some((domain) => matched.has(domain))).map(
+        ({ keys: candidateKeys }) => candidateKeys
+      )
+    : GENERIC_MOCK_FOLLOW_UPS;
+
+  return keys.slice(0, 3).map((candidateKeys) => localizeMockFollowUp(candidateKeys, language));
+}
 
 const DIAGNOSIS_TERM =
   "(?:autism|autistic|ADHD|attention\\s+deficit\\s+hyperactivity\\s+disorder|dyslexia|dyslexic|speech(?:\\s+or|\\s*\\/)?\\s*language\\s+disorder|speech\\s+disorder|language\\s+disorder|developmental\\s+delay|intellectual\\s+disability|Down\\s+syndrome)";
@@ -254,7 +327,10 @@ export function extractFamilyInterviewMock(
   return {
     facts: extractExplicitFacts(text, profile, language),
     domains: sanitizedDomains,
-    followUps: []
+    followUps: buildMockFollowUps(
+      sanitizedDomains.map(({ domain }) => domain),
+      language
+    )
   };
 }
 

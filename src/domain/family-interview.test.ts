@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { morganFamilyState } from "./family-fixtures";
 import {
+  buildMockFollowUps,
   extractFamilyInterviewMock,
   familyFactStatus,
   familyInterviewInputSchema,
   parseFamilyInterviewPayload
 } from "./family-interview";
+import type { DevNeedDomain } from "./types";
 
 const validPayload = {
   facts: [{ label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" }],
   domains: [{ domain: "school_iep", rationale: "The caregiver described school concerns." }],
-  followUps: ["What support has the school offered?"]
+  followUps: [{ question: "What support has the school offered?", options: ["Nothing yet", "A meeting is planned"] }]
 };
 
 describe("family interview contract", () => {
@@ -50,6 +52,40 @@ describe("family interview contract", () => {
       })
     ).toBeNull();
   });
+
+  it("enforces the strict follow-up question contract", () => {
+    expect(parseFamilyInterviewPayload({ ...validPayload, followUps: ["What support has the school offered?"] })).toBeNull();
+    expect(
+      parseFamilyInterviewPayload({
+        ...validPayload,
+        followUps: Array.from({ length: 4 }, (_, index) => ({ question: `Question ${index}?`, options: [] }))
+      })
+    ).toBeNull();
+    expect(
+      parseFamilyInterviewPayload({
+        ...validPayload,
+        followUps: [{ question: "Question?", options: ["1", "2", "3", "4", "5"] }]
+      })
+    ).toBeNull();
+    expect(
+      parseFamilyInterviewPayload({
+        ...validPayload,
+        followUps: [{ question: "q".repeat(201), options: [] }]
+      })
+    ).toBeNull();
+    expect(
+      parseFamilyInterviewPayload({
+        ...validPayload,
+        followUps: [{ question: "Question?", options: ["o".repeat(61)] }]
+      })
+    ).toBeNull();
+    expect(
+      parseFamilyInterviewPayload({
+        ...validPayload,
+        followUps: [{ question: "Question?", options: [], advice: "Do this" }]
+      })
+    ).toBeNull();
+  });
 });
 
 describe("deterministic family interview extraction", () => {
@@ -73,6 +109,20 @@ describe("deterministic family interview extraction", () => {
     ]);
     expect(result.domains.map(({ domain }) => domain)).toEqual(["school_iep", "waivers_financial", "parent_support"]);
     expect(result.domains.every(({ rationale }) => !/Riley has|your child has|sounds like/i.test(rationale))).toBe(true);
+    expect(result.followUps).toEqual([
+      {
+        question: "What has the school offered so far?",
+        options: ["Nothing yet", "A meeting is planned", "An evaluation was done"]
+      },
+      {
+        question: "Have you applied for any state programs yet?",
+        options: ["Not yet", "Applied, still waiting", "Not sure"]
+      },
+      {
+        question: "Who can take over for a few hours?",
+        options: ["No one right now", "Family sometimes", "A paid helper"]
+      }
+    ]);
   });
 
   it("extracts the exact Spanish Morgan path with localized facts and rationales", () => {
@@ -107,6 +157,66 @@ describe("deterministic family interview extraction", () => {
         rationale: "La persona cuidadora describió sentirse abrumada o no saber por dónde empezar."
       }
     ]);
+    expect(result.followUps).toEqual([
+      {
+        question: "¿Qué ha ofrecido la escuela hasta ahora?",
+        options: ["Nada todavía", "Hay una reunión planeada", "Ya hicieron una evaluación"]
+      },
+      {
+        question: "¿Has solicitado algún programa estatal?",
+        options: ["Todavía no", "Solicité y sigo esperando", "No estoy seguro"]
+      },
+      {
+        question: "¿Quién puede encargarse por unas horas?",
+        options: ["Nadie por ahora", "A veces la familia", "Una persona de apoyo pagada"]
+      }
+    ]);
+  });
+
+  it("returns two generic orientation questions when no domain matches", () => {
+    expect(extractFamilyInterviewMock("We would like some guidance.", morganFamilyState.profile!).followUps).toEqual([
+      {
+        question: "What part of a typical day is hardest?",
+        options: ["Mornings", "Afternoons", "Bedtime"]
+      },
+      {
+        question: "Who helps your family right now?",
+        options: ["No one", "Family or friends", "A professional"]
+      }
+    ]);
+    expect(extractFamilyInterviewMock("Nos gustaría recibir orientación.", morganFamilyState.profile!, new Date(), "es").followUps).toEqual([
+      {
+        question: "¿Qué parte de un día típico es la más difícil?",
+        options: ["Las mañanas", "Las tardes", "La hora de dormir"]
+      },
+      {
+        question: "¿Quién ayuda a tu familia ahora?",
+        options: ["Nadie", "Familiares o amigos", "Un profesional"]
+      }
+    ]);
+  });
+
+  it("keeps every canned question and chip isolated to its own domain and free of organization names", () => {
+    const cases: Array<{ domains: DevNeedDomain[]; allowed: DevNeedDomain[] }> = [
+      { domains: ["school_iep"], allowed: ["school_iep"] },
+      { domains: ["therapies"], allowed: ["therapies"] },
+      { domains: ["waivers_financial"], allowed: ["waivers_financial"] },
+      { domains: ["respite"], allowed: ["respite", "parent_support"] },
+      { domains: [], allowed: [] }
+    ];
+
+    for (const language of ["en", "es"] as const) {
+      for (const { domains, allowed } of cases) {
+        const followUps = buildMockFollowUps(domains, language);
+        for (const text of followUps.flatMap(({ question, options }) => [question, ...options])) {
+          const rematched = extractFamilyInterviewMock(text, morganFamilyState.profile!, new Date(), language).domains.map(
+            ({ domain }) => domain
+          );
+          expect(rematched.every((domain) => allowed.includes(domain))).toBe(true);
+          expect(text).not.toMatch(/First Steps|KY-SPIN|Michelle P\.|kynect|\b211\b/i);
+        }
+      }
+    }
   });
 
   it.each([
