@@ -11,6 +11,48 @@ import type {
 } from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("backdates stored family diagnosis months for the demo without replacing the clock", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const beforeDates = seeded.family?.profile?.diagnoses.map(({ diagnosedAt }) => diagnosedAt);
+
+    const backdated = healthReducer(seeded, {
+      type: "backdateFamilyDiagnoses",
+      monthsAgo: 6,
+      now: "2026-07-17T12:00:00.000Z"
+    });
+
+    expect(beforeDates).toEqual(["2026-05", "2026-05"]);
+    expect(seeded.family?.profile?.diagnoses.map(({ diagnosedAt }) => diagnosedAt)).toEqual([
+      "2026-05",
+      "2026-05"
+    ]);
+    expect(backdated.family?.profile?.diagnoses.map(({ diagnosedAt }) => diagnosedAt)).toEqual([
+      "2026-01",
+      "2026-01"
+    ]);
+    expect(backdated.family?.interviewDraft).toBe(seeded.family?.interviewDraft);
+    expect(backdated.auditEvents.at(-1)).toMatchObject({
+      action: "updated",
+      label: "Demo control: family diagnosis dates set to 6 months ago"
+    });
+  });
+
+  it("does not backdate when a family profile has no diagnoses", () => {
+    const seeded = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
+    const withoutDiagnoses = healthReducer(seeded, {
+      type: "saveFamilyProfile",
+      profile: { ...seeded.family!.profile!, diagnoses: [] }
+    });
+
+    expect(
+      healthReducer(withoutDiagnoses, {
+        type: "backdateFamilyDiagnoses",
+        monthsAgo: 3,
+        now: "2026-07-17T12:00:00.000Z"
+      })
+    ).toBe(withoutDiagnoses);
+  });
+
   it("seeds Morgan and Casey by replacing only the family slice", () => {
     const morgan = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
     const casey = healthReducer(morgan, { type: "seedExampleFamily", example: "casey" });

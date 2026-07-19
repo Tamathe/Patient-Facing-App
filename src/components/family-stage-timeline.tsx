@@ -1,5 +1,9 @@
 import React from "react";
-import { buildFamilyStages, type FamilyStage } from "@/domain/family-stages";
+import {
+  buildFamilyStages,
+  type FamilyDiagnosisBackdateMonths,
+  type FamilyStage
+} from "@/domain/family-stages";
 import type { FamilyNavigatorState } from "@/domain/types";
 import { tFamily, type FamilyStringKey } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
@@ -8,27 +12,19 @@ export type FamilyStageTimelineProps = {
   family: FamilyNavigatorState;
   language: Language;
   now?: Date;
+  onBackdateDiagnoses?: (monthsAgo: FamilyDiagnosisBackdateMonths, now: Date) => void;
 };
 
-const STAGE_KEYS: Record<string, { title: FamilyStringKey; body: FamilyStringKey }> = {
-  "first-steps": { title: "timelineFirstStepsTitle", body: "timelineFirstStepsBody" },
-  "age-three-transition": {
-    title: "timelineAgeThreeTransitionTitle",
-    body: "timelineAgeThreeTransitionBody"
-  },
-  "school-enrollment": { title: "timelineSchoolEnrollmentTitle", body: "timelineSchoolEnrollmentBody" },
-  "waiver-apply": { title: "timelineWaiverApplyTitle", body: "timelineWaiverApplyBody" },
-  "school-arc": { title: "timelineSchoolArcTitle", body: "timelineSchoolArcBody" },
-  "parent-connection": {
-    title: "timelineParentConnectionTitle",
-    body: "timelineParentConnectionBody"
-  },
-  "sibling-respite": { title: "timelineSiblingRespiteTitle", body: "timelineSiblingRespiteBody" },
-  "mission-transition": {
-    title: "timelineMissionTransitionTitle",
-    body: "timelineMissionTransitionBody"
-  },
-  "before-eighteen": { title: "timelineBeforeEighteenTitle", body: "timelineBeforeEighteenBody" }
+const STAGE_TITLE_KEYS: Record<string, FamilyStringKey> = {
+  "first-steps": "timelineFirstStepsTitle",
+  "age-three-transition": "timelineAgeThreeTransitionTitle",
+  "school-enrollment": "timelineSchoolEnrollmentTitle",
+  "waiver-apply": "timelineWaiverApplyTitle",
+  "school-arc": "timelineSchoolArcTitle",
+  "parent-connection": "timelineParentConnectionTitle",
+  "sibling-respite": "timelineSiblingRespiteTitle",
+  "mission-transition": "timelineMissionTransitionTitle",
+  "before-eighteen": "timelineBeforeEighteenTitle"
 };
 
 const TIMING_KEYS: Record<FamilyStage["timing"], FamilyStringKey> = {
@@ -39,8 +35,23 @@ const TIMING_KEYS: Record<FamilyStage["timing"], FamilyStringKey> = {
 
 const TIMINGS: FamilyStage["timing"][] = ["now", "next", "later"];
 
-export function FamilyStageTimeline({ family, language, now = new Date() }: FamilyStageTimelineProps) {
-  const stages = buildFamilyStages(family, now);
+const BACKDATE_OPTIONS: Array<{
+  monthsAgo: FamilyDiagnosisBackdateMonths;
+  key: FamilyStringKey;
+}> = [
+  { monthsAgo: 0, key: "timelineDemoThisMonth" },
+  { monthsAgo: 1, key: "timelineDemoOneMonthAgo" },
+  { monthsAgo: 3, key: "timelineDemoThreeMonthsAgo" },
+  { monthsAgo: 6, key: "timelineDemoSixMonthsAgo" }
+];
+
+export function FamilyStageTimeline({
+  family,
+  language,
+  now = new Date(),
+  onBackdateDiagnoses
+}: FamilyStageTimelineProps) {
+  const stages = buildFamilyStages(family, now, language);
 
   return (
     <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-timeline-title">
@@ -57,6 +68,28 @@ export function FamilyStageTimeline({ family, language, now = new Date() }: Fami
               {tFamily(language, "timelineYearOnlyNotice")}
             </p>
           ) : null}
+          {family.profile.diagnoses.length > 0 && onBackdateDiagnoses ? (
+            <fieldset className="mt-4 rounded-control border border-care/20 bg-calm/40 p-3">
+              <legend className="px-1 font-semibold text-care">
+                {tFamily(language, "timelineDemoControlTitle")}
+              </legend>
+              <p className="text-sm leading-6 text-ink/75">
+                {tFamily(language, "timelineDemoControlIntro")}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {BACKDATE_OPTIONS.map(({ monthsAgo, key }) => (
+                  <button
+                    key={monthsAgo}
+                    type="button"
+                    onClick={() => onBackdateDiagnoses(monthsAgo, now)}
+                    className="min-h-11 rounded-control border border-care bg-white px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+                  >
+                    {tFamily(language, key)}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           {stages.length === 0 ? (
             <p className="mt-4 text-sm text-ink/70">{tFamily(language, "timelineEmpty")}</p>
           ) : null}
@@ -72,13 +105,13 @@ export function FamilyStageTimeline({ family, language, now = new Date() }: Fami
                   {entries.length > 0 ? (
                     <ul className="mt-3 grid gap-3">
                       {entries.map((stage) => {
-                        const keys = STAGE_KEYS[stage.id];
-                        if (!keys) return null;
+                        const titleKey = STAGE_TITLE_KEYS[stage.id];
+                        if (!titleKey) return null;
                         return (
                           <li key={stage.id} className="min-w-0 rounded-control border border-ink/10 bg-white p-3">
-                            <h4 className="break-words font-semibold">{tFamily(language, keys.title)}</h4>
+                            <h4 className="break-words font-semibold">{tFamily(language, titleKey)}</h4>
                             <p className="mt-1 break-words text-sm leading-6 text-ink/75">
-                              {tFamily(language, keys.body)}
+                              {stage.description}
                             </p>
                           </li>
                         );

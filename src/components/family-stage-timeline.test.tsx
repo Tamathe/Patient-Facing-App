@@ -1,10 +1,52 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { morganFamilyState } from "@/domain/family-fixtures";
 import { FamilyStageTimeline } from "./family-stage-timeline";
 
 describe("FamilyStageTimeline", () => {
+  it("surfaces diagnosis stages by due month and backdates diagnosis data through an explicit demo control", async () => {
+    const user = userEvent.setup();
+    const onBackdateDiagnoses = vi.fn();
+    const now = new Date("2026-07-17T12:00:00.000Z");
+    render(
+      <FamilyStageTimeline
+        family={morganFamilyState}
+        language="en"
+        now={now}
+        onBackdateDiagnoses={onBackdateDiagnoses}
+      />
+    );
+
+    const current = screen.getByRole("region", { name: "Now" });
+    const next = screen.getByRole("region", { name: "Next" });
+    expect(within(current).getByRole("heading", { name: "Connect with another parent" })).toBeVisible();
+    expect(within(next).getByRole("heading", { name: "Explore sibling support and respite" })).toBeVisible();
+
+    const control = screen.getByRole("group", { name: "Demo timeline control" });
+    expect(within(control).getByText(/does not change the device clock/i)).toBeVisible();
+    await user.click(within(control).getByRole("button", { name: "Set diagnosis dates to 6 months ago" }));
+
+    expect(onBackdateDiagnoses).toHaveBeenCalledWith(6, now);
+  });
+
+  it("does not show diagnosis backdating controls without a diagnosis", () => {
+    render(
+      <FamilyStageTimeline
+        family={{
+          ...morganFamilyState,
+          profile: { ...morganFamilyState.profile!, diagnoses: [] }
+        }}
+        language="en"
+        now={new Date("2026-07-17T12:00:00.000Z")}
+        onBackdateDiagnoses={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("group", { name: "Demo timeline control" })).not.toBeInTheDocument();
+  });
+
   it("distinguishes a missing profile from a valid profile with no matching stages", () => {
     const { rerender } = render(
       <FamilyStageTimeline

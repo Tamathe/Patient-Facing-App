@@ -257,6 +257,51 @@ test("Casey in Perry County gets the age-2 local First Steps POE before statewid
   await expect(page.getByLabel("What would you like help with?")).toHaveValue(MORGAN_PARAGRAPH);
 });
 
+test("demo timeline control backdates diagnosis data and advances staged nudges without faking the clock", async ({
+  page
+}) => {
+  await page.goto("/family");
+  await page.getByRole("button", { name: /Morgan and Riley.*Scott County/ }).click();
+
+  const timeline = page.getByRole("region", { name: "Right thing at the right time" });
+  await expect(
+    timeline.getByRole("region", { name: "Now" }).getByRole("heading", { name: "Connect with another parent" })
+  ).toBeVisible();
+  await expect(
+    timeline
+      .getByRole("region", { name: "Next" })
+      .getByRole("heading", { name: "Explore sibling support and respite" })
+  ).toBeVisible();
+
+  await timeline.getByRole("button", { name: "Set diagnosis dates to this month" }).click();
+  await expect(
+    timeline.getByRole("region", { name: "Next" }).getByRole("heading", { name: "Connect with another parent" })
+  ).toBeVisible();
+  await expect(
+    timeline
+      .getByRole("region", { name: "Later" })
+      .getByRole("heading", { name: "Explore sibling support and respite" })
+  ).toBeVisible();
+
+  await timeline.getByRole("button", { name: "Set diagnosis dates to 6 months ago" }).click();
+  const current = timeline.getByRole("region", { name: "Now" });
+  await expect(current.getByRole("heading", { name: "Connect with another parent" })).toBeVisible();
+  await expect(current.getByRole("heading", { name: "Explore sibling support and respite" })).toBeVisible();
+  await expect(page.getByLabel("Dyslexia diagnosis month (optional)")).toHaveValue("2026-01");
+  await expect
+    .poll(() =>
+      page.evaluate((key) => {
+        const raw = window.localStorage.getItem(key);
+        const state = raw
+          ? (JSON.parse(raw) as { family?: { profile?: { diagnoses?: Array<{ diagnosedAt?: string }> } } })
+          : null;
+        return state?.family?.profile?.diagnoses?.map(({ diagnosedAt }) => diagnosedAt) ?? [];
+      }, STORAGE_KEY)
+    )
+    .toEqual(["2026-01", "2026-01"]);
+  expect(await page.evaluate(() => Date.now())).toBe(FROZEN_NOW.valueOf());
+});
+
 test("Family Navigator is reachable from both Menu and the home composer", async ({ page }) => {
   await page.goto("/menu");
 

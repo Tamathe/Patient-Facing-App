@@ -160,6 +160,12 @@ export type FamilyStringKey =
   | "timelineNoProfile"
   | "timelineEmpty"
   | "timelineYearOnlyNotice"
+  | "timelineDemoControlTitle"
+  | "timelineDemoControlIntro"
+  | "timelineDemoThisMonth"
+  | "timelineDemoOneMonthAgo"
+  | "timelineDemoThreeMonthsAgo"
+  | "timelineDemoSixMonthsAgo"
   | "timelineFirstStepsTitle"
   | "timelineFirstStepsBody"
   | "timelineAgeThreeTransitionTitle"
@@ -333,13 +339,19 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     emptyFallbackBody: "Start with statewide family supports, the HDI directory, kynect resources, or 211 while you keep looking locally.",
     emptyNavigatorHonesty: "A family navigator can help look for local options. This demo cannot promise that a service, opening, or benefit is available.",
     timelineTitle: "Right thing at the right time",
-    timelineIntro: "This read-only timeline uses the age and dates you entered. It is a planning aid, not a reminder service or eligibility decision.",
+    timelineIntro: "This timeline uses the age and dates you entered. It is a planning aid, not a reminder service or eligibility decision.",
     timelineNow: "Now",
     timelineNext: "Next",
     timelineLater: "Later",
     timelineNoProfile: "Add a family profile to see planning moments.",
     timelineEmpty: "No planning moments match the current profile yet.",
     timelineYearOnlyNotice: "Timing is shown early because only the birth year is known.",
+    timelineDemoControlTitle: "Demo timeline control",
+    timelineDemoControlIntro: "Backdate the stored diagnosis dates to preview each stage. This updates the fictional profile data and does not change the device clock.",
+    timelineDemoThisMonth: "Set diagnosis dates to this month",
+    timelineDemoOneMonthAgo: "Set diagnosis dates to 1 month ago",
+    timelineDemoThreeMonthsAgo: "Set diagnosis dates to 3 months ago",
+    timelineDemoSixMonthsAgo: "Set diagnosis dates to 6 months ago",
     timelineFirstStepsTitle: "Contact First Steps now",
     timelineFirstStepsBody: "First Steps does not accept new referrals in the final 45 days before age three. Contact the local point of entry to confirm whether the referral window remains open and ask about transition options if it does not.",
     timelineAgeThreeTransitionTitle: "Plan the transition before age three",
@@ -512,13 +524,19 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     emptyFallbackBody: "Empieza con apoyos estatales para familias, el directorio de HDI, recursos de kynect o el 211 mientras sigues buscando localmente.",
     emptyNavigatorHonesty: "Un navegador familiar puede ayudar a buscar opciones locales. Este demo no puede prometer que un servicio, cupo o beneficio esté disponible.",
     timelineTitle: "Lo correcto en el momento correcto",
-    timelineIntro: "Esta cronología de consulta usa la edad y las fechas ingresadas. Sirve para planificar; no es un servicio de recordatorios ni una decisión de elegibilidad.",
+    timelineIntro: "Esta cronología usa la edad y las fechas ingresadas. Sirve para planificar; no es un servicio de recordatorios ni una decisión de elegibilidad.",
     timelineNow: "Ahora",
     timelineNext: "Próximo",
     timelineLater: "Más adelante",
     timelineNoProfile: "Agrega un perfil familiar para ver momentos de planificación.",
     timelineEmpty: "Aún no hay momentos de planificación que coincidan con el perfil actual.",
     timelineYearOnlyNotice: "El momento se muestra temprano porque solo se conoce el año de nacimiento.",
+    timelineDemoControlTitle: "Control de cronología para el demo",
+    timelineDemoControlIntro: "Cambia las fechas de diagnóstico guardadas para mostrar cada etapa. Esto actualiza los datos ficticios del perfil y no cambia el reloj del dispositivo.",
+    timelineDemoThisMonth: "Establecer las fechas de diagnóstico en este mes",
+    timelineDemoOneMonthAgo: "Establecer las fechas de diagnóstico hace 1 mes",
+    timelineDemoThreeMonthsAgo: "Establecer las fechas de diagnóstico hace 3 meses",
+    timelineDemoSixMonthsAgo: "Establecer las fechas de diagnóstico hace 6 meses",
     timelineFirstStepsTitle: "Contacta a First Steps ahora",
     timelineFirstStepsBody: "First Steps no acepta referidos nuevos durante los últimos 45 días antes de los tres años. Contacta el punto de entrada local para confirmar si la ventana sigue abierta y pregunta por opciones de transición si ya cerró.",
     timelineAgeThreeTransitionTitle: "Planifica la transición antes de los tres años",

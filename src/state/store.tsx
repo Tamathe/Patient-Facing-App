@@ -11,6 +11,10 @@ import {
 } from "react";
 import { brentState, defaultDemoState, deletedDemoState, demoState } from "@/domain/fixtures";
 import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
+import {
+  backdatedDiagnosisMonth,
+  type FamilyDiagnosisBackdateMonths
+} from "@/domain/family-stages";
 import { mergeFamilyDomains } from "@/domain/family-screen";
 import { recordAuditEvent } from "@/domain/audit";
 import { activeConditions } from "@/domain/condition-lens";
@@ -75,6 +79,11 @@ export type HealthAction =
   | { type: "bookReferralSlot"; referralId: string; slot: string }
   | { type: "markReferralCompleted"; referralId: string }
   | { type: "saveFamilyProfile"; profile: FamilyProfile }
+  | {
+      type: "backdateFamilyDiagnoses";
+      monthsAgo: FamilyDiagnosisBackdateMonths;
+      now: string;
+    }
   | { type: "setFamilyInterviewDraft"; draft: string }
   | { type: "submitFamilyScreen"; answers: FamilyScreenAnswer[]; facts: FamilyFact[] }
   | { type: "addFamilyInterview"; interview: FamilyInterview; facts: FamilyFact[]; domains: FamilyNavigatorState["activeDomains"] }
@@ -486,6 +495,38 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ...state,
         family: state.family ? { ...state.family, profile: action.profile } : emptyFamilyState(action.profile)
       };
+    case "backdateFamilyDiagnoses": {
+      const family = state.family;
+      const profile = family?.profile;
+      const now = new Date(action.now);
+      if (!profile || profile.diagnoses.length === 0 || Number.isNaN(now.valueOf())) {
+        return state;
+      }
+
+      const diagnosedAt = backdatedDiagnosisMonth(now, action.monthsAgo);
+      const timingLabel =
+        action.monthsAgo === 0
+          ? "this month"
+          : `${action.monthsAgo} month${action.monthsAgo === 1 ? "" : "s"} ago`;
+      return {
+        ...state,
+        family: {
+          ...family,
+          profile: {
+            ...profile,
+            diagnoses: profile.diagnoses.map((diagnosis) => ({ ...diagnosis, diagnosedAt }))
+          }
+        },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(
+            state.patient.id,
+            "updated",
+            `Demo control: family diagnosis dates set to ${timingLabel}`
+          )
+        ]
+      };
+    }
     case "setFamilyInterviewDraft":
       if (!state.family) {
         return state;

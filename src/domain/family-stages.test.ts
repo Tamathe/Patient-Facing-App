@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FamilyNavigatorState, FamilyProfile } from "./types";
-import { buildFamilyStages } from "./family-stages";
+import { backdatedDiagnosisMonth, buildFamilyStages } from "./family-stages";
 
 function familyWith(profile: FamilyProfile): FamilyNavigatorState {
   return {
@@ -34,8 +34,8 @@ describe("buildFamilyStages", () => {
     expect(stages).toMatchObject([
       { id: "waiver-apply", timing: "now", domains: ["waivers_financial"] },
       { id: "school-arc", timing: "now", domains: ["school_iep"] },
-      { id: "parent-connection", timing: "next", domains: ["parent_support"] },
-      { id: "sibling-respite", timing: "later", domains: ["sibling_support", "respite"] }
+      { id: "parent-connection", timing: "now", domains: ["parent_support"] },
+      { id: "sibling-respite", timing: "next", domains: ["sibling_support", "respite"] }
     ]);
     const waiver = stages.find(({ id }) => id === "waiver-apply");
     expect(waiver?.title).toBe("Ask about the Michelle P. Waiver application");
@@ -51,10 +51,70 @@ describe("buildFamilyStages", () => {
       diagnoses: [{ id: "speech", label: "speech_language" }]
     });
 
-    expect(buildFamilyStages(family, new Date("2026-07-17T12:00:00.000Z"))).toMatchObject([
-      { id: "first-steps", timing: "now", domains: ["early_intervention"] },
-      { id: "age-three-transition", timing: "later", domains: ["early_intervention", "school_iep"] }
-    ]);
+    expect(buildFamilyStages(family, new Date("2026-07-17T12:00:00.000Z"))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "first-steps", timing: "now", domains: ["early_intervention"] }),
+        expect.objectContaining({
+          id: "age-three-transition",
+          timing: "now",
+          domains: ["early_intervention", "school_iep"]
+        })
+      ])
+    );
+  });
+
+  it("moves diagnosis nudges through next, later, and now from the most recent diagnosis month", () => {
+    const family = familyWith({
+      childFirstName: "Riley",
+      birthYear: 2017,
+      birthMonth: 4,
+      schoolStage: "elementary",
+      county: "Scott",
+      diagnoses: [
+        { id: "older", label: "dyslexia", diagnosedAt: "2026-02" },
+        { id: "recent", label: "adhd", diagnosedAt: "2026-07" }
+      ]
+    });
+
+    const timingAt = (iso: string, id: string) =>
+      buildFamilyStages(family, new Date(iso)).find((stage) => stage.id === id)?.timing;
+
+    expect(timingAt("2026-07-17T12:00:00.000Z", "waiver-apply")).toBe("now");
+    expect(timingAt("2026-07-17T12:00:00.000Z", "parent-connection")).toBe("next");
+    expect(timingAt("2026-07-17T12:00:00.000Z", "sibling-respite")).toBe("later");
+    expect(timingAt("2026-08-01T00:00:00.000Z", "parent-connection")).toBe("now");
+    expect(timingAt("2026-09-01T00:00:00.000Z", "sibling-respite")).toBe("next");
+    expect(timingAt("2026-10-01T00:00:00.000Z", "sibling-respite")).toBe("now");
+  });
+
+  it("backdates diagnosis data with UTC month math without mutating or replacing the clock", () => {
+    const now = new Date("2026-07-17T12:00:00.000Z");
+
+    expect(backdatedDiagnosisMonth(now, 0)).toBe("2026-07");
+    expect(backdatedDiagnosisMonth(now, 1)).toBe("2026-06");
+    expect(backdatedDiagnosisMonth(now, 6)).toBe("2026-01");
+    expect(backdatedDiagnosisMonth(now, 8)).toBe("2025-11");
+    expect(now.toISOString()).toBe("2026-07-17T12:00:00.000Z");
+  });
+
+  it("renders every stage body from approved linted templates in both languages", () => {
+    const family = familyWith({
+      birthYear: 2009,
+      birthMonth: 7,
+      schoolStage: "high",
+      county: "Scott",
+      diagnoses: [{ id: "diagnosis", label: "intellectual_disability", diagnosedAt: "2026-01" }]
+    });
+    const now = new Date("2026-07-17T12:00:00.000Z");
+
+    for (const language of ["en", "es"] as const) {
+      const stages = buildFamilyStages(family, now, language);
+      expect(stages.length).toBeGreaterThan(0);
+      for (const stage of stages) {
+        expect(stage.description.length).toBeGreaterThan(20);
+        expect(stage.templateId).toMatch(/^family_stage_.+_v1$/);
+      }
+    }
   });
 
   it("uses exact UTC birth-month age for the 2-year-3-month transition trigger", () => {
@@ -183,6 +243,7 @@ describe("buildFamilyStages", () => {
     );
 
     expect(preciseSeventeen.map(({ id }) => id)).toEqual(["mission-transition", "before-eighteen"]);
+    expect(preciseSeventeen.find(({ id }) => id === "before-eighteen")?.timing).toBe("now");
     expect(preciseEighteen.map(({ id }) => id)).toEqual(["mission-transition"]);
 
     const yearOnlyEighteen = buildFamilyStages(
@@ -243,7 +304,10 @@ describe("buildFamilyStages", () => {
       diagnoses: [{ id: "adhd", label: "adhd" }]
     });
 
-    expect(buildFamilyStages(postHigh, new Date("2026-07-17T12:00:00.000Z"))).toEqual([]);
+    const stages = buildFamilyStages(postHigh, new Date("2026-07-17T12:00:00.000Z"));
+
+    expect(stages.some(({ id }) => id === "school-arc")).toBe(false);
+    expect(stages.map(({ id }) => id)).toEqual(["waiver-apply", "parent-connection", "sibling-respite"]);
   });
 
   it("returns no stages without a profile", () => {

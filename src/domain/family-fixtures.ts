@@ -7,8 +7,8 @@ export const morganFamilyState: FamilyNavigatorState = {
     schoolStage: "elementary",
     county: "Scott",
     diagnoses: [
-      { id: "morgan-diagnosis-dyslexia", label: "dyslexia" },
-      { id: "morgan-diagnosis-adhd", label: "adhd" }
+      { id: "morgan-diagnosis-dyslexia", label: "dyslexia", diagnosedAt: "2026-05" },
+      { id: "morgan-diagnosis-adhd", label: "adhd", diagnosedAt: "2026-05" }
     ]
   },
   interviewDraft:

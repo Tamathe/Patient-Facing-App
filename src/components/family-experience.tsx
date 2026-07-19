@@ -18,6 +18,7 @@ import { FamilyProfileForm } from "@/components/family-profile-form";
 import { FamilyResourceCard } from "@/components/family-resource-card";
 import { FamilyStageTimeline } from "@/components/family-stage-timeline";
 import { recordAuditEvent } from "@/domain/audit";
+import type { FamilyDiagnosisBackdateMonths } from "@/domain/family-stages";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
   FAMILY_RESOURCE_CATALOG,
@@ -181,6 +182,8 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const latestInterview = family?.interviews.at(-1);
   const latestInterviewId = latestInterview?.id;
   const reviewFacts = family?.facts.filter(({ interviewId }) => interviewId === latestInterviewId) ?? [];
+  const profileDiagnosisVersion =
+    family?.profile?.diagnoses.map(({ id, diagnosedAt }) => `${id}:${diagnosedAt ?? ""}`).join("|") ?? "none";
 
   useEffect(() => {
     const previousLanguage = document.documentElement.lang;
@@ -235,6 +238,14 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   function saveProfile(profile: FamilyProfile): void {
     setSafetySuppressed(false);
     dispatch({ type: "saveFamilyProfile", profile });
+  }
+
+  function backdateFamilyDiagnoses(monthsAgo: FamilyDiagnosisBackdateMonths, now: Date): void {
+    dispatch({
+      type: "backdateFamilyDiagnoses",
+      monthsAgo,
+      now: now.toISOString()
+    });
   }
 
   function submitScreen(answers: FamilyScreenAnswer[], facts: FamilyFact[]): void {
@@ -310,7 +321,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       </section>
 
       <FamilyProfileForm
-        key={`family-profile-${seedVersion}`}
+        key={`family-profile-${seedVersion}-${profileDiagnosisVersion}`}
         language={language}
         initialProfile={family?.profile ?? null}
         defaultCounty={state.patient.county}
@@ -541,7 +552,11 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             )}
           </section>
 
-          <FamilyStageTimeline family={family} language={language} />
+          <FamilyStageTimeline
+            family={family}
+            language={language}
+            onBackdateDiagnoses={backdateFamilyDiagnoses}
+          />
         </>
       ) : null}
     </div>

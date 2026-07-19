@@ -1,3 +1,5 @@
+import type { Language } from "@/i18n/strings";
+import { renderNudge } from "./nudge-template";
 import type { DevNeedDomain, FamilyNavigatorState, FamilyProfile } from "./types";
 
 export type FamilyStage = {
@@ -6,13 +8,77 @@ export type FamilyStage = {
   title: string;
   description: string;
   domains: DevNeedDomain[];
+  templateId: string;
 };
 
-const YEAR_ONLY_TIMING_NOTE = "Timing is shown early because only the birth year is known.";
+export type FamilyDiagnosisBackdateMonths = 0 | 1 | 3 | 6;
 
-function ageDescription(profile: FamilyProfile, description: string): string {
-  return profile.birthMonth === undefined ? `${description} ${YEAR_ONLY_TIMING_NOTE}` : description;
-}
+type FamilyStageDefinition = {
+  title: string;
+  domains: DevNeedDomain[];
+  templateId: string;
+  ageSensitive?: boolean;
+};
+
+const YEAR_ONLY_TIMING_NOTE: Record<Language, string> = {
+  en: "Timing is shown early because only the birth year is known.",
+  es: "El momento se muestra temprano porque solo se conoce el año de nacimiento."
+};
+
+const STAGE_DEFINITIONS = {
+  "first-steps": {
+    title: "Contact First Steps now",
+    domains: ["early_intervention"],
+    templateId: "family_stage_first_steps_v1",
+    ageSensitive: true
+  },
+  "age-three-transition": {
+    title: "Plan the transition before age three",
+    domains: ["early_intervention", "school_iep"],
+    templateId: "family_stage_age_three_transition_v1",
+    ageSensitive: true
+  },
+  "school-enrollment": {
+    title: "Prepare for school enrollment",
+    domains: ["school_iep"],
+    templateId: "family_stage_school_enrollment_v1",
+    ageSensitive: true
+  },
+  "waiver-apply": {
+    title: "Ask about the Michelle P. Waiver application",
+    domains: ["waivers_financial"],
+    templateId: "family_stage_waiver_apply_v1"
+  },
+  "school-arc": {
+    title: "Prepare for the school ARC meeting",
+    domains: ["school_iep"],
+    templateId: "family_stage_school_arc_v1"
+  },
+  "parent-connection": {
+    title: "Connect with another parent",
+    domains: ["parent_support"],
+    templateId: "family_stage_parent_connection_v1"
+  },
+  "sibling-respite": {
+    title: "Explore sibling support and respite",
+    domains: ["sibling_support", "respite"],
+    templateId: "family_stage_sibling_respite_v1"
+  },
+  "mission-transition": {
+    title: "Start transition planning",
+    domains: ["future_planning"],
+    templateId: "family_stage_mission_transition_v1",
+    ageSensitive: true
+  },
+  "before-eighteen": {
+    title: "Prepare for age eighteen",
+    domains: ["future_planning"],
+    templateId: "family_stage_before_eighteen_v1",
+    ageSensitive: true
+  }
+} satisfies Record<string, FamilyStageDefinition>;
+
+type FamilyStageId = keyof typeof STAGE_DEFINITIONS;
 
 function ageInMonths(profile: FamilyProfile, now: Date): number | null {
   if (profile.birthMonth === undefined) {
@@ -74,7 +140,92 @@ function diagnosedSchoolAge(profile: FamilyProfile): boolean {
   );
 }
 
-export function buildFamilyStages(family: FamilyNavigatorState, now: Date): FamilyStage[] {
+function monthIndex(date: Date): number {
+  return date.getUTCFullYear() * 12 + date.getUTCMonth();
+}
+
+function diagnosisMonthIndex(value: string | undefined): number | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(value ?? "");
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  return month >= 1 && month <= 12 ? year * 12 + month - 1 : null;
+}
+
+function mostRecentDiagnosisMonth(profile: FamilyProfile, now: Date): number | null {
+  const currentMonth = monthIndex(now);
+  const diagnosisMonths = profile.diagnoses
+    .map(({ diagnosedAt }) => diagnosisMonthIndex(diagnosedAt))
+    .filter((candidate): candidate is number => candidate !== null && candidate <= currentMonth);
+
+  return diagnosisMonths.length > 0 ? Math.max(...diagnosisMonths) : null;
+}
+
+function timingForDiagnosisOffset(anchorMonth: number, offsetMonths: number, now: Date): FamilyStage["timing"] {
+  const monthsUntilDue = anchorMonth + offsetMonths - monthIndex(now);
+  if (monthsUntilDue <= 0) {
+    return "now";
+  }
+  return monthsUntilDue === 1 ? "next" : "later";
+}
+
+function buildStage(
+  id: FamilyStageId,
+  timing: FamilyStage["timing"],
+  profile: FamilyProfile,
+  language: Language
+): FamilyStage | null {
+  const definition = STAGE_DEFINITIONS[id];
+  const rendered = renderNudge({ templateId: definition.templateId, language, slots: {} });
+  if (!rendered.ok) {
+    return null;
+  }
+
+  const description =
+    "ageSensitive" in definition && definition.ageSensitive && profile.birthMonth === undefined
+      ? `${rendered.message} ${YEAR_ONLY_TIMING_NOTE[language]}`
+      : rendered.message;
+
+  return {
+    id,
+    timing,
+    title: definition.title,
+    description,
+    domains: [...definition.domains],
+    templateId: definition.templateId
+  };
+}
+
+function pushStage(
+  stages: FamilyStage[],
+  id: FamilyStageId,
+  timing: FamilyStage["timing"],
+  profile: FamilyProfile,
+  language: Language
+): void {
+  const stage = buildStage(id, timing, profile, language);
+  if (stage) {
+    stages.push(stage);
+  }
+}
+
+export function backdatedDiagnosisMonth(now: Date, monthsAgo: number): string {
+  if (Number.isNaN(now.valueOf()) || !Number.isInteger(monthsAgo) || monthsAgo < 0) {
+    throw new RangeError("Diagnosis backdate months must be a non-negative integer.");
+  }
+
+  const backdated = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsAgo, 1));
+  return `${backdated.getUTCFullYear()}-${String(backdated.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export function buildFamilyStages(
+  family: FamilyNavigatorState,
+  now: Date,
+  language: Language = "en"
+): FamilyStage[] {
   const { profile } = family;
   if (!profile) {
     return [];
@@ -83,102 +234,47 @@ export function buildFamilyStages(family: FamilyNavigatorState, now: Date): Fami
   const stages: FamilyStage[] = [];
 
   if (isUnderThree(profile, now)) {
-    stages.push({
-      id: "first-steps",
-      timing: "now",
-      title: "Contact First Steps now",
-      description: ageDescription(
-        profile,
-        "First Steps does not accept new referrals in the final 45 days before age three. Contact the local point of entry now to confirm whether the referral window remains open and ask about transition options if it does not."
-      ),
-      domains: ["early_intervention"]
-    });
+    pushStage(stages, "first-steps", "now", profile, language);
   }
 
   if (transitionWindowHasOpened(profile, now)) {
-    stages.push({
-      id: "age-three-transition",
-      timing: "later",
-      title: "Plan the transition before age three",
-      description: ageDescription(
-        profile,
-        "Ask for the transition conference and stay enrolled in First Steps so an eligible child can have an IEP in place by the third birthday."
-      ),
-      domains: ["early_intervention", "school_iep"]
-    });
+    pushStage(stages, "age-three-transition", "now", profile, language);
   }
 
   if (isInSchoolEnrollmentWindow(profile, now)) {
-    stages.push({
-      id: "school-enrollment",
-      timing: "now",
-      title: "Prepare for school enrollment",
-      description: ageDescription(
-        profile,
-        "Learn Kentucky's ARC and IEP process before preschool or kindergarten enrollment."
-      ),
-      domains: ["school_iep"]
-    });
+    pushStage(stages, "school-enrollment", "now", profile, language);
   }
 
-  if (diagnosedSchoolAge(profile)) {
-    stages.push(
-      {
-        id: "waiver-apply",
-        timing: "now",
-        title: "Ask about the Michelle P. Waiver application",
-        description:
-          "The Michelle P. waiting list is date ordered, so ask Kentucky how to apply now. Kentucky determines eligibility and waitlist placement.",
-        domains: ["waivers_financial"]
-      },
-      {
-        id: "school-arc",
-        timing: "now",
-        title: "Prepare for the school ARC meeting",
-        description: "Gather the family's concerns and ask the school how to request an ARC meeting or IEP evaluation.",
-        domains: ["school_iep"]
-      },
-      {
-        id: "parent-connection",
-        timing: "next",
-        title: "Connect with another parent",
-        description: "A parent group or peer mentor can help the family learn the next steps without navigating alone.",
-        domains: ["parent_support"]
-      },
-      {
-        id: "sibling-respite",
-        timing: "later",
-        title: "Explore sibling support and respite",
-        description: "Look for honest local options for siblings and planned caregiving breaks.",
-        domains: ["sibling_support", "respite"]
-      }
+  if (profile.diagnoses.length > 0) {
+    const diagnosisMonth = mostRecentDiagnosisMonth(profile, now);
+    pushStage(stages, "waiver-apply", "now", profile, language);
+
+    if (diagnosedSchoolAge(profile)) {
+      pushStage(stages, "school-arc", "now", profile, language);
+    }
+
+    pushStage(
+      stages,
+      "parent-connection",
+      diagnosisMonth === null ? "next" : timingForDiagnosisOffset(diagnosisMonth, 1, now),
+      profile,
+      language
+    );
+    pushStage(
+      stages,
+      "sibling-respite",
+      diagnosisMonth === null ? "later" : timingForDiagnosisOffset(diagnosisMonth, 3, now),
+      profile,
+      language
     );
   }
 
   if (hasReachedAge(profile, now, 14)) {
-    stages.push({
-      id: "mission-transition",
-      timing: "now",
-      title: "Start transition planning",
-      description: ageDescription(
-        profile,
-        "Use the school ARC process and Kentucky transition resources to begin planning for adult life."
-      ),
-      domains: ["future_planning"]
-    });
+    pushStage(stages, "mission-transition", "now", profile, language);
   }
 
   if (isAgeSeventeen(profile, now)) {
-    stages.push({
-      id: "before-eighteen",
-      timing: "next",
-      title: "Prepare for age eighteen",
-      description: ageDescription(
-        profile,
-        "Review SSI re-application, supported decision-making versus guardianship, and STABLE account options before age eighteen."
-      ),
-      domains: ["future_planning"]
-    });
+    pushStage(stages, "before-eighteen", "now", profile, language);
   }
 
   const timingOrder: Record<FamilyStage["timing"], number> = { now: 0, next: 1, later: 2 };

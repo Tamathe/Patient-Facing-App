@@ -51,6 +51,27 @@ describe("renderNudge", () => {
     });
     expect(rendered).toMatchObject({ ok: false, reason: "disclosure_lint_failed" });
   });
+
+  it("approves every Family Navigator stage template in English and Spanish", () => {
+    const templateIds = [
+      "family_stage_first_steps_v1",
+      "family_stage_age_three_transition_v1",
+      "family_stage_school_enrollment_v1",
+      "family_stage_waiver_apply_v1",
+      "family_stage_school_arc_v1",
+      "family_stage_parent_connection_v1",
+      "family_stage_sibling_respite_v1",
+      "family_stage_mission_transition_v1",
+      "family_stage_before_eighteen_v1"
+    ];
+
+    for (const templateId of templateIds) {
+      for (const language of ["en", "es"] as const) {
+        const rendered = renderNudge({ templateId, language, slots: {} });
+        expect(rendered, `${templateId} (${language})`).toMatchObject({ ok: true });
+      }
+    }
+  });
 });
 
 describe("lintNudgeMessage", () => {

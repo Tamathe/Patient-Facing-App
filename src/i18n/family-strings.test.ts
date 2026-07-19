@@ -81,7 +81,13 @@ const TASK_7_REQUIRED_KEYS = [
   "emptyNavigatorHonesty",
   "timelineNow",
   "timelineNext",
-  "timelineLater"
+  "timelineLater",
+  "timelineDemoControlTitle",
+  "timelineDemoControlIntro",
+  "timelineDemoThisMonth",
+  "timelineDemoOneMonthAgo",
+  "timelineDemoThreeMonthsAgo",
+  "timelineDemoSixMonthsAgo"
 ] satisfies FamilyStringKey[];
 
 describe("familyStrings", () => {
@@ -100,5 +106,6 @@ describe("familyStrings", () => {
     expect(tFamily("es", "demoBadge")).toBe("Demo — datos ficticios");
     expect(tFamily("en", "interviewCount", { count: 42, max: 5000 })).toBe("42 of 5000 characters");
     expect(familyStrings.en.intro).toMatch(/does not diagnose/i);
+    expect(familyStrings.en.timelineDemoControlIntro).toMatch(/does not change the device clock/i);
   });
 });
