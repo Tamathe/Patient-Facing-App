@@ -115,6 +115,14 @@ export type FamilyStringKey =
   | "followUpGenericHelpChip1"
   | "followUpGenericHelpChip2"
   | "followUpGenericHelpChip3"
+  | "orientationRoundCount"
+  | "followUpChipsLabel"
+  | "followUpAnswerLabel"
+  | "followUpAnswerPlaceholder"
+  | "followUpAnswerSubmit"
+  | "followUpAnswerError"
+  | "orientationComplete"
+  | "orientationStartOver"
   | "factsTitle"
   | "factsIntro"
   | "evidencePatientReported"
@@ -319,6 +327,14 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     followUpGenericHelpChip1: "No one",
     followUpGenericHelpChip2: "Family or friends",
     followUpGenericHelpChip3: "A professional",
+    orientationRoundCount: "Question {round} of {max}",
+    followUpChipsLabel: "Suggested answers",
+    followUpAnswerLabel: "Or type a short answer",
+    followUpAnswerPlaceholder: "Type your answer",
+    followUpAnswerSubmit: "Add answer",
+    followUpAnswerError: "Enter an answer before continuing.",
+    orientationComplete: "Thanks. We have enough to orient your next steps.",
+    orientationStartOver: "Start a new description",
     factsTitle: "Review what we heard",
     factsIntro: "Confirm only details that are accurate. Suggested details do not change your profile until you confirm them.",
     evidencePatientReported: "From your words",
@@ -522,6 +538,14 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     followUpGenericHelpChip1: "Nadie",
     followUpGenericHelpChip2: "Familiares o amigos",
     followUpGenericHelpChip3: "Un profesional",
+    orientationRoundCount: "Pregunta {round} de {max}",
+    followUpChipsLabel: "Respuestas sugeridas",
+    followUpAnswerLabel: "O escribe una respuesta corta",
+    followUpAnswerPlaceholder: "Escribe tu respuesta",
+    followUpAnswerSubmit: "Agregar respuesta",
+    followUpAnswerError: "Escribe una respuesta antes de continuar.",
+    orientationComplete: "Gracias. Tenemos suficiente para orientar tus próximos pasos.",
+    orientationStartOver: "Empezar una descripción nueva",
     factsTitle: "Revisa lo que entendimos",
     factsIntro: "Confirma solo los datos correctos. Las sugerencias no cambian tu perfil hasta que las confirmes.",
     evidencePatientReported: "De tus palabras",
