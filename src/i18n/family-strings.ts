@@ -45,10 +45,6 @@ export type FamilyStringKey =
   | "examplesTitle"
   | "exampleMorgan"
   | "exampleCasey"
-  | "entryQuestionsTitle"
-  | "entryQuestionsBody"
-  | "entryInterviewTitle"
-  | "entryInterviewBody"
   | "screenTitle"
   | "screenIntro"
   | "screenEarlyIntervention"
@@ -131,7 +127,8 @@ export type FamilyStringKey =
   | "factSource"
   | "factConfirm"
   | "factConfirmed"
-  | "followUpsTitle"
+  | "needsScreenDisclosureTitle"
+  | "needsScreenDisclosureBody"
   | "domainRationaleTitle"
   | "factGradeLabel"
   | "factReportedDiagnosisLabel"
@@ -257,10 +254,6 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     examplesTitle: "Try a fictional example",
     exampleMorgan: "Morgan and Riley — Scott County",
     exampleCasey: "Casey — Perry County",
-    entryQuestionsTitle: "Answer a few questions",
-    entryQuestionsBody: "Choose yes, no, or prefer not to answer for eight support areas.",
-    entryInterviewTitle: "Tell us about your child",
-    entryInterviewBody: "Type or speak what is going on. Review the words before you submit them.",
     screenTitle: "What support would help?",
     screenIntro: "These questions are optional. A yes helps organize resources; it is not a diagnosis or eligibility decision.",
     screenEarlyIntervention: "Would help before age three, such as First Steps, be useful?",
@@ -343,7 +336,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factSource: "Source words",
     factConfirm: "Confirm this detail",
     factConfirmed: "Detail confirmed",
-    followUpsTitle: "Questions to consider",
+    needsScreenDisclosureTitle: "Prefer simple questions?",
+    needsScreenDisclosureBody: "Answer eight optional questions with yes, no, or prefer not to answer.",
     domainRationaleTitle: "Why this support area appeared",
     factGradeLabel: "Grade",
     factReportedDiagnosisLabel: "Reported diagnosis",
@@ -468,10 +462,6 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     examplesTitle: "Prueba un ejemplo ficticio",
     exampleMorgan: "Morgan y Riley — condado de Scott",
     exampleCasey: "Casey — condado de Perry",
-    entryQuestionsTitle: "Responde unas preguntas",
-    entryQuestionsBody: "Elige sí, no o prefiero no responder en ocho áreas de apoyo.",
-    entryInterviewTitle: "Cuéntanos sobre tu hijo o hija",
-    entryInterviewBody: "Escribe o di lo que está pasando. Revisa las palabras antes de enviarlas.",
     screenTitle: "¿Qué apoyo sería útil?",
     screenIntro: "Estas preguntas son opcionales. Un sí ayuda a organizar recursos; no es un diagnóstico ni una decisión de elegibilidad.",
     screenEarlyIntervention: "¿Sería útil recibir ayuda antes de los tres años, como First Steps?",
@@ -554,7 +544,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factSource: "Palabras de origen",
     factConfirm: "Confirmar este dato",
     factConfirmed: "Dato confirmado",
-    followUpsTitle: "Preguntas para considerar",
+    needsScreenDisclosureTitle: "¿Prefieres preguntas sencillas?",
+    needsScreenDisclosureBody: "Responde ocho preguntas opcionales con sí, no o prefiero no responder.",
     domainRationaleTitle: "Por qué apareció esta área de apoyo",
     factGradeLabel: "Grado",
     factReportedDiagnosisLabel: "Diagnóstico informado",
