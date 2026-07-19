@@ -108,20 +108,33 @@ describe("family interview route", () => {
     expect(options.signal).toBeInstanceOf(AbortSignal);
     const payload = JSON.parse(options.body as string) as {
       model: string;
+      max_tokens: number;
       response_format: { type: string };
       messages: Array<{ role: string; content: string }>;
     };
     expect(payload.model).toBe("interview-model");
+    expect(payload.max_tokens).toBe(1200);
     expect(payload.response_format).toEqual({ type: "json_object" });
-    expect(payload.messages[0].content).toContain("early_intervention");
-    expect(payload.messages[0].content).toContain("never state that the child has a condition");
+    const prompt = payload.messages[0].content;
+    expect(prompt).toContain("early_intervention");
+    expect(prompt).toContain('"followUps":[{"question":"","options":["",""]}]');
+    expect(prompt).toMatch(/at most 3 short orientation questions/i);
+    expect(prompt).toMatch(/2 to 4 suggested short answers under 60 characters/i);
+    expect(prompt).toMatch(/questions under 200 characters/i);
+    expect(prompt).toContain('lines beginning with "Q:"');
+    expect(prompt).toContain('lines beginning with "A:"');
+    expect(prompt).toMatch(/only from the caregiver's words/i);
+    expect(prompt).toMatch(/never repeat a question already asked/i);
+    expect(prompt).toContain("never state that the child has a condition");
+    expect(prompt).toMatch(/rationales, followUps questions, or options/i);
     expect(payload.messages.map(({ content }) => content).join("\n")).toContain("Riley");
     expect(payload.messages.map(({ content }) => content).join("\n")).not.toMatch(/KY-SPIN|Michelle P\.|First Steps|catalog|resource name/i);
   });
 
   it.each([
     ["malformed JSON", "not json"],
-    ["off-shape JSON", JSON.stringify({ ...result, surprise: true })]
+    ["off-shape JSON", JSON.stringify({ ...result, surprise: true })],
+    ["legacy string follow-ups", JSON.stringify({ ...result, followUps: ["What has helped?"] })]
   ])("returns data null for %s model content", async (_name, content) => {
     vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
     vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
