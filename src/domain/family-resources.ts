@@ -290,7 +290,7 @@ const STATEWIDE_AND_LOCAL_RESOURCES: FamilyResource[] = [
     counties: ["statewide"],
     summary: "A Kentucky Medicaid waiver for people with intellectual or developmental disabilities who meet program and level-of-care requirements. The state decides eligibility.",
     contact: "Apply through kynect or call the waiver help desk at 844-784-5614",
-    actNow: "The Michelle P. waiting list is date ordered, so families who want the state to assess an application should start now rather than wait for a later milestone.",
+    actNow: "The Michelle P. waiting list is date ordered — 9,686 people were waiting as of 9/2/2025, with an average wait of about 3.5 years (CHFS report to the Kentucky legislature, 9/17/2025). Families who want the state to assess an application should start now rather than wait for a later milestone.",
     sourceName: "Kentucky Department for Medicaid Services",
     sourceUrl: "https://www.chfs.ky.gov/agencies/dms/dca/pages/mpw.aspx",
     verifiedAt: VERIFIED_AT,
