@@ -113,14 +113,14 @@ describe("FamilyInterview", () => {
     ]);
   });
 
-  it("drops every live model-authored follow-up before it can render", async () => {
+  it("sanitizes live follow-ups and keeps safe questions with chips", async () => {
     requestFamilyInterview.mockResolvedValueOnce({
       facts: [],
       domains: [{ domain: "school_iep" }],
       followUps: [
-        "Ask Riley's pediatrician whether this is autism.",
-        "Apply to an unverified resource called FastTrack Supports.",
-        "What has the teacher noticed?"
+        { question: "Does Riley have autism?", options: ["Maybe"] },
+        { question: "Would First Steps help?", options: ["Maybe"] },
+        { question: "What has the teacher noticed?", options: ["Nothing yet", "Reading is hard"] }
       ]
     });
     const onExtracted = vi.fn();
@@ -129,7 +129,9 @@ describe("FamilyInterview", () => {
     fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
-    expect(onExtracted.mock.calls[0][0].followUps).toEqual([]);
+    expect(onExtracted.mock.calls[0][0].followUps).toEqual([
+      { question: "What has the teacher noticed?", options: ["Nothing yet", "Reading is hard"] }
+    ]);
   });
 
   it("drops an unsupported live diagnosis fact even when its source snippet is verbatim", async () => {
@@ -405,7 +407,16 @@ describe("FamilyInterview", () => {
       {
         facts: [{ label: "Grade", value: "grade 4", sourceSnippet: "grade 4" }],
         domains: [],
-        followUps: []
+        followUps: [
+          {
+            question: "What part of a typical day is hardest?",
+            options: ["Mornings", "Afternoons", "Bedtime"]
+          },
+          {
+            question: "Who helps your family right now?",
+            options: ["No one", "Family or friends", "A professional"]
+          }
+        ]
       },
       { extraction: "mock", source: "typed", rawText: draftB }
     ]);

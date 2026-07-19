@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { requestFamilyInterview } from "@/ai/family-interview-provider";
 import { extractFamilyInterviewMock, familyInterviewInputSchema, type FamilyInterviewResult } from "@/domain/family-interview";
 import { filterUnsupportedDiagnosisFacts, stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
+import { sanitizeFamilyFollowUps } from "@/domain/family-follow-up-lint";
 import { classifyCrisis, classifySafety } from "@/domain/safety";
 import { screenSocialEmergency } from "@/domain/social-screen";
 import type { FamilyProfile } from "@/domain/types";
@@ -60,7 +61,7 @@ function speechRecognitionConstructor(): (new () => SpeechRecognitionLike) | nul
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
 }
 
-function sanitizeResult(
+export function sanitizeResult(
   result: FamilyInterviewResult,
   profile: FamilyProfile,
   rawText: string
@@ -69,7 +70,7 @@ function sanitizeResult(
     ...result,
     facts: filterUnsupportedDiagnosisFacts(result.facts, rawText, profile),
     domains: stripUnsafeFamilyRationales(result.domains, profile.childFirstName),
-    followUps: []
+    followUps: sanitizeFamilyFollowUps(result.followUps, profile.childFirstName)
   };
 }
 
