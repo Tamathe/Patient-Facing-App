@@ -221,7 +221,7 @@ function isMeasurementContextArray(value: unknown): value is MeasurementContext[
   return Array.isArray(value) && value.every((item) => isMeasurementContext(item));
 }
 
-function isLanguage(value: unknown): value is PatientProfile["language"] {
+export function isLanguage(value: unknown): value is PatientProfile["language"] {
   return value === "en" || value === "es";
 }
 

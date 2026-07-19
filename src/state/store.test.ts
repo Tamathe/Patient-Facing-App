@@ -11,6 +11,22 @@ import type {
 } from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("switches the patient language and audits the change", () => {
+    const next = healthReducer(demoState, { type: "setLanguage", language: "es" });
+
+    expect(next.patient.language).toBe("es");
+    expect(next.auditEvents.at(-1)).toMatchObject({
+      patientId: demoState.patient.id,
+      action: "updated",
+      label: "Language preference updated"
+    });
+  });
+
+  it("is a strict no-op for the current or an invalid language", () => {
+    expect(healthReducer(demoState, { type: "setLanguage", language: "en" })).toBe(demoState);
+    expect(healthReducer(demoState, { type: "setLanguage", language: "fr" as never })).toBe(demoState);
+  });
+
   it("seeds Morgan and Casey by replacing only the family slice", () => {
     const morgan = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
     const casey = healthReducer(morgan, { type: "seedExampleFamily", example: "casey" });

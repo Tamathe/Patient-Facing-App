@@ -18,7 +18,7 @@ import { canTransition, outcomeToStatus, transition } from "@/domain/screening-g
 import { outcomeForGrade, recallDateFrom, recallReasonFor, tierForResult } from "@/domain/dr-triage";
 import { backdatedSentAt, escalationDue } from "@/domain/referral-followup";
 import { getDestinationById, nearestDestinationOfKind } from "@/domain/screening-sites";
-import { tScreening } from "@/i18n/strings";
+import { tScreening, type Language } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type {
   AccessibilityPreference,
@@ -44,7 +44,7 @@ import type {
   SavedFamilyResource,
   ScreeningResult
 } from "@/domain/types";
-import { loadStoredState, saveStoredState } from "./storage";
+import { isLanguage, loadStoredState, saveStoredState } from "./storage";
 
 export type HealthAction =
   | { type: "addReading"; reading: HomeReading }
@@ -61,6 +61,7 @@ export type HealthAction =
   | { type: "logMedicationFill"; fill: MedicationFill }
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
+  | { type: "setLanguage"; language: Language }
   | { type: "completeOnboarding"; conditions: Condition[] }
   | { type: "bookScreening"; gapId: string; siteId: string; siteName: string; when: string }
   | {
@@ -240,6 +241,22 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         auditEvents: [
           ...state.auditEvents,
           recordAuditEvent(state.patient.id, "updated", "Display and access preferences updated")
+        ]
+      };
+    }
+    case "setLanguage": {
+      // Guarded by the same isLanguage check storage applies on load: a value
+      // outside en/es would fail isPatient there and reset the whole state to
+      // the default demo, so it must never be persisted.
+      if (!isLanguage(action.language) || action.language === state.patient.language) {
+        return state;
+      }
+      return {
+        ...state,
+        patient: { ...state.patient, language: action.language },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Language preference updated")
         ]
       };
     }
