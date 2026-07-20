@@ -166,13 +166,27 @@ export function useFoodVoiceSession(args: {
     if (token.mode === "live") {
       setMode("live");
       setDataMode(aiDataModeForVoiceTransport(token));
+      let lastInjectedFoodId: string | null = null;
+      const buildContextMessage = (): { text: string; imageDataUrl: string | null } => {
+        const context = getContext();
+        const includeFood = context.identifiedFood && context.identifiedFood.id !== lastInjectedFoodId;
+        if (context.identifiedFood) {
+          lastInjectedFoodId = context.identifiedFood.id;
+        }
+        const foodJson = includeFood ? JSON.stringify(context.identifiedFood) : '{"foodData":"unchanged"}';
+        const flags = context.flagTexts.length > 0 ? context.flagTexts.join("; ") : "none";
+        return {
+          imageDataUrl: context.frameDataUrl,
+          text: `[camera context — not spoken by the patient] Food data: ${foodJson}. Precomputed flags: ${flags}.`
+        };
+      };
       try {
         handleRef.current = await connectRealtimeSession({
           clientSecret: token.clientSecret,
           model: token.model,
           instructions: buildFoodLensInstructions(state, selectLenses(activeConditions(state.carePlan))),
           language,
-          getContext,
+          buildContextMessage,
           onEvent: handleEvent,
           gateTranscript
         });

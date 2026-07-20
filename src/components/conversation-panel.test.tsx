@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ConversationPanel } from "./conversation-panel";
@@ -89,6 +89,10 @@ describe("ConversationPanel", () => {
     expect(screen.getByText("Safety guidance: Safe to continue")).toBeInTheDocument();
     expect(screen.getByText("Safety guidance: Escalate to care now")).toBeInTheDocument();
     expect(screen.getByText("Safety guidance: Blocked for safety")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Read aloud" })).toHaveLength(3);
+    const patientArticle = screen.getByText("Could you explain why blood pressure matters?").closest("article");
+    expect(patientArticle).not.toBeNull();
+    expect(within(patientArticle as HTMLElement).queryByRole("button", { name: "Read aloud" })).not.toBeInTheDocument();
   });
 
   it("renders a banner, call/draft actions, and humanized sources for a soft escalation", () => {

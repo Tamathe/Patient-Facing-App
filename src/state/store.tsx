@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type Dispatch,
   type ReactNode
 } from "react";
@@ -22,7 +23,7 @@ import { canTransition, outcomeToStatus, transition } from "@/domain/screening-g
 import { outcomeForGrade, recallDateFrom, recallReasonFor, tierForResult } from "@/domain/dr-triage";
 import { backdatedSentAt, escalationDue } from "@/domain/referral-followup";
 import { getDestinationById, nearestDestinationOfKind } from "@/domain/screening-sites";
-import { tScreening } from "@/i18n/strings";
+import { tScreening, type Language } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
 import { getInstrument } from "@/domain/instruments/registry";
 import type {
@@ -50,13 +51,15 @@ import type {
   SavedFamilyResource,
   ScreeningResult
 } from "@/domain/types";
-import { loadStoredState, saveStoredState } from "./storage";
+import { isLanguage, loadStoredState, saveStoredState } from "./storage";
 
 export type HealthAction =
+  | { type: "hydrateStoredState"; state: AppState }
   | { type: "addReading"; reading: HomeReading }
   | { type: "addGlucoseReading"; reading: GlucoseReading }
   | { type: "setMedicationBarriers"; medicationId: string; barriers: MedicationBarrier[] }
   | { type: "addContextItem"; item: CareContextItem; facts: ExtractedFact[] }
+  | { type: "removeContextItem"; contextItemId: string }
   | { type: "confirmFact"; factId: string }
   | { type: "addAiMessage"; message: AiMessage }
   | { type: "acknowledgeCrisis"; messageId: string }
@@ -68,6 +71,7 @@ export type HealthAction =
   | { type: "logMedicationFill"; fill: MedicationFill }
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
+  | { type: "setLanguage"; language: Language }
   | { type: "completeOnboarding"; conditions: Condition[] }
   | { type: "bookScreening"; gapId: string; siteId: string; siteName: string; when: string }
   | {
@@ -113,6 +117,8 @@ function emptyFamilyState(profile: FamilyProfile): FamilyNavigatorState {
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
   switch (action.type) {
+    case "hydrateStoredState":
+      return action.state;
     case "addReading": {
       return {
         ...state,
@@ -142,6 +148,15 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         contextItems: [...state.contextItems, action.item],
         extractedFacts: [...state.extractedFacts, ...action.facts],
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Care instructions added")]
+      };
+    }
+    case "removeContextItem": {
+      if (!state.contextItems.some((item) => item.id === action.contextItemId)) return state;
+      return {
+        ...state,
+        contextItems: state.contextItems.filter((item) => item.id !== action.contextItemId),
+        extractedFacts: state.extractedFacts.filter((fact) => fact.contextItemId !== action.contextItemId),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "deleted", "Care note removed")]
       };
     }
     case "confirmFact": {
@@ -267,6 +282,22 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         auditEvents: [
           ...state.auditEvents,
           recordAuditEvent(state.patient.id, "updated", "Display and access preferences updated")
+        ]
+      };
+    }
+    case "setLanguage": {
+      // Guarded by the same isLanguage check storage applies on load: a value
+      // outside en/es would fail isPatient there and reset the whole state to
+      // the default demo, so it must never be persisted.
+      if (!isLanguage(action.language) || action.language === state.patient.language) {
+        return state;
+      }
+      return {
+        ...state,
+        patient: { ...state.patient, language: action.language },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Language preference updated")
         ]
       };
     }
@@ -666,17 +697,22 @@ type HealthStateContextValue = {
 const HealthStateContext = createContext<HealthStateContextValue | null>(null);
 
 export function HealthStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(healthReducer, defaultDemoState, loadStoredState);
+  const [state, dispatch] = useReducer(healthReducer, defaultDemoState);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Silence escalation runs on every app load; the reducer is a strict no-op
-  // (same state reference) when nothing is due, so this never dirties storage.
   useEffect(() => {
+    dispatch({ type: "hydrateStoredState", state: loadStoredState() });
     dispatch({ type: "checkReferralFollowup" });
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     saveStoredState(state);
-  }, [state]);
+  }, [hydrated, state]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 
@@ -684,11 +720,15 @@ export function HealthStateProvider({ children }: { children: ReactNode }) {
 }
 
 export function useHealthState(): HealthStateContextValue {
-  const value = useContext(HealthStateContext);
+  const value = useOptionalHealthState();
 
   if (!value) {
     throw new Error("useHealthState must be used inside HealthStateProvider");
   }
 
   return value;
+}
+
+export function useOptionalHealthState(): HealthStateContextValue | null {
+  return useContext(HealthStateContext);
 }

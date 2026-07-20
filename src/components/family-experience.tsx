@@ -8,12 +8,9 @@ import React, {
   type Dispatch
 } from "react";
 import { FamilyFactCard } from "@/components/family-fact-card";
-import {
-  FamilyInterview,
-  type FamilyInterviewSubmissionMeta,
-  type SanitizedFamilyInterviewResult
-} from "@/components/family-interview";
+import type { FamilyInterviewSubmissionMeta, SanitizedFamilyInterviewResult } from "@/components/family-interview";
 import { FamilyNeedsScreen } from "@/components/family-needs-screen";
+import { FamilyOrientationInterview } from "@/components/family-orientation-interview";
 import { FamilyProfileForm } from "@/components/family-profile-form";
 import { FamilyResourceCard } from "@/components/family-resource-card";
 import { FamilyStageTimeline } from "@/components/family-stage-timeline";
@@ -51,7 +48,6 @@ type MatchedResource = {
 
 type ReviewDetails = {
   domains: SanitizedFamilyInterviewResult["domains"];
-  followUps: string[];
 };
 
 const DOMAIN_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
@@ -177,6 +173,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const [reviewDetails, setReviewDetails] = useState<ReviewDetails | null>(null);
   const [safetySuppressed, setSafetySuppressed] = useState(false);
   const [seedVersion, setSeedVersion] = useState(0);
+  const [needsScreenOpen, setNeedsScreenOpen] = useState(false);
   const reviewRef = useRef<HTMLElement>(null);
   const pendingReviewFocusRef = useRef(false);
   const latestInterview = family?.interviews.at(-1);
@@ -231,6 +228,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     pendingReviewFocusRef.current = false;
     setReviewDetails(null);
     setSafetySuppressed(false);
+    setNeedsScreenOpen(false);
     setSeedVersion((current) => current + 1);
     dispatch({ type: "seedExampleFamily", example, now });
   }
@@ -255,9 +253,10 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
 
   function addInterview(
     result: SanitizedFamilyInterviewResult,
-    meta: FamilyInterviewSubmissionMeta
+    meta: FamilyInterviewSubmissionMeta,
+    { round }: { round: number }
   ): void {
-    pendingReviewFocusRef.current = true;
+    pendingReviewFocusRef.current = round === 0;
     const interviewId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const facts: FamilyFact[] = result.facts.map((fact) => ({
@@ -271,7 +270,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     const domains = result.domains.map(({ domain }) => domain);
 
     setSafetySuppressed(false);
-    setReviewDetails({ domains: result.domains, followUps: result.followUps });
+    setReviewDetails({ domains: result.domains });
     dispatch({
       type: "addFamilyInterview",
       interview: {
@@ -331,49 +330,21 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
 
       {family?.profile ? (
         <>
-          <section className="grid gap-3 sm:grid-cols-2" aria-label={tFamily(language, "pageTitle")}>
-            <a
-              href="#family-screen-title"
-              onClick={() => document.getElementById("family-screen-title")?.focus()}
-              className="min-w-0 rounded-control border border-care/20 bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
-            >
-              <h2 className="break-words text-lg font-semibold">{tFamily(language, "entryQuestionsTitle")}</h2>
-              <p className="mt-1 break-words text-sm leading-6 text-ink/75">
-                {tFamily(language, "entryQuestionsBody")}
-              </p>
-            </a>
-            <a
-              href="#family-interview-title"
-              onClick={() => document.getElementById("family-interview-title")?.focus()}
-              className="min-w-0 rounded-control border border-care/20 bg-white p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
-            >
-              <h2 className="break-words text-lg font-semibold">{tFamily(language, "entryInterviewTitle")}</h2>
-              <p className="mt-1 break-words text-sm leading-6 text-ink/75">
-                {tFamily(language, "entryInterviewBody")}
-              </p>
-            </a>
-          </section>
-
-          <FamilyNeedsScreen
-            key={`family-screen-${seedVersion}`}
-            language={language}
-            initialAnswers={family.screenAnswers}
-            onSubmit={submitScreen}
-          />
-
           <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-interview-title">
             <h2 id="family-interview-title" tabIndex={-1} className="text-xl font-semibold">
               {tFamily(language, "interviewTitle")}
             </h2>
             <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "interviewIntro")}</p>
             <div className="mt-4">
-              <FamilyInterview
+              <FamilyOrientationInterview
+                key={`family-orientation-${seedVersion}`}
                 profile={family.profile}
                 draft={family.interviewDraft}
                 passcode={passcode}
                 language={language}
+                voiceEntryContext={{ patientId: state.patient.id, dispatch }}
                 onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
-                onExtracted={addInterview}
+                onInterviewExtracted={addInterview}
                 onSafetyEscalation={suppressForSafety}
               />
             </div>
@@ -407,18 +378,6 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                       <li key={domain} className="rounded-control bg-white p-3 text-sm">
                         <span className="font-semibold">{tFamily(language, DOMAIN_KEYS[domain])}</span>
                         {rationale ? <p className="mt-1 break-words text-ink/75">{rationale}</p> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {reviewDetails?.followUps.length ? (
-                <div>
-                  <h3 className="font-semibold">{tFamily(language, "followUpsTitle")}</h3>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink/75">
-                    {reviewDetails.followUps.map((followUp) => (
-                      <li key={followUp} className="break-words">
-                        {followUp}
                       </li>
                     ))}
                   </ul>
@@ -516,6 +475,33 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
               ) : null}
             </section>
           ) : null}
+
+          <section className="rounded-control border border-care/20 bg-white p-4">
+            <button
+              type="button"
+              aria-expanded={needsScreenOpen}
+              aria-controls="family-needs-screen-panel"
+              onClick={() => setNeedsScreenOpen((current) => !current)}
+              className="min-h-12 w-full min-w-0 rounded-control text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+            >
+              <span className="block break-words text-lg font-semibold">
+                {tFamily(language, "needsScreenDisclosureTitle")}
+              </span>
+              <span className="mt-1 block break-words text-sm leading-6 text-ink/75">
+                {tFamily(language, "needsScreenDisclosureBody")}
+              </span>
+            </button>
+            {needsScreenOpen ? (
+              <div id="family-needs-screen-panel" className="mt-4">
+                <FamilyNeedsScreen
+                  key={`family-screen-${seedVersion}`}
+                  language={language}
+                  initialAnswers={family.screenAnswers}
+                  onSubmit={submitScreen}
+                />
+              </div>
+            ) : null}
+          </section>
 
           <section
             role="region"

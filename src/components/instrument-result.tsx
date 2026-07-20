@@ -6,6 +6,7 @@ import type { ScreeningContext, ScreeningInstrument } from "@/domain/instruments
 import type { AiMessage } from "@/domain/types";
 import { tSafety, type Language } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
+import { speak } from "@/voice/tts";
 import { AdultOutcomeCard } from "./adult-outcome-card";
 import { MessageActions } from "./message-actions";
 
@@ -63,6 +64,12 @@ export function InstrumentResult({
       dispatch({ type: "addAiMessage", message });
     }
   }, [crisis, dispatch, instrument.id, language, outcome.band, outcome.totalScore, responses, state.patient.id]);
+
+  useEffect(() => {
+    if (crisis) {
+      void speak(tSafety(language, "crisisResponse"), { language, rate: 0.9 });
+    }
+  }, [crisis, language]);
 
   if (crisis) {
     return (

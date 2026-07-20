@@ -68,11 +68,13 @@ const domainValues = devNeedDomainSchema.options.join(", ");
 function systemPrompt(): string {
   return [
     "Extract only facts explicitly reported by the caregiver and developmental support domains from the interview.",
-    'Return JSON only with exactly: {"facts":[{"label":"","value":"","sourceSnippet":""}],"domains":[{"domain":"","rationale":""}],"followUps":[""]}.',
+    'Return JSON only with exactly: {"facts":[{"label":"","value":"","sourceSnippet":""}],"domains":[{"domain":"","rationale":""}],"followUps":[{"question":"","options":["",""]}]}.',
     `Allowed domain values: ${domainValues}.`,
+    "followUps: at most 3 short orientation questions, each with 2 to 4 suggested short answers under 60 characters in options; questions under 200 characters, plain language, ending with a question mark.",
+    'In the caregiver interview, lines beginning with "Q:" are questions the navigator already asked and lines beginning with "A:" are the caregiver\'s replies. Extract facts and domains only from the caregiver\'s words; never repeat a question already asked.',
     "Every sourceSnippet must quote the caregiver text exactly. Never invent a fact or diagnosis.",
     "never state that the child has a condition; say the concerns you described unless the caregiver explicitly reports a diagnosis.",
-    "Use cautious, plain-language rationales. Do not name or recommend organizations, programs, services, or providers."
+    "Use cautious, plain-language rationales. Do not name or recommend organizations, programs, services, or providers in rationales, followUps questions, or options."
   ].join("\n");
 }
 
@@ -126,7 +128,7 @@ export async function POST(request: Request): Promise<Response> {
       body: JSON.stringify({
         model: process.env.HEALTH_AI_INTERVIEW_MODEL || DEFAULT_INTERVIEW_MODEL,
         temperature: 0,
-        max_tokens: 900,
+        max_tokens: 1200,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt() },

@@ -7,7 +7,7 @@
 ## Command
 
 ```
-npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts src/domain/front-door.test.ts src/domain/safety.test.ts
+npx vitest run src/domain/crisis-red-flags.test.ts src/ai/safety-gate.test.ts src/domain/front-door.test.ts src/domain/safety.test.ts src/ai/voice-gate-corpus.test.ts src/ai/output-guard.test.ts
 ```
 
 ## Result
@@ -19,15 +19,17 @@ PASS
 ```
 RUN  v2.1.9 C:/Patient centered
 
- ✓ src/domain/safety.test.ts (16 tests) 10ms
- ✓ src/domain/crisis-red-flags.test.ts (183 tests) 48ms
- ✓ src/domain/front-door.test.ts (45 tests) 40ms
- ✓ src/ai/safety-gate.test.ts (46 tests) 50ms
+ ✓ src/domain/crisis-red-flags.test.ts (183 tests) 38ms
+ ✓ src/domain/safety.test.ts (16 tests) 5ms
+ ✓ src/ai/voice-gate-corpus.test.ts (2 tests) 25ms
+ ✓ src/ai/safety-gate.test.ts (46 tests) 47ms
+ ✓ src/ai/output-guard.test.ts (12 tests) 39ms
+ ✓ src/domain/front-door.test.ts (45 tests) 29ms
 
- Test Files  4 passed (4)
-      Tests  290 passed (290)
-   Start at  13:09:33
-   Duration  1.28s (transform 273ms, setup 347ms, collect 573ms, tests 149ms, environment 1.94s, prepare 450ms)
+ Test Files  6 passed (6)
+      Tests  304 passed (304)
+   Start at  16:41:44
+   Duration  1.28s (transform 447ms, setup 528ms, collect 985ms, tests 183ms, environment 2.92s, prepare 537ms)
 ```
 
 ## Interpretation

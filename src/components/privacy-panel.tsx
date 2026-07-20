@@ -2,10 +2,11 @@
 
 import React, { useState } from "react";
 import { AiDataDisclosure } from "@/components/ai-data-disclosure";
+import { LanguageToggle } from "@/components/language-toggle";
 import { ACCESSIBILITY_PREFERENCE_LABELS, ACCESSIBILITY_PREFERENCES } from "@/domain/accessibility";
 import type { AiDataMode } from "@/domain/privacy-disclosure";
 import { type AccessibilityPreference, type AppState, type AuditEvent } from "@/domain/types";
-import { tPrivacy } from "@/i18n/strings";
+import { tPrivacy, type Language } from "@/i18n/strings";
 
 function formatLogTime(createdAt: string): string {
   const eventDate = new Date(createdAt);
@@ -26,7 +27,9 @@ const actionLabelMap: Record<AuditEvent["action"], string> = {
   referral_placed: "Referral placed",
   referral_escalated: "Referral escalated to care team",
   recall_scheduled: "Annual recall scheduled",
-  referral_booked: "Referral appointment booked"
+  referral_booked: "Referral appointment booked",
+  voice_consent_granted: "Voice consent granted",
+  voice_session_started: "Voice session started"
 };
 
 type PrivacyPanelProps = {
@@ -36,6 +39,7 @@ type PrivacyPanelProps = {
   onExport: () => void;
   onRestoreDefaultDemo?: () => void;
   onUpdateAccessibility?: (preferences: AccessibilityPreference[]) => void;
+  onUpdateLanguage?: (language: Language) => void;
 };
 
 function getDisplayLabel(event: AuditEvent): string {
@@ -48,7 +52,8 @@ export function PrivacyPanel({
   onReset,
   onExport,
   onRestoreDefaultDemo,
-  onUpdateAccessibility
+  onUpdateAccessibility,
+  onUpdateLanguage
 }: PrivacyPanelProps) {
   const activePreferences = state.patient.accessibilityPreferences ?? [];
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -150,22 +155,29 @@ export function PrivacyPanel({
           </div>
         ) : null}
       </section>
-      {onUpdateAccessibility ? (
+      {onUpdateAccessibility || onUpdateLanguage ? (
         <section className="rounded-control border border-ink/10 bg-white p-4">
           <h2 className="text-lg font-semibold">Display &amp; access</h2>
           <p className="mt-1 text-sm text-ink/70">Turn on the options that make this easier to use. They apply everywhere.</p>
-          <div className="mt-3 grid gap-2">
-            {ACCESSIBILITY_PREFERENCES.map((preference) => (
-              <label key={preference} className="flex min-h-12 items-center gap-2 text-sm capitalize">
-                <input
-                  checked={activePreferences.includes(preference)}
-                  onChange={() => togglePreference(preference)}
-                  type="checkbox"
-                />
-                {ACCESSIBILITY_PREFERENCE_LABELS[preference]}
-              </label>
-            ))}
-          </div>
+          {onUpdateLanguage ? (
+            <div className="mt-3">
+              <LanguageToggle language={state.patient.language} onChange={onUpdateLanguage} />
+            </div>
+          ) : null}
+          {onUpdateAccessibility ? (
+            <div className="mt-3 grid gap-2">
+              {ACCESSIBILITY_PREFERENCES.map((preference) => (
+                <label key={preference} className="flex min-h-12 items-center gap-2 text-sm capitalize">
+                  <input
+                    checked={activePreferences.includes(preference)}
+                    onChange={() => togglePreference(preference)}
+                    type="checkbox"
+                  />
+                  {ACCESSIBILITY_PREFERENCE_LABELS[preference]}
+                </label>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
       <section className="rounded-control border border-ink/10 bg-white p-4">

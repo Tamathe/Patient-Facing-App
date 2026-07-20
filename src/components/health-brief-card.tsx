@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { HealthBrief } from "@/domain/types";
+import type { Language } from "@/i18n/strings";
+import { ReadAloud } from "@/voice/read-aloud";
 
 type HealthBriefCardProps = {
   brief: HealthBrief;
   onDownload?: () => void;
   onPrint?: () => void;
   onShare?: () => void;
+  language?: Language;
 };
 
-export function HealthBriefCard({ brief, onDownload, onPrint, onShare }: HealthBriefCardProps) {
+export function HealthBriefCard({ brief, onDownload, onPrint, onShare, language = "en" }: HealthBriefCardProps) {
   const [canShare, setCanShare] = useState(false);
   const generatedLabel = useMemo(() => {
     const generatedAt = new Date(brief.generatedAt);
@@ -92,6 +95,7 @@ export function HealthBriefCard({ brief, onDownload, onPrint, onShare }: HealthB
           <p className="text-sm text-ink/65">Generated {generatedLabel}</p>
         </div>
         <div className="health-brief-card__actions flex gap-2">
+          <ReadAloud text={textContent} language={language} />
           <button
             className="rounded-control border border-care px-3 py-2 text-sm font-semibold text-care"
             onClick={() => {
@@ -116,9 +120,15 @@ export function HealthBriefCard({ brief, onDownload, onPrint, onShare }: HealthB
           <section key={`${section.title}-${sectionIndex}`} className="border-t border-ink/10 pt-3">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-semibold">{section.title}</h3>
-              <span className="rounded-control bg-calm px-2 py-1 text-xs font-medium text-care">
-                {section.status.replace("_", " ")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-control bg-calm px-2 py-1 text-xs font-medium text-care">
+                  {section.status.replace("_", " ")}
+                </span>
+                <ReadAloud
+                  text={[section.title, ...section.items].join(". ")}
+                  language={language}
+                />
+              </div>
             </div>
             <ul className="mt-2 grid gap-1 text-sm leading-6">
               {section.items.map((item, itemIndex) => (

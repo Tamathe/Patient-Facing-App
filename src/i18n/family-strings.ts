@@ -92,6 +92,38 @@ export type FamilyStringKey =
   | "interviewSafetyRedirect"
   | "interviewSafetyRedirectTitle"
   | "interviewSafetyRedirectBody"
+  | "followUpSchoolIepQuestion"
+  | "followUpSchoolIepChip1"
+  | "followUpSchoolIepChip2"
+  | "followUpSchoolIepChip3"
+  | "followUpTherapiesQuestion"
+  | "followUpTherapiesChip1"
+  | "followUpTherapiesChip2"
+  | "followUpTherapiesChip3"
+  | "followUpWaiversQuestion"
+  | "followUpWaiversChip1"
+  | "followUpWaiversChip2"
+  | "followUpWaiversChip3"
+  | "followUpRespiteQuestion"
+  | "followUpRespiteChip1"
+  | "followUpRespiteChip2"
+  | "followUpRespiteChip3"
+  | "followUpGenericDayQuestion"
+  | "followUpGenericDayChip1"
+  | "followUpGenericDayChip2"
+  | "followUpGenericDayChip3"
+  | "followUpGenericHelpQuestion"
+  | "followUpGenericHelpChip1"
+  | "followUpGenericHelpChip2"
+  | "followUpGenericHelpChip3"
+  | "orientationRoundCount"
+  | "followUpChipsLabel"
+  | "followUpAnswerLabel"
+  | "followUpAnswerPlaceholder"
+  | "followUpAnswerSubmit"
+  | "followUpAnswerError"
+  | "orientationComplete"
+  | "orientationStartOver"
   | "factsTitle"
   | "factsIntro"
   | "evidencePatientReported"
@@ -100,7 +132,8 @@ export type FamilyStringKey =
   | "factSource"
   | "factConfirm"
   | "factConfirmed"
-  | "followUpsTitle"
+  | "needsScreenDisclosureTitle"
+  | "needsScreenDisclosureBody"
   | "domainRationaleTitle"
   | "factGradeLabel"
   | "factReportedDiagnosisLabel"
@@ -293,6 +326,38 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     interviewSafetyRedirect: "Safety comes first. We are opening immediate support instead of analyzing or showing family resources.",
     interviewSafetyRedirectTitle: "Immediate support",
     interviewSafetyRedirectBody: "We are opening immediate support now. The interview will not be analyzed and family resources will not be shown for this submission.",
+    followUpSchoolIepQuestion: "What has the school offered so far?",
+    followUpSchoolIepChip1: "Nothing yet",
+    followUpSchoolIepChip2: "A meeting is planned",
+    followUpSchoolIepChip3: "An evaluation was done",
+    followUpTherapiesQuestion: "Has anyone talked with you about therapy visits?",
+    followUpTherapiesChip1: "Not yet",
+    followUpTherapiesChip2: "We are on a list",
+    followUpTherapiesChip3: "We go now",
+    followUpWaiversQuestion: "Have you applied for any state programs yet?",
+    followUpWaiversChip1: "Not yet",
+    followUpWaiversChip2: "Applied, still waiting",
+    followUpWaiversChip3: "Not sure",
+    followUpRespiteQuestion: "Who can take over for a few hours?",
+    followUpRespiteChip1: "No one right now",
+    followUpRespiteChip2: "Family sometimes",
+    followUpRespiteChip3: "A paid helper",
+    followUpGenericDayQuestion: "What part of a typical day is hardest?",
+    followUpGenericDayChip1: "Mornings",
+    followUpGenericDayChip2: "Afternoons",
+    followUpGenericDayChip3: "Bedtime",
+    followUpGenericHelpQuestion: "Who helps your family right now?",
+    followUpGenericHelpChip1: "No one",
+    followUpGenericHelpChip2: "Family or friends",
+    followUpGenericHelpChip3: "A professional",
+    orientationRoundCount: "Question {round} of {max}",
+    followUpChipsLabel: "Suggested answers",
+    followUpAnswerLabel: "Or type a short answer",
+    followUpAnswerPlaceholder: "Type your answer",
+    followUpAnswerSubmit: "Add answer",
+    followUpAnswerError: "Enter an answer before continuing.",
+    orientationComplete: "Thanks. We have enough to orient your next steps.",
+    orientationStartOver: "Start a new description",
     factsTitle: "Review what we heard",
     factsIntro: "Confirm only details that are accurate. Suggested details do not change your profile until you confirm them.",
     evidencePatientReported: "From your words",
@@ -301,7 +366,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factSource: "Source words",
     factConfirm: "Confirm this detail",
     factConfirmed: "Detail confirmed",
-    followUpsTitle: "Questions to consider",
+    needsScreenDisclosureTitle: "Prefer simple questions?",
+    needsScreenDisclosureBody: "Answer eight optional questions with yes, no, or prefer not to answer.",
     domainRationaleTitle: "Why this support area appeared",
     factGradeLabel: "Grade",
     factReportedDiagnosisLabel: "Reported diagnosis",
@@ -493,6 +559,38 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     interviewSafetyRedirect: "La seguridad es lo primero. Abriremos apoyo inmediato en vez de analizar o mostrar recursos familiares.",
     interviewSafetyRedirectTitle: "Apoyo inmediato",
     interviewSafetyRedirectBody: "Abriremos apoyo inmediato ahora. La entrevista no se analizará y no se mostrarán recursos familiares para este envío.",
+    followUpSchoolIepQuestion: "¿Qué ha ofrecido la escuela hasta ahora?",
+    followUpSchoolIepChip1: "Nada todavía",
+    followUpSchoolIepChip2: "Hay una reunión planeada",
+    followUpSchoolIepChip3: "Ya hicieron una evaluación",
+    followUpTherapiesQuestion: "¿Alguien te ha hablado sobre visitas de terapia?",
+    followUpTherapiesChip1: "Todavía no",
+    followUpTherapiesChip2: "Estamos en una lista",
+    followUpTherapiesChip3: "Vamos ahora",
+    followUpWaiversQuestion: "¿Has solicitado algún programa estatal?",
+    followUpWaiversChip1: "Todavía no",
+    followUpWaiversChip2: "Solicité y sigo esperando",
+    followUpWaiversChip3: "No estoy seguro",
+    followUpRespiteQuestion: "¿Quién puede encargarse por unas horas?",
+    followUpRespiteChip1: "Nadie por ahora",
+    followUpRespiteChip2: "A veces la familia",
+    followUpRespiteChip3: "Una persona de apoyo pagada",
+    followUpGenericDayQuestion: "¿Qué parte de un día típico es la más difícil?",
+    followUpGenericDayChip1: "Las mañanas",
+    followUpGenericDayChip2: "Las tardes",
+    followUpGenericDayChip3: "La hora de dormir",
+    followUpGenericHelpQuestion: "¿Quién ayuda a tu familia ahora?",
+    followUpGenericHelpChip1: "Nadie",
+    followUpGenericHelpChip2: "Familiares o amigos",
+    followUpGenericHelpChip3: "Un profesional",
+    orientationRoundCount: "Pregunta {round} de {max}",
+    followUpChipsLabel: "Respuestas sugeridas",
+    followUpAnswerLabel: "O escribe una respuesta corta",
+    followUpAnswerPlaceholder: "Escribe tu respuesta",
+    followUpAnswerSubmit: "Agregar respuesta",
+    followUpAnswerError: "Escribe una respuesta antes de continuar.",
+    orientationComplete: "Gracias. Tenemos suficiente para orientar tus próximos pasos.",
+    orientationStartOver: "Empezar una descripción nueva",
     factsTitle: "Revisa lo que entendimos",
     factsIntro: "Confirma solo los datos correctos. Las sugerencias no cambian tu perfil hasta que las confirmes.",
     evidencePatientReported: "De tus palabras",
@@ -501,7 +599,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     factSource: "Palabras de origen",
     factConfirm: "Confirmar este dato",
     factConfirmed: "Dato confirmado",
-    followUpsTitle: "Preguntas para considerar",
+    needsScreenDisclosureTitle: "¿Prefieres preguntas sencillas?",
+    needsScreenDisclosureBody: "Responde ocho preguntas opcionales con sí, no o prefiero no responder.",
     domainRationaleTitle: "Por qué apareció esta área de apoyo",
     factGradeLabel: "Grado",
     factReportedDiagnosisLabel: "Diagnóstico informado",

@@ -76,6 +76,7 @@ export default function PrivacyPage() {
         }}
         onRestoreDefaultDemo={() => dispatch({ type: "resetDemo" })}
         onUpdateAccessibility={(preferences) => dispatch({ type: "updateAccessibilityPreferences", preferences })}
+        onUpdateLanguage={(language) => dispatch({ type: "setLanguage", language })}
       />
     </AppShell>
   );

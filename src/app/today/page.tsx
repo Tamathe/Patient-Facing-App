@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { DoseCard } from "@/components/dose-card";
 import { DoseReminderCard } from "@/components/dose-reminder-card";
 import { HomeComposer } from "@/components/home-composer";
+import { LanguageToggle } from "@/components/language-toggle";
 import { TodayGreeting } from "@/components/today-greeting";
 import {
   getAdherenceStreak,
@@ -80,6 +81,13 @@ export default function TodayPage() {
   return (
     <AppShell title="Today">
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <LanguageToggle
+            compact
+            language={state.patient.language}
+            onChange={(language) => dispatch({ type: "setLanguage", language })}
+          />
+        </div>
         <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} language={state.patient.language} />
         <HomeComposer />
         {featuredMedication ? (

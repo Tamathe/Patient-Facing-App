@@ -14,7 +14,10 @@ import { SWYC_18MO_INSTRUMENT } from "@/domain/instruments/swyc-milestones-18mo"
 import { tSafety } from "@/i18n/strings";
 import { InstrumentResult } from "./instrument-result";
 
-const { dispatch } = vi.hoisted(() => ({ dispatch: vi.fn() }));
+const { dispatch, speakMock } = vi.hoisted(() => ({
+  dispatch: vi.fn(),
+  speakMock: vi.fn(() => Promise.resolve())
+}));
 
 vi.mock("@/state/store", () => ({
   useHealthState: () => ({
@@ -22,9 +25,13 @@ vi.mock("@/state/store", () => ({
     dispatch
   })
 }));
+vi.mock("@/voice/tts", () => ({ speak: speakMock }));
 
 describe("InstrumentResult", () => {
-  beforeEach(() => dispatch.mockReset());
+  beforeEach(() => {
+    dispatch.mockReset();
+    speakMock.mockReset();
+  });
 
   it("records a positive-item event, dispatches the shared crisis message, and replaces the band summary", async () => {
     render(
@@ -60,6 +67,10 @@ describe("InstrumentResult", () => {
     expect(screen.getByRole("link", { name: /Text 988/i })).toHaveAttribute("href", "sms:988");
     expect(screen.getByRole("link", { name: /Call 911/i })).toHaveAttribute("href", "tel:911");
     expect(screen.queryByText(/few or no signs/i)).not.toBeInTheDocument();
+    expect(speakMock).toHaveBeenCalledWith(tSafety("en", "crisisResponse"), {
+      language: "en",
+      rate: 0.9
+    });
   });
 
   it("records a non-crisis result and renders its localized band summary", async () => {

@@ -60,4 +60,23 @@ describe("realtime token route", () => {
     await expect(response.json()).resolves.toEqual({ mode: "live", model: "gpt-realtime-2" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("passes the realtime model env override to the mint payload while keeping marin", async () => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("HEALTH_AI_REALTIME_MODEL", "verified-cheap-model");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ value: "client-secret", expires_at: 123 }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(makeRequest({ patientId: "patient-1", crisisOpen: false }));
+    const json = await response.json();
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const payload = JSON.parse(String(options.body)) as { session: { model: string; audio: { output: { voice: string } } } };
+
+    expect(json.model).toBe("verified-cheap-model");
+    expect(payload.session.model).toBe("verified-cheap-model");
+    expect(payload.session.audio.output.voice).toBe("marin");
+  });
 });

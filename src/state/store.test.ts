@@ -53,6 +53,58 @@ describe("healthReducer", () => {
     ).toBe(withoutDiagnoses);
   });
 
+  it("removes a care context item with its facts and audits the deletion", () => {
+    const contextItemId = demoState.contextItems[0]?.id ?? "voice-note-1";
+    const state = {
+      ...demoState,
+      contextItems: [
+        ...demoState.contextItems,
+        {
+          id: contextItemId,
+          patientId: demoState.patient.id,
+          title: "Voice note 1",
+          rawText: "Check blood pressure every morning.",
+          sourceLabel: "Spoken plan note",
+          createdAt: "2026-07-20T12:00:00.000Z"
+        }
+      ],
+      extractedFacts: [
+        ...demoState.extractedFacts,
+        {
+          id: "voice-fact-1",
+          contextItemId,
+          label: "Home monitoring",
+          value: "Check blood pressure at home",
+          confidence: "medium" as const,
+          status: "needs_review" as const,
+          sourceSnippet: "Check blood pressure every morning."
+        }
+      ]
+    };
+
+    const next = healthReducer(state, { type: "removeContextItem", contextItemId });
+
+    expect(next.contextItems.some((item) => item.id === contextItemId)).toBe(false);
+    expect(next.extractedFacts.some((fact) => fact.contextItemId === contextItemId)).toBe(false);
+    expect(next.auditEvents.at(-1)).toMatchObject({ action: "deleted", label: "Care note removed" });
+  });
+
+  it("switches the patient language and audits the change", () => {
+    const next = healthReducer(demoState, { type: "setLanguage", language: "es" });
+
+    expect(next.patient.language).toBe("es");
+    expect(next.auditEvents.at(-1)).toMatchObject({
+      patientId: demoState.patient.id,
+      action: "updated",
+      label: "Language preference updated"
+    });
+  });
+
+  it("is a strict no-op for the current or an invalid language", () => {
+    expect(healthReducer(demoState, { type: "setLanguage", language: "en" })).toBe(demoState);
+    expect(healthReducer(demoState, { type: "setLanguage", language: "fr" as never })).toBe(demoState);
+  });
+
   it("seeds Morgan and Casey by replacing only the family slice", () => {
     const morgan = healthReducer(demoState, { type: "seedExampleFamily", example: "morgan" });
     const casey = healthReducer(morgan, { type: "seedExampleFamily", example: "casey" });

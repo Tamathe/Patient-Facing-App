@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { InstrumentResult } from "@/components/instrument-result";
 import { InstrumentRunner } from "@/components/instrument-runner";
+import { Phq9CheckIn } from "@/components/phq9-check-in";
 import { FamilyScreeningResult } from "@/components/family-screening-result";
 import { SwycCheckin } from "@/components/swyc-checkin";
 import { childAgeMonths, familyScreeningEntries } from "@/domain/family-screenings";
@@ -14,7 +15,7 @@ import { useHealthState } from "@/state/store";
 
 export default function InstrumentPage() {
   const params = useParams<{ instrumentId: string | string[] }>();
-  const { state } = useHealthState();
+  const { state, dispatch } = useHealthState();
   const [responses, setResponses] = useState<number[] | null>(null);
   const language = state.patient.language;
   const routeId = Array.isArray(params.instrumentId) ? params.instrumentId[0] : params.instrumentId;
@@ -70,14 +71,22 @@ export default function InstrumentPage() {
   return (
     <AppShell title={instrument.title[language]}>
       {responses === null ? (
-        <InstrumentRunner
-          childName={familyProfile?.childFirstName}
-          hiddenItemIds={prefillLungStatus ? ["smoking_status"] : undefined}
-          initialResponses={prefillLungStatus ? { smoking_status: smokingStatus } : undefined}
-          instrument={instrument}
-          language={language}
-          onComplete={setResponses}
-        />
+        instrument.id === "phq9" ? (
+          <Phq9CheckIn
+            language={language}
+            onComplete={setResponses}
+            voiceEntryContext={{ patientId: state.patient.id, dispatch }}
+          />
+        ) : (
+          <InstrumentRunner
+            childName={familyProfile?.childFirstName}
+            hiddenItemIds={prefillLungStatus ? ["smoking_status"] : undefined}
+            initialResponses={prefillLungStatus ? { smoking_status: smokingStatus } : undefined}
+            instrument={instrument}
+            language={language}
+            onComplete={setResponses}
+          />
+        )
       ) : (
         <InstrumentResult actions={familyActions} instrument={instrument} language={language} responses={responses} />
       )}

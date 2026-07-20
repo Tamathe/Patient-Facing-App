@@ -2,139 +2,360 @@
 
 import { Mic, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { classifyRouteRemote } from "@/ai/route-classifier-client";
 import { decideFrontDoor } from "@/domain/front-door";
 import { CLASSIFIER_HREFS } from "@/domain/route-classifier";
-import { classifyRouteRemote } from "@/ai/route-classifier-client";
-import { tHome } from "@/i18n/home-strings";
+import { tHome, type HomeStringKey } from "@/i18n/home-strings";
+import type { Language } from "@/i18n/strings";
+import { tVoice } from "@/i18n/voice-strings";
 import { useHealthState } from "@/state/store";
+import { isSpeaking, speak, stopSpeaking, subscribeSpeaking } from "@/voice/tts";
+import { useDictation } from "@/voice/use-dictation";
+import { useVoiceEntry } from "@/voice/voice-consent";
+import { VoiceConsentSheet } from "@/voice/voice-consent-sheet";
+import { VoiceIndicator } from "@/voice/voice-indicator";
+import { MENU_GROUPS } from "./menu-grid";
 
-// Minimal shim for the browser Web Speech API (the webkit-prefixed variant is
-// untyped in lib.dom). Voice is only an input adapter: the transcript runs
-// through the exact same deterministic, safety-first router as typed text, so
-// the safety gate still fronts every spoken utterance.
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
+export const NAV_CONFIRM_MS = 1500;
+const CLARIFY_TIMEOUT_MS = 6000;
+
+type PendingNavigation = { href: string; label: string; utterance: string };
+type ClarifyOption = { href: string; label: string };
+type Clarification = { options: ClarifyOption[]; utterance: string; voiceInitiated: boolean };
+type VoiceMode = "route" | "cancel" | "clarify";
+
+const ROUTE_LABEL_KEYS = new Map<string, HomeStringKey>(
+  MENU_GROUPS.flatMap(({ items }) => items.map(({ href, labelKey }) => [href, labelKey] as const))
+);
+
+const CANCEL_GRAMMAR: Record<Language, ReadonlySet<string>> = {
+  en: new Set(["no", "stop", "cancel", "wait"]),
+  es: new Set(["no", "para", "cancela", "espera"])
 };
 
-function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+const ORDINALS: Record<Language, string[][]> = {
+  en: [
+    ["one", "first", "the first one", "option one"],
+    ["two", "second", "the second one", "option two"],
+    ["three", "third", "the third one", "option three"]
+  ],
+  es: [
+    ["uno", "una", "primero", "primera", "el primero", "la primera", "opcion uno"],
+    ["dos", "segundo", "segunda", "el segundo", "la segunda", "opcion dos"],
+    ["tres", "tercero", "tercera", "el tercero", "la tercera", "opcion tres"]
+  ]
+};
+
+function normalizeSpoken(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function routeLabel(href: string, language: Language): string {
+  const key = ROUTE_LABEL_KEYS.get(href);
+  return key ? tHome(language, key) : href;
+}
+
+function spokenOptions(options: readonly ClarifyOption[], language: Language): string {
+  const labels = options.map(({ label }) => label);
+  const conjunction = language === "es" ? "o" : "or";
+  if (labels.length === 2) return `${labels[0]} ${conjunction} ${labels[1]}`;
+  if (labels.length > 2) return `${labels.slice(0, -1).join(", ")}, ${conjunction} ${labels.at(-1)}`;
+  return labels[0] ?? "";
+}
+
+function matchClarification(
+  transcript: string,
+  options: readonly ClarifyOption[],
+  language: Language
+): ClarifyOption | null {
+  const normalized = normalizeSpoken(transcript);
+  const label = options.find((option) => normalizeSpoken(option.label) === normalized);
+  if (label) return label;
+  const index = ORDINALS[language].findIndex((phrases) => phrases.includes(normalized));
+  return index >= 0 ? options[index] ?? null : null;
 }
 
 export function HomeComposer() {
   const router = useRouter();
-  const { state } = useHealthState();
+  const { state, dispatch } = useHealthState();
+  const language = state.patient.language;
   const [input, setInput] = useState("");
-  const [listening, setListening] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [speaking, setSpeaking] = useState(() => isSpeaking());
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
+  const [clarification, setClarification] = useState<Clarification | null>(null);
+  const modeRef = useRef<VoiceMode>("route");
+  const pendingNavigationRef = useRef<PendingNavigation | null>(null);
+  const clarificationRef = useRef<Clarification | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const routeRef = useRef<(utterance: string, voiceInitiated: boolean) => Promise<void>>(async () => undefined);
+  const dictationControlsRef = useRef<{ start: () => void; stop: () => void }>({
+    start: () => undefined,
+    stop: () => undefined
+  });
+  const voiceEntry = useVoiceEntry({ patientId: state.patient.id, dispatch });
 
-  useEffect(() => {
-    setVoiceSupported(getSpeechRecognition() !== null);
+  const clearTimer = useCallback((): void => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
   }, []);
 
-  async function route(utterance: string) {
+  const clearInteractiveState = useCallback((): void => {
+    clearTimer();
+    pendingNavigationRef.current = null;
+    clarificationRef.current = null;
+    modeRef.current = "route";
+    setPendingNavigation(null);
+    setClarification(null);
+    dictationControlsRef.current.stop();
+  }, [clearTimer]);
+
+  const fallbackToCoach = useCallback(
+    (utterance: string): void => {
+      clearInteractiveState();
+      router.push(`/chat?ask=${encodeURIComponent(utterance)}`);
+    },
+    [clearInteractiveState, router]
+  );
+
+  const chooseClarification = useCallback(
+    (option: ClarifyOption): void => {
+      clearInteractiveState();
+      stopSpeaking();
+      router.push(option.href);
+    },
+    [clearInteractiveState, router]
+  );
+
+  const onFinalTranscript = useCallback(
+    (transcript: string): void => {
+      const mode = modeRef.current;
+      if (mode === "cancel") {
+        if (CANCEL_GRAMMAR[language].has(normalizeSpoken(transcript))) {
+          clearInteractiveState();
+          stopSpeaking();
+        }
+        return;
+      }
+      if (mode === "clarify") {
+        const pending = clarificationRef.current;
+        if (!pending) return;
+        const match = matchClarification(transcript, pending.options, language);
+        if (match) {
+          chooseClarification(match);
+        } else {
+          fallbackToCoach(pending.utterance);
+        }
+        return;
+      }
+      setInput(transcript);
+      void routeRef.current(transcript, true);
+    },
+    [chooseClarification, clearInteractiveState, fallbackToCoach, language]
+  );
+
+  const dictation = useDictation({ language, onFinalTranscript });
+  const stopDictation = dictation.stop;
+  dictationControlsRef.current = { start: dictation.start, stop: dictation.stop };
+
+  useEffect(() => subscribeSpeaking(setSpeaking), []);
+
+  useEffect(
+    () => () => {
+      clearTimer();
+      stopDictation();
+      stopSpeaking();
+    },
+    [clearTimer, stopDictation]
+  );
+
+  async function confirmNavigation(pending: PendingNavigation): Promise<void> {
+    clearInteractiveState();
+    pendingNavigationRef.current = pending;
+    modeRef.current = "cancel";
+    setPendingNavigation(pending);
+    await speak(tVoice(language, "takingYouTo", { label: pending.label }), { language });
+    if (pendingNavigationRef.current !== pending) return;
+    dictationControlsRef.current.start();
+    timerRef.current = setTimeout(() => {
+      if (pendingNavigationRef.current !== pending) return;
+      clearInteractiveState();
+      router.push(pending.href);
+    }, NAV_CONFIRM_MS);
+  }
+
+  async function offerClarification(next: Clarification): Promise<void> {
+    clearInteractiveState();
+    clarificationRef.current = next;
+    modeRef.current = "clarify";
+    setClarification(next);
+    await speak(
+      tVoice(language, "didYouMean", { options: spokenOptions(next.options, language) }),
+      { language }
+    );
+    if (clarificationRef.current !== next) return;
+    if (next.voiceInitiated) dictationControlsRef.current.start();
+    timerRef.current = setTimeout(() => {
+      if (clarificationRef.current === next) fallbackToCoach(next.utterance);
+    }, CLARIFY_TIMEOUT_MS);
+  }
+
+  async function route(utterance: string, voiceInitiated: boolean): Promise<void> {
     const trimmed = utterance.trim();
-    if (trimmed.length === 0) {
-      return;
-    }
+    if (!trimmed) return;
     const decision = decideFrontDoor(trimmed, state);
     if (decision.kind === "navigate") {
-      router.push(decision.href);
+      if (voiceInitiated) {
+        await confirmNavigation({ href: decision.href, label: decision.label, utterance: trimmed });
+      } else {
+        clearInteractiveState();
+        router.push(decision.href);
+      }
       return;
     }
-    // A safety-triggered coach goes straight to the Coach — the crisis utterance
-    // must never be sent to the LLM router.
     if (decision.reason === "safety") {
+      clearInteractiveState();
       router.push(`/chat?ask=${encodeURIComponent(trimmed)}`);
       return;
     }
-    // No deterministic route matched; refine with the live LLM router if it is
-    // configured. It fails closed to the Coach.
+
     const llm = await classifyRouteRemote(trimmed, CLASSIFIER_HREFS);
-    if (llm.kind === "navigate" && typeof llm.href === "string" && CLASSIFIER_HREFS.includes(llm.href) && llm.confidence >= 0.75) {
-      router.push(llm.href);
+    if (
+      llm.kind === "navigate" &&
+      typeof llm.href === "string" &&
+      CLASSIFIER_HREFS.includes(llm.href) &&
+      llm.confidence >= 0.75
+    ) {
+      if (voiceInitiated) {
+        await confirmNavigation({ href: llm.href, label: routeLabel(llm.href, language), utterance: trimmed });
+      } else {
+        clearInteractiveState();
+        router.push(llm.href);
+      }
       return;
     }
-    router.push(`/chat?ask=${encodeURIComponent(trimmed)}`);
+    if (llm.kind === "clarify") {
+      const options = llm.candidates
+        .filter((href) => CLASSIFIER_HREFS.includes(href))
+        .slice(0, 3)
+        .map((href) => ({ href, label: routeLabel(href, language) }));
+      if (options.length > 0) {
+        await offerClarification({ options, utterance: trimmed, voiceInitiated });
+        return;
+      }
+    }
+    fallbackToCoach(trimmed);
   }
+  routeRef.current = route;
 
-  function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent): void {
     event.preventDefault();
-    void route(input);
+    void route(input, false);
   }
 
-  function toggleVoice() {
-    if (listening) {
-      recognitionRef.current?.stop();
+  function beginDictation(): void {
+    clearInteractiveState();
+    stopSpeaking();
+    voiceEntry.onSessionStart("front door");
+    dictation.start();
+  }
+
+  function toggleVoice(): void {
+    if (dictation.listening) {
+      dictation.stop();
       return;
     }
-    const Recognition = getSpeechRecognition();
-    if (!Recognition) {
+    if (voiceEntry.consentRequired) {
+      setShowConsent(true);
       return;
     }
-    const recognition = new Recognition();
-    recognition.lang = state.patient.language === "es" ? "es-US" : "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript ?? "";
-      setInput(transcript);
-      void route(transcript);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-    setListening(true);
-    // start() throws if the engine is already running or the mic is unavailable;
-    // fail back to the idle state so the button stays usable.
-    try {
-      recognition.start();
-    } catch {
-      setListening(false);
-    }
+    beginDictation();
   }
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-2 rounded-control border border-ink/15 bg-white p-2">
-      <label className="sr-only" htmlFor="home-composer-input">
-        {tHome(state.patient.language, "composerLabel")}
-      </label>
-      <input
-        id="home-composer-input"
-        className="min-h-11 flex-1 rounded-control px-3 py-2 text-sm"
-        placeholder={tHome(state.patient.language, "composerPlaceholder")}
-        value={input}
-        onChange={(event) => setInput(event.target.value)}
-      />
-      {voiceSupported ? (
+    <div className="space-y-2">
+      <form onSubmit={submit} className="flex items-center gap-2 rounded-control border border-ink/15 bg-white p-2">
+        <label className="sr-only" htmlFor="home-composer-input">
+          {tHome(language, "composerLabel")}
+        </label>
+        <input
+          id="home-composer-input"
+          className="min-h-11 flex-1 rounded-control px-3 py-2 text-sm"
+          placeholder={tHome(language, "composerPlaceholder")}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+        />
+        {dictation.supported ? (
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-label={dictation.listening ? tHome(language, "composerStop") : tHome(language, "composerSpeak")}
+            aria-pressed={dictation.listening}
+            className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${dictation.listening ? "bg-pulse text-white" : "bg-calm text-care"}`}
+          >
+            <Mic aria-hidden="true" className="h-5 w-5" />
+          </button>
+        ) : null}
+        <button type="submit" aria-label={tHome(language, "composerSend")} className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-care text-white">
+          <Send aria-hidden="true" className="h-5 w-5" />
+        </button>
+      </form>
+
+      {pendingNavigation ? (
         <button
           type="button"
-          onClick={toggleVoice}
-          aria-label={listening ? tHome(state.patient.language, "composerStop") : tHome(state.patient.language, "composerSpeak")}
-          aria-pressed={listening}
-          className={`inline-flex h-11 w-11 flex-none items-center justify-center rounded-full ${listening ? "bg-pulse text-white" : "bg-calm text-care"}`}
+          onClick={() => {
+            clearInteractiveState();
+            stopSpeaking();
+          }}
+          className="min-h-12 rounded-control border border-care bg-white px-4 py-2 text-sm font-semibold text-care"
         >
-          <Mic aria-hidden="true" className="h-5 w-5" />
+          {tVoice(language, "goingToCancel", { label: pendingNavigation.label })}
         </button>
       ) : null}
-      <button type="submit" aria-label={tHome(state.patient.language, "composerSend")} className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full bg-care text-white">
-        <Send aria-hidden="true" className="h-5 w-5" />
-      </button>
-    </form>
+
+      {clarification ? (
+        <div role="group" aria-label={tVoice(language, "didYouMean", { options: "" })} className="flex flex-wrap gap-2">
+          {clarification.options.map((option) => (
+            <button
+              key={option.href}
+              type="button"
+              onClick={() => chooseClarification(option)}
+              className="min-h-12 rounded-control border border-care bg-white px-4 py-2 font-semibold text-care"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <VoiceIndicator
+        listening={dictation.listening}
+        speaking={speaking}
+        onStop={() => {
+          clearInteractiveState();
+          stopSpeaking();
+        }}
+      />
+
+      {showConsent ? (
+        <VoiceConsentSheet
+          language={language}
+          onAccept={() => {
+            voiceEntry.grantConsent();
+            setShowConsent(false);
+            beginDictation();
+          }}
+          onCancel={() => setShowConsent(false)}
+        />
+      ) : null}
+    </div>
   );
 }
