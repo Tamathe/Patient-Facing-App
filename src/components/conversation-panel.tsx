@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { tSafety, type Language } from "@/i18n/strings";
 import { MessageActions } from "./message-actions";
 import type { AiMessage, AiMode } from "@/domain/types";
+import { ReadAloud } from "@/voice/read-aloud";
 
 const modes: Array<{ mode: AiMode; label: string }> = [
   { mode: "explain", label: "Explain this" },
@@ -140,7 +141,12 @@ export function ConversationPanel({
                 {message.banner}
               </p>
             ) : null}
-            <p>{message.content}</p>
+            <div className="flex items-start gap-2">
+              <p className="min-w-0 flex-1">{message.content}</p>
+              {message.role === "assistant" ? (
+                <ReadAloud text={message.content} language={language} />
+              ) : null}
+            </div>
             {renderActions(message)}
             {message.role === "assistant" && draftShared && message.actions?.includes("draft_message") ? (
               <p className="mt-2 text-xs text-ink/60">Draft ready — check your share sheet or clipboard, then send it to your team.</p>

@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/app-shell";
 import { ConversationPanel } from "@/components/conversation-panel";
+import { AssistantMessageAutoReader } from "@/voice/assistant-message-auto-reader";
 import { OpenAiCoachProvider } from "@/ai/coach-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
 import { buildCareTeamMessage } from "@/domain/care-team-message";
@@ -128,6 +129,12 @@ export default function ChatPage() {
 
   return (
     <AppShell title="Coach">
+      <AssistantMessageAutoReader
+        messages={state.aiMessages}
+        language={state.patient.language}
+        enabled={state.patient.accessibilityPreferences?.includes("read_aloud") ?? false}
+        liveVoiceActive={false}
+      />
       <ConversationPanel
         messages={state.aiMessages}
         onSubmit={handleSubmit}

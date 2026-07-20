@@ -13,6 +13,7 @@ import { useDictation } from "@/voice/use-dictation";
 import { useVoiceEntry, type VoiceEntryContext } from "@/voice/voice-consent";
 import { VoiceConsentSheet } from "@/voice/voice-consent-sheet";
 import { VoiceIndicator } from "@/voice/voice-indicator";
+import { ReadAloud } from "@/voice/read-aloud";
 
 export const FAMILY_FOLLOW_UP_ANSWER_MAX = 500;
 
@@ -149,14 +150,17 @@ export function FamilyFollowUpTurn({
       <p className="text-sm font-semibold text-care" aria-live="polite">
         {tFamily(language, "orientationRoundCount", { round, max: roundCap })}
       </p>
-      <h3
-        id="family-follow-up-question"
-        ref={questionRef}
-        tabIndex={-1}
-        className="mt-2 break-words text-lg font-semibold"
-      >
-        {question.question}
-      </h3>
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <h3
+          id="family-follow-up-question"
+          ref={questionRef}
+          tabIndex={-1}
+          className="break-words text-lg font-semibold"
+        >
+          {question.question}
+        </h3>
+        <ReadAloud text={question.question} language={language} />
+      </div>
       {question.options.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={tFamily(language, "followUpChipsLabel")}>
           {question.options.map((option) => (

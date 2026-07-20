@@ -34,6 +34,7 @@ export default function VisitsPage() {
         </section>
         <HealthBriefCard
           brief={brief}
+          language={state.patient.language}
           onDownload={() => recordBriefShare("Health Brief downloaded")}
           onPrint={() => recordBriefShare("Health Brief printed")}
           onShare={() => recordBriefShare("Health Brief shared")}

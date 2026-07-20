@@ -12,6 +12,7 @@ import type { Language } from "@/i18n/strings";
 import { tVoice } from "@/i18n/voice-strings";
 import { speak, stopSpeaking } from "@/voice/tts";
 import type { VoiceEntryContext } from "@/voice/voice-consent";
+import { ReadAloud } from "@/voice/read-aloud";
 import {
   FamilyFollowUpTurn,
   FAMILY_FOLLOW_UP_ANSWER_MAX
@@ -307,7 +308,10 @@ export function FamilyOrientationInterview({
           answer === undefined ? null : (
             <React.Fragment key={`${index}-${question.question}`}>
               <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
-                <p className="break-words font-semibold">{question.question}</p>
+                <div className="flex items-start gap-2">
+                  <p className="min-w-0 flex-1 break-words font-semibold">{question.question}</p>
+                  <ReadAloud text={question.question} language={language} />
+                </div>
               </div>
               <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
                 <p className="break-words whitespace-pre-wrap">{answer}</p>
@@ -337,9 +341,10 @@ export function FamilyOrientationInterview({
       ) : null}
 
       {thread.status === "complete" ? (
-        <p role="status" tabIndex={-1} className="rounded-control bg-care/10 p-4 font-semibold text-care">
-          {tFamily(language, "orientationComplete")}
-        </p>
+        <div role="status" tabIndex={-1} className="flex items-start gap-2 rounded-control bg-care/10 p-4 font-semibold text-care">
+          <p className="min-w-0 flex-1">{tFamily(language, "orientationComplete")}</p>
+          <ReadAloud text={tFamily(language, "orientationComplete")} language={language} />
+        </div>
       ) : null}
 
       <button

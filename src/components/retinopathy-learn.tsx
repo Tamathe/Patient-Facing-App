@@ -10,13 +10,14 @@ import {
   answerEducationQuestion
 } from "@/domain/retinopathy-education";
 import type { Language } from "@/i18n/strings";
+import { ReadAloud } from "@/voice/read-aloud";
 
 type AnswerState =
   | { tone: "answer"; text: string; source: string }
   | { tone: "muted"; text: string }
   | { tone: "alert"; text: string; ask: string };
 
-function EducationQa() {
+function EducationQa({ language }: { language: Language }) {
   const [result, setResult] = useState<AnswerState | null>(null);
   const [text, setText] = useState("");
 
@@ -82,13 +83,19 @@ function EducationQa() {
             <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
             Sandy
           </p>
-          <p className="text-sm leading-6 text-ink">{result.text}</p>
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 text-sm leading-6 text-ink">{result.text}</p>
+            <ReadAloud text={result.text} language={language} />
+          </div>
           <p className="mt-2 text-xs font-medium text-ink/55">{result.source}</p>
         </div>
       ) : null}
 
       {result?.tone === "muted" ? (
-        <div className="rounded-control bg-paper p-3 text-sm leading-6 text-ink">{result.text}</div>
+        <div className="flex items-start gap-2 rounded-control bg-paper p-3 text-sm leading-6 text-ink">
+          <p className="min-w-0 flex-1">{result.text}</p>
+          <ReadAloud text={result.text} language={language} />
+        </div>
       ) : null}
 
       <div className="flex items-center gap-2">
@@ -151,7 +158,7 @@ export function RetinopathyLearn({ language }: { language: Language }) {
         Sandy can explain diabetic retinopathy and the eye screening in plain language. Tap a question, or ask your own.
       </p>
 
-      <EducationQa />
+      <EducationQa language={language} />
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/60">Learn the basics</h2>

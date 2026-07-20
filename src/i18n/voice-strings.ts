@@ -16,7 +16,9 @@ export type VoiceStringKey =
   | "chipsSpoken"
   | "goingToCancel"
   | "takingYouTo"
-  | "didYouMean";
+  | "didYouMean"
+  | "readAloud"
+  | "stopReading";
 
 export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
   en: {
@@ -35,7 +37,9 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     chipsSpoken: "You can say: {options}.",
     goingToCancel: "Going to {label} — tap to cancel",
     takingYouTo: "Taking you to {label}",
-    didYouMean: "Did you mean {options}?"
+    didYouMean: "Did you mean {options}?",
+    readAloud: "Read aloud",
+    stopReading: "Stop reading"
   },
   es: {
     listening: "Escuchando…",
@@ -53,7 +57,9 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     chipsSpoken: "Puede decir: {options}.",
     goingToCancel: "Yendo a {label} — toque para cancelar",
     takingYouTo: "Le llevo a {label}",
-    didYouMean: "¿Quiso decir {options}?"
+    didYouMean: "¿Quiso decir {options}?",
+    readAloud: "Leer en voz alta",
+    stopReading: "Detener lectura"
   }
 };
 
