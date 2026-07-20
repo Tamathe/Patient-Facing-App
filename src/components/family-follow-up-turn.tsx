@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { Mic } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { FamilyFollowUp } from "@/domain/family-interview";
+import { classifyCrisis, classifySafety } from "@/domain/safety";
+import { screenSocialEmergency } from "@/domain/social-screen";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
+import { tVoice } from "@/i18n/voice-strings";
+import { isSpeaking, stopSpeaking, subscribeSpeaking } from "@/voice/tts";
+import { useDictation } from "@/voice/use-dictation";
+import { useVoiceEntry, type VoiceEntryContext } from "@/voice/voice-consent";
+import { VoiceConsentSheet } from "@/voice/voice-consent-sheet";
+import { VoiceIndicator } from "@/voice/voice-indicator";
 
 export const FAMILY_FOLLOW_UP_ANSWER_MAX = 500;
 
@@ -13,11 +22,43 @@ export type FamilyFollowUpTurnProps = {
   roundCap: number;
   language: Language;
   submitting: boolean;
-  onAnswer: (text: string, via: "chip" | "typed") => void;
+  voiceEntryContext?: VoiceEntryContext;
+  onAnswer: (text: string, via: "chip" | "typed" | "voice") => void;
 };
 
 const CONTROL_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
+
+const ORDINALS: Record<Language, string[][]> = {
+  en: [
+    ["one", "first", "the first one", "option one"],
+    ["two", "second", "the second one", "option two"],
+    ["three", "third", "the third one", "option three"]
+  ],
+  es: [
+    ["uno", "una", "primero", "primera", "el primero", "la primera", "opcion uno"],
+    ["dos", "segundo", "segunda", "el segundo", "la segunda", "opcion dos"],
+    ["tres", "tercero", "tercera", "el tercero", "la tercera", "opcion tres"]
+  ]
+};
+
+function normalizeSpoken(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function matchSpokenOption(text: string, options: readonly string[], language: Language): string | null {
+  const normalized = normalizeSpoken(text);
+  const labelMatch = options.find((option) => normalizeSpoken(option) === normalized);
+  if (labelMatch) return labelMatch;
+  const ordinalIndex = ORDINALS[language].findIndex((phrases) => phrases.includes(normalized));
+  return ordinalIndex >= 0 ? options[ordinalIndex] ?? null : null;
+}
 
 export function FamilyFollowUpTurn({
   question,
@@ -25,11 +66,39 @@ export function FamilyFollowUpTurn({
   roundCap,
   language,
   submitting,
+  voiceEntryContext,
   onAnswer
 }: FamilyFollowUpTurnProps) {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+  const [speaking, setSpeaking] = useState(() => isSpeaking());
   const questionRef = useRef<HTMLHeadingElement>(null);
+  const { consentRequired, grantConsent, onSessionStart } = useVoiceEntry(voiceEntryContext);
+
+  const onFinalTranscript = useCallback(
+    (transcript: string): void => {
+      if (
+        classifyCrisis(transcript).matched ||
+        classifySafety(transcript).level !== "allowed" ||
+        screenSocialEmergency(transcript)
+      ) {
+        onAnswer(transcript, "voice");
+        return;
+      }
+      const matched = matchSpokenOption(transcript, question.options, language);
+      if (matched) {
+        onAnswer(matched, "voice");
+        return;
+      }
+      setAnswer(transcript.slice(0, FAMILY_FOLLOW_UP_ANSWER_MAX));
+      setError(false);
+    },
+    [language, onAnswer, question.options]
+  );
+  const dictation = useDictation({ language, onFinalTranscript });
+
+  useEffect(() => subscribeSpeaking(setSpeaking), []);
 
   useEffect(() => {
     setAnswer("");
@@ -38,6 +107,32 @@ export function FamilyFollowUpTurn({
       questionRef.current?.focus();
     }
   }, [question.question, round]);
+
+  useEffect(
+    () => () => {
+      dictation.stop();
+      stopSpeaking();
+    },
+    [dictation.stop]
+  );
+
+  function beginVoice(): void {
+    stopSpeaking();
+    onSessionStart("family follow-up");
+    dictation.start();
+  }
+
+  function toggleVoice(): void {
+    if (dictation.listening) {
+      dictation.stop();
+      return;
+    }
+    if (consentRequired) {
+      setShowConsent(true);
+      return;
+    }
+    beginVoice();
+  }
 
   function submit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -97,6 +192,18 @@ export function FamilyFollowUpTurn({
             }}
             className={`min-h-12 min-w-0 flex-1 rounded-control border border-ink/20 bg-white px-3 py-2 ${CONTROL_FOCUS}`}
           />
+          {dictation.supported ? (
+            <button
+              type="button"
+              aria-label={dictation.listening ? tVoice(language, "stopVoice") : tVoice(language, "answerByVoice")}
+              aria-pressed={dictation.listening}
+              disabled={submitting}
+              onClick={toggleVoice}
+              className={`min-h-12 rounded-control border border-care px-3 text-care disabled:opacity-50 ${CONTROL_FOCUS}`}
+            >
+              <Mic aria-hidden="true" className="h-5 w-5" />
+            </button>
+          ) : null}
           <button
             type="submit"
             disabled={submitting}
@@ -110,7 +217,28 @@ export function FamilyFollowUpTurn({
             {tFamily(language, "followUpAnswerError")}
           </p>
         ) : null}
+        <VoiceIndicator
+          listening={dictation.listening}
+          speaking={speaking}
+          onStop={() => {
+            dictation.stop();
+            stopSpeaking();
+          }}
+        />
       </form>
+      {showConsent ? (
+        <div className="mt-4">
+          <VoiceConsentSheet
+            language={language}
+            onAccept={() => {
+              grantConsent();
+              setShowConsent(false);
+              beginVoice();
+            }}
+            onCancel={() => setShowConsent(false)}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

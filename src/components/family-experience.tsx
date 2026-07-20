@@ -331,6 +331,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                 draft={family.interviewDraft}
                 passcode={passcode}
                 language={language}
+                voiceEntryContext={{ patientId: state.patient.id, dispatch }}
                 onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
                 onInterviewExtracted={addInterview}
                 onSafetyEscalation={suppressForSafety}

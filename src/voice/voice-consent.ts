@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type Dispatch } from "react";
 import { recordAuditEvent } from "@/domain/audit";
-import { useHealthState } from "@/state/store";
+import { useOptionalHealthState, type HealthAction } from "@/state/store";
 
 export const VOICE_CONSENT_KEY = "home-health-voice-consent";
 
@@ -24,35 +24,44 @@ export function markVoiceConsentGranted(): void {
   }
 }
 
-export function useVoiceEntry(): {
+export type VoiceEntryContext = {
+  patientId: string;
+  dispatch: Dispatch<HealthAction>;
+};
+
+export function useVoiceEntry(explicit?: VoiceEntryContext): {
   consentRequired: boolean;
   grantConsent: () => void;
   onSessionStart: (surface: string) => void;
 } {
-  const { state, dispatch } = useHealthState();
+  const healthState = useOptionalHealthState();
+  const patientId = explicit?.patientId ?? healthState?.state.patient.id;
+  const dispatch = explicit?.dispatch ?? healthState?.dispatch;
   const [consentRequired, setConsentRequired] = useState(() => !isVoiceConsentGranted());
 
   const grantConsent = useCallback((): void => {
     markVoiceConsentGranted();
     setConsentRequired(false);
+    if (!dispatch || !patientId) return;
     dispatch({
       type: "addAuditEvent",
-      event: recordAuditEvent(state.patient.id, "voice_consent_granted", "Voice consent granted")
+      event: recordAuditEvent(patientId, "voice_consent_granted", "Voice consent granted")
     });
-  }, [dispatch, state.patient.id]);
+  }, [dispatch, patientId]);
 
   const onSessionStart = useCallback(
     (surface: string): void => {
+      if (!dispatch || !patientId) return;
       dispatch({
         type: "addAuditEvent",
         event: recordAuditEvent(
-          state.patient.id,
+          patientId,
           "voice_session_started",
           `Voice session started — ${surface}`
         )
       });
     },
-    [dispatch, state.patient.id]
+    [dispatch, patientId]
   );
 
   return { consentRequired, grantConsent, onSessionStart };

@@ -11,7 +11,9 @@ export type VoiceStringKey =
   | "consentBrowserService"
   | "consentNoSave"
   | "consentTypeInstead"
-  | "consentAccept";
+  | "consentAccept"
+  | "answerByVoice"
+  | "chipsSpoken";
 
 export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
   en: {
@@ -25,7 +27,9 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     consentBrowserService: "Your browser may use its speech service to turn what you say into text.",
     consentNoSave: "Nothing is saved without a visible confirmation on the screen.",
     consentTypeInstead: "You can stop and type instead at any time.",
-    consentAccept: "I understand, use voice"
+    consentAccept: "I understand, use voice",
+    answerByVoice: "Answer by voice",
+    chipsSpoken: "You can say: {options}."
   },
   es: {
     listening: "Escuchando…",
@@ -38,7 +42,9 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     consentBrowserService: "Su navegador puede usar su servicio de voz para convertir lo que dice en texto.",
     consentNoSave: "Nada se guarda sin una confirmación visible en la pantalla.",
     consentTypeInstead: "Puede detenerse y escribir en cualquier momento.",
-    consentAccept: "Entiendo, usar voz"
+    consentAccept: "Entiendo, usar voz",
+    answerByVoice: "Responder por voz",
+    chipsSpoken: "Puede decir: {options}."
   }
 };
 

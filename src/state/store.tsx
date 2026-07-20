@@ -635,11 +635,15 @@ export function HealthStateProvider({ children }: { children: ReactNode }) {
 }
 
 export function useHealthState(): HealthStateContextValue {
-  const value = useContext(HealthStateContext);
+  const value = useOptionalHealthState();
 
   if (!value) {
     throw new Error("useHealthState must be used inside HealthStateProvider");
   }
 
   return value;
+}
+
+export function useOptionalHealthState(): HealthStateContextValue | null {
+  return useContext(HealthStateContext);
 }

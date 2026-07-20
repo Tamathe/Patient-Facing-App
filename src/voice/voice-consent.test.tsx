@@ -12,7 +12,7 @@ import { VoiceConsentSheet } from "./voice-consent-sheet";
 const dispatch = vi.fn();
 
 vi.mock("@/state/store", () => ({
-  useHealthState: () => ({ state: { patient: { id: "patient-voice" } }, dispatch })
+  useOptionalHealthState: () => ({ state: { patient: { id: "patient-voice" } }, dispatch })
 }));
 
 function ConsentHarness() {

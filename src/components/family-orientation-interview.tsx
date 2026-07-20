@@ -9,6 +9,9 @@ import { screenSocialEmergency } from "@/domain/social-screen";
 import type { FamilyProfile } from "@/domain/types";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
+import { tVoice } from "@/i18n/voice-strings";
+import { speak, stopSpeaking } from "@/voice/tts";
+import type { VoiceEntryContext } from "@/voice/voice-consent";
 import {
   FamilyFollowUpTurn,
   FAMILY_FOLLOW_UP_ANSWER_MAX
@@ -27,10 +30,12 @@ export const FAMILY_ORIENTATION_MAX_ROUNDS = 2;
 type OrientationRound = {
   question: FamilyFollowUp;
   answer?: string;
+  source?: "typed" | "voice";
 };
 
 type OrientationState = {
   openingText: string;
+  openingSource: "typed" | "voice" | "mixed";
   rounds: OrientationRound[];
   pendingFollowUps: FamilyFollowUp[];
   status: "idle" | "active" | "submitting" | "complete";
@@ -41,6 +46,7 @@ export type FamilyOrientationInterviewProps = {
   draft: string;
   passcode?: string;
   language: Language;
+  voiceEntryContext?: VoiceEntryContext;
   onDraftChange: (draft: string) => void;
   onInterviewExtracted: (
     result: SanitizedFamilyInterviewResult,
@@ -55,7 +61,7 @@ const CONTROL_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
 
 function initialOrientationState(): OrientationState {
-  return { openingText: "", rounds: [], pendingFollowUps: [], status: "idle" };
+  return { openingText: "", openingSource: "typed", rounds: [], pendingFollowUps: [], status: "idle" };
 }
 
 function orientationContextKey(profile: FamilyProfile, language: Language): string {
@@ -88,11 +94,25 @@ function hasFollowUpHeadroom(transcript: string): boolean {
   return FAMILY_INTERVIEW_MAX_CHARS - transcript.length - FOLLOW_UP_TRANSCRIPT_RESERVE >= 0;
 }
 
+function combinedSource(sources: readonly ("typed" | "voice" | "mixed" | undefined)[]): "typed" | "voice" | "mixed" {
+  const present = sources.filter((source): source is "typed" | "voice" | "mixed" => source !== undefined);
+  if (present.includes("mixed") || (present.includes("typed") && present.includes("voice"))) return "mixed";
+  return present.includes("voice") ? "voice" : "typed";
+}
+
+function formatSpokenOptions(options: readonly string[], language: Language): string {
+  if (options.length < 2) return options[0] ?? "";
+  const conjunction = language === "es" ? "o" : "or";
+  if (options.length === 2) return `${options[0]} ${conjunction} ${options[1]}`;
+  return `${options.slice(0, -1).join(", ")}, ${conjunction} ${options.at(-1)}`;
+}
+
 export function FamilyOrientationInterview({
   profile,
   draft,
   passcode,
   language,
+  voiceEntryContext,
   onDraftChange,
   onInterviewExtracted,
   onSafetyEscalation
@@ -110,17 +130,46 @@ export function FamilyOrientationInterview({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      stopSpeaking();
     };
   }, []);
 
   useEffect(() => {
     if (previousContextKeyRef.current === contextKey) return;
+    stopSpeaking();
     previousContextKeyRef.current = contextKey;
     submittingRef.current = false;
     setThread(initialOrientationState());
   }, [contextKey]);
 
+  const currentQuestion = thread.status === "active" ? thread.rounds.at(-1)?.question : undefined;
+
+  useEffect(() => {
+    if (!currentQuestion) return;
+    let cancelled = false;
+    const speakRound = async (): Promise<void> => {
+      stopSpeaking();
+      await speak(currentQuestion.question, { language });
+      if (cancelled || currentQuestion.options.length === 0) return;
+      await speak(
+        tVoice(language, "chipsSpoken", { options: formatSpokenOptions(currentQuestion.options, language) }),
+        { language }
+      );
+    };
+    void speakRound();
+    return () => {
+      cancelled = true;
+      stopSpeaking();
+    };
+  }, [currentQuestion, language]);
+
+  useEffect(() => {
+    if (thread.status !== "complete") return;
+    void speak(tFamily(language, "orientationComplete"), { language });
+  }, [language, thread.status]);
+
   function resetThread(): void {
+    stopSpeaking();
     submittingRef.current = false;
     setThread(initialOrientationState());
   }
@@ -131,13 +180,14 @@ export function FamilyOrientationInterview({
     const canAsk = candidates.length > 0 && hasFollowUpHeadroom(meta.rawText);
     setThread({
       openingText: meta.rawText,
+      openingSource: meta.source,
       rounds: canAsk ? [{ question: candidates[0] }] : [],
       pendingFollowUps: canAsk ? candidates.slice(1) : [],
       status: canAsk ? "active" : "complete"
     });
   }
 
-  async function answerFollowUp(text: string): Promise<void> {
+  async function answerFollowUp(text: string, via: "chip" | "typed" | "voice"): Promise<void> {
     if (submittingRef.current || thread.status !== "active") return;
     const currentRound = thread.rounds[thread.rounds.length - 1];
     if (!currentRound || currentRound.answer !== undefined) return;
@@ -158,7 +208,7 @@ export function FamilyOrientationInterview({
 
     const answeredRounds = [
       ...thread.rounds.slice(0, -1),
-      { ...currentRound, answer }
+      { ...currentRound, answer, source: via === "voice" ? "voice" as const : "typed" as const }
     ];
     const liveTranscript = fullTranscript(thread.openingText, answeredRounds);
     const caregiverTranscript = familyOnlyTranscript(thread.openingText, answeredRounds);
@@ -200,7 +250,11 @@ export function FamilyOrientationInterview({
       const round = answeredRounds.length;
       onInterviewExtracted(
         sanitized,
-        { extraction, source: "typed", rawText: caregiverTranscript },
+        {
+          extraction,
+          source: combinedSource([thread.openingSource, ...answeredRounds.map(({ source }) => source)]),
+          rawText: caregiverTranscript
+        },
         { round }
       );
 
@@ -214,6 +268,7 @@ export function FamilyOrientationInterview({
         hasFollowUpHeadroom(liveTranscript);
       setThread({
         openingText: thread.openingText,
+        openingSource: thread.openingSource,
         rounds: canContinue ? [...answeredRounds, { question: candidates[0] }] : answeredRounds,
         pendingFollowUps: canContinue ? candidates.slice(1) : [],
         status: canContinue ? "active" : "complete"
@@ -270,7 +325,8 @@ export function FamilyOrientationInterview({
           roundCap={FAMILY_ORIENTATION_MAX_ROUNDS}
           language={language}
           submitting={false}
-          onAnswer={(answer) => void answerFollowUp(answer)}
+          voiceEntryContext={voiceEntryContext}
+          onAnswer={(answer, via) => void answerFollowUp(answer, via)}
         />
       ) : null}
 

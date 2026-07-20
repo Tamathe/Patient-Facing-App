@@ -5,14 +5,32 @@ import { morganFamilyState } from "@/domain/family-fixtures";
 import type { FamilyFollowUp, FamilyInterviewResult } from "@/domain/family-interview";
 import { FamilyOrientationInterview } from "./family-orientation-interview";
 
-const { extractFamilyInterviewMock, push, requestFamilyInterview } = vi.hoisted(() => ({
+const { extractFamilyInterviewMock, push, requestFamilyInterview, speak, stopSpeaking, voice } = vi.hoisted(() => ({
   extractFamilyInterviewMock: vi.fn(),
   push: vi.fn(),
-  requestFamilyInterview: vi.fn()
+  requestFamilyInterview: vi.fn(),
+  speak: vi.fn(() => Promise.resolve()),
+  stopSpeaking: vi.fn(),
+  voice: { finalTranscript: null as ((text: string) => void) | null }
 }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/ai/family-interview-provider", () => ({ requestFamilyInterview }));
+vi.mock("@/voice/tts", () => ({
+  isSpeaking: () => false,
+  speak,
+  stopSpeaking,
+  subscribeSpeaking: () => () => undefined
+}));
+vi.mock("@/voice/use-dictation", () => ({
+  useDictation: ({ onFinalTranscript }: { onFinalTranscript: (text: string) => void }) => {
+    voice.finalTranscript = onFinalTranscript;
+    return { supported: true, listening: false, start: vi.fn(), stop: vi.fn() };
+  }
+}));
+vi.mock("@/voice/voice-consent", () => ({
+  useVoiceEntry: () => ({ consentRequired: false, grantConsent: vi.fn(), onSessionStart: vi.fn() })
+}));
 vi.mock("@/domain/family-interview", async () => {
   const actual = await vi.importActual<typeof import("@/domain/family-interview")>("@/domain/family-interview");
   return {
@@ -76,6 +94,9 @@ beforeEach(() => {
   extractFamilyInterviewMock.mockClear();
   push.mockClear();
   requestFamilyInterview.mockReset();
+  speak.mockClear();
+  stopSpeaking.mockClear();
+  voice.finalTranscript = null;
 });
 
 describe("FamilyOrientationInterview", () => {
@@ -204,5 +225,53 @@ describe("FamilyOrientationInterview", () => {
     expect(requestFamilyInterview).toHaveBeenCalledTimes(2);
     await act(async () => pending.resolve(result([])));
     await screen.findByText("Thanks. We have enough to orient your next steps.");
+  });
+
+  it("speaks the sanitized question and options when a round starts, then speaks completion", async () => {
+    requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion])).mockResolvedValueOnce(result([]));
+    renderOrientation();
+    await submitOpening();
+
+    await waitFor(() => expect(speak).toHaveBeenCalledWith(schoolQuestion.question, { language: "en" }));
+    await waitFor(() =>
+      expect(speak).toHaveBeenCalledWith(
+        "You can say: Nothing yet, A meeting is planned, or An evaluation was done.",
+        { language: "en" }
+      )
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Nothing yet" }));
+    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await waitFor(() =>
+      expect(speak).toHaveBeenCalledWith("Thanks. We have enough to orient your next steps.", { language: "en" })
+    );
+  });
+
+  it("safety-gates a spoken crisis answer before network and preserves voice provenance", async () => {
+    requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
+    const onSafetyEscalation = vi.fn();
+    renderOrientation({ onSafetyEscalation });
+    await submitOpening();
+
+    const crisisText = "I am going to kill myself tonight";
+    act(() => voice.finalTranscript?.(crisisText));
+
+    expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
+    expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a voice follow-up as mixed with the typed opening transcript", async () => {
+    requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion])).mockResolvedValueOnce(result([]));
+    const onInterviewExtracted = vi.fn();
+    renderOrientation({ onInterviewExtracted });
+    await submitOpening();
+
+    act(() => voice.finalTranscript?.("Nothing yet"));
+
+    await waitFor(() => expect(onInterviewExtracted).toHaveBeenCalledTimes(2));
+    expect(onInterviewExtracted.mock.calls[1][1]).toEqual(
+      expect.objectContaining({ source: "mixed", rawText: `${morganFamilyState.interviewDraft}\nNothing yet` })
+    );
   });
 });
