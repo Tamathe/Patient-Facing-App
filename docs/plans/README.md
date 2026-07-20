@@ -23,6 +23,8 @@ Lifecycle meanings: **Active** is being implemented now; **Complete** landed its
 | 12 | [Screening Hub](12-screening-hub.md) | **Active** | Implementation began from `eccdcd8` on 2026-07-20. Do not fold parked behavioral or SDOH scope into it beyond its locked questionnaire-engine plan. |
 | — | [Adherence & Trust Uplift](../adherence-trust-uplift-execution-plan.md) | **Retired** | The 55-task umbrella remains non-executable. Its three bounded replacements landed on `master` on 2026-07-20: adherence/barrier UX, opt-in reminders/PWA, and runtime-mode privacy disclosure. |
 
+The runtime-mode disclosure copy has [recorded product-owner approval](../ops/ai-data-disclosure-approval.md). Independent legal, privacy-officer, clinical, and regulatory approval remains required before real-patient or production exposure.
+
 ## Retired branches
 
 - `claude/agitated-tharp-cccd48` — retired 2026-07-20 at `078ca302596759b804f1dee4958fe18179ac9f7d`. This unmerged July 7 voice-safety experiment was superseded by Sprint 08 and later `master` work; both the local and remote branches were deleted after the tip was recorded here.
