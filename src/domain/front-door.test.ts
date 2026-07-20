@@ -56,6 +56,7 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
     expect(decideFrontDoor("show my visits", en)).toMatchObject({ kind: "navigate", href: "/visits" });
     expect(decideFrontDoor("food", en)).toMatchObject({ kind: "navigate", href: "/food" });
     expect(decideFrontDoor("open support", en)).toMatchObject({ kind: "navigate", href: "/support" });
+    expect(decideFrontDoor("mood", en)).toMatchObject({ kind: "navigate", href: "/checkin/phq9" });
   });
 
   it("routes blood-sugar logging and browsing to the glucose screen", () => {
@@ -165,7 +166,7 @@ describe("decideFrontDoor — Spanish", () => {
 
   it("keeps the eye check and the mood check-in apart in Spanish", () => {
     expect(decideFrontDoor("chequeo de ojos", es)).toMatchObject({ kind: "navigate", href: "/screening" });
-    expect(decideFrontDoor("chequeo", es)).toMatchObject({ kind: "navigate", href: "/checkin" });
+    expect(decideFrontDoor("chequeo", es)).toMatchObject({ kind: "navigate", href: "/checkin/phq9" });
   });
 
   it("routes Spanish retinopathy learning asks to the learning page", () => {

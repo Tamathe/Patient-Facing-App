@@ -25,6 +25,13 @@ describe("mockRouteClassifier", () => {
     });
   });
 
+  it("routes mood language to the moved PHQ-9 instrument", () => {
+    expect(mockRouteClassifier.classify("mood", CLASSIFIER_HREFS)).toMatchObject({
+      kind: "navigate",
+      href: "/checkin/phq9"
+    });
+  });
+
   it.each([
     "help for my daughter",
     "resources for my child",

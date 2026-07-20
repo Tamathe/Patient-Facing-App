@@ -1,75 +1,135 @@
 "use client";
 
-import React, { useState } from "react";
+import Link from "next/link";
+import React from "react";
 import { AppShell } from "@/components/app-shell";
-import { MessageActions } from "@/components/message-actions";
-import { Phq9CheckIn } from "@/components/phq9-check-in";
-import { CRISIS_ACTIONS } from "@/ai/safety-gate";
-import { phq9Item9IsPositive, scorePhq9, severityBandSummary } from "@/domain/assessment";
-import { tSafety } from "@/i18n/strings";
+import { INSTRUMENTS, getInstrument } from "@/domain/instruments/registry";
+import type { ScreeningInstrument } from "@/domain/instruments/types";
+import type { AssessmentEvent } from "@/domain/assessment";
+import type { Language } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
-import type { AiMessage } from "@/domain/types";
 
-type CheckinResult = { severitySummary: string; crisis: boolean };
+const COPY = {
+  en: {
+    title: "Screening hub",
+    due: "Due now",
+    upToDate: "You're up to date.",
+    start: "Start",
+    quick: "Quick check",
+    comingSoon: "Coming soon",
+    quickBody: "A shorter check-in will be available here.",
+    family: "Family support",
+    familyBody: "Continue to family and caregiver support.",
+    history: "History",
+    emptyHistory: "No completed check-ins yet.",
+    fallbackTitle: "Check-in"
+  },
+  es: {
+    title: "Centro de chequeos",
+    due: "Para hacer ahora",
+    upToDate: "Estás al día.",
+    start: "Comenzar",
+    quick: "Chequeo rápido",
+    comingSoon: "Próximamente",
+    quickBody: "Pronto habrá un chequeo más breve aquí.",
+    family: "Apoyo familiar",
+    familyBody: "Continúa al apoyo para familias y personas cuidadoras.",
+    history: "Historial",
+    emptyHistory: "Aún no hay chequeos completados.",
+    fallbackTitle: "Chequeo"
+  }
+} satisfies Record<Language, Record<string, string>>;
+
+function latestEventFor(instrument: ScreeningInstrument, events: AssessmentEvent[]): AssessmentEvent | undefined {
+  return events
+    .filter(({ instrumentId }) => instrumentId === instrument.id)
+    .sort((left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf())[0];
+}
+
+function isDue(instrument: ScreeningInstrument, events: AssessmentEvent[]): boolean {
+  if (instrument.recurrenceDays === undefined) {
+    return false;
+  }
+  const latest = latestEventFor(instrument, events);
+  return (
+    latest === undefined ||
+    Date.now() - new Date(latest.recordedAt).valueOf() > instrument.recurrenceDays * 24 * 60 * 60 * 1000
+  );
+}
 
 export default function CheckinPage() {
-  const { state, dispatch } = useHealthState();
+  const { state } = useHealthState();
   const language = state.patient.language;
-  const [result, setResult] = useState<CheckinResult | null>(null);
-
-  function handleComplete(itemResponses: number[]) {
-    const { totalScore, severityBand } = scorePhq9(itemResponses);
-    const crisis = phq9Item9IsPositive(itemResponses);
-
-    dispatch({
-      type: "addAssessmentEvent",
-      event: {
-        id: crypto.randomUUID(),
-        patientId: state.patient.id,
-        instrumentId: "phq9",
-        itemResponses,
-        totalScore,
-        severityBand,
-        status: "patient_reported",
-        recordedAt: new Date().toISOString()
-      }
-    });
-
-    // FR-4: any non-zero item-9 routes through the same crisis pathway as the
-    // coach, independent of the total score. The assistant crisis message audits
-    // as crisis_escalated via the store seam.
-    if (crisis) {
-      const message: AiMessage = {
-        id: crypto.randomUUID(),
-        mode: "trouble",
-        role: "assistant",
-        content: tSafety(language, "crisisResponse"),
-        createdAt: new Date().toISOString(),
-        safety: "crisis",
-        sources: [],
-        actions: CRISIS_ACTIONS
-      };
-      dispatch({ type: "addAiMessage", message });
-    }
-
-    setResult({ severitySummary: severityBandSummary(severityBand, language), crisis });
-  }
+  const copy = COPY[language];
+  const instruments = Object.values(INSTRUMENTS);
+  const due = instruments.filter((instrument) => isDue(instrument, state.assessmentEvents));
+  const history = [...state.assessmentEvents].sort(
+    (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
+  );
 
   return (
-    <AppShell title="Check-in">
-      {result === null ? (
-        <Phq9CheckIn language={language} onComplete={handleComplete} />
-      ) : result.crisis ? (
-        <section className="grid gap-3 rounded-control border border-rose-400 bg-rose-100 p-5">
-          <p className="text-sm leading-6 font-medium text-rose-900">{tSafety(language, "crisisResponse")}</p>
-          <MessageActions actions={CRISIS_ACTIONS} language={language} />
+    <AppShell title={copy.title}>
+      <div className="grid gap-5">
+        <section className="rounded-control border border-care/20 bg-calm p-5">
+          <h2 className="text-xl font-semibold">{copy.due}</h2>
+          {due.length === 0 ? (
+            <p className="mt-2 text-sm text-ink/70">{copy.upToDate}</p>
+          ) : (
+            <div className="mt-3 grid gap-3">
+              {due.map((instrument) => (
+                <Link
+                  className="flex min-h-12 items-center justify-between gap-3 rounded-control bg-care px-4 py-3 font-semibold text-white"
+                  href={`/checkin/${instrument.id}`}
+                  key={instrument.id}
+                >
+                  <span>{instrument.title[language]}</span>
+                  <span>{copy.start}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
-      ) : (
+
         <section className="rounded-control border border-ink/10 bg-white p-5">
-          <h2 className="text-lg font-semibold">{language === "es" ? "Gracias por tu chequeo" : "Thanks for checking in"}</h2>
-          <p className="mt-2 text-sm leading-6 text-ink/80">{result.severitySummary}</p>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold">{copy.quick}</h2>
+            <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/60">{copy.comingSoon}</span>
+          </div>
+          <p className="mt-2 text-sm text-ink/70">{copy.quickBody}</p>
         </section>
-      )}
+
+        {state.family ? (
+          <section className="rounded-control border border-ink/10 bg-white p-5">
+            <Link className="text-lg font-semibold text-care underline" href="/family">
+              {copy.family}
+            </Link>
+            <p className="mt-2 text-sm text-ink/70">{copy.familyBody}</p>
+          </section>
+        ) : null}
+
+        <section aria-label={copy.history} className="rounded-control border border-ink/10 bg-white p-5">
+          <h2 className="text-xl font-semibold">{copy.history}</h2>
+          {history.length === 0 ? (
+            <p className="mt-2 text-sm text-ink/70">{copy.emptyHistory}</p>
+          ) : (
+            <ul className="mt-3 grid gap-3">
+              {history.map((event) => {
+                const instrument = getInstrument(event.instrumentId);
+                return (
+                  <li className="rounded-control border border-ink/10 p-3" key={event.id}>
+                    <p className="font-medium">{instrument?.title[language] ?? copy.fallbackTitle}</p>
+                    <time className="text-sm text-ink/60" dateTime={event.recordedAt}>
+                      {new Date(event.recordedAt).toLocaleDateString(language === "es" ? "es-US" : "en-US", {
+                        dateStyle: "medium"
+                      })}
+                    </time>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
     </AppShell>
   );
 }

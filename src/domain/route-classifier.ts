@@ -22,7 +22,8 @@ const ROUTE_SYNONYMS: Record<string, string[]> = {
   "/plan": ["care plan", "my plan", "goals"],
   "/visits": ["visit", "visits", "appointment", "appointments", "checkup"],
   "/chat": ["coach"],
-  "/checkin": ["mood", "check in", "check-in", "how i feel", "how i'm feeling"],
+  "/checkin": ["screening hub", "check-in history"],
+  "/checkin/phq9": ["mood", "check in", "check-in", "how i feel", "how i'm feeling"],
   "/support": ["support", "resource", "resources", "rent", "housing", "utilities", "food stamps"],
   "/family": [
     "family navigator",

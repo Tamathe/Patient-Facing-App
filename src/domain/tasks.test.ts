@@ -357,12 +357,29 @@ describe("buildTodayTasks", () => {
     const tasks = buildTodayTasks({ ...demoState, readings: [] });
 
     expect(tasks.some((task) => task.kind === "checkin")).toBe(true);
+    expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/phq9");
   });
 
   it("does not add a check-in nudge when one was recorded recently", () => {
     const tasks = buildTodayTasks({ ...demoState, assessmentEvents: recentCheckin });
 
     expect(tasks.some((task) => task.kind === "checkin")).toBe(false);
+  });
+
+  it("does not let another instrument reset the legacy PHQ-9 recurrence clock", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: [
+        {
+          ...recentCheckin[0],
+          id: "other-recent",
+          instrumentId: "future-screen",
+          itemResponses: [0]
+        }
+      ]
+    });
+
+    expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/phq9");
   });
 
   it("keeps the priority-1 clinical task in the top three when a check-in nudge competes (FR-14)", () => {

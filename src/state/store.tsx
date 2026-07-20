@@ -24,6 +24,7 @@ import { backdatedSentAt, escalationDue } from "@/domain/referral-followup";
 import { getDestinationById, nearestDestinationOfKind } from "@/domain/screening-sites";
 import { tScreening } from "@/i18n/strings";
 import type { AssessmentEvent } from "@/domain/assessment";
+import { getInstrument } from "@/domain/instruments/registry";
 import type {
   AccessibilityPreference,
   AiMessage,
@@ -233,12 +234,17 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
       };
     }
     case "addAssessmentEvent": {
+      const instrumentTitle = getInstrument(action.event.instrumentId)?.title.en;
       return {
         ...state,
         assessmentEvents: [...state.assessmentEvents, action.event],
         auditEvents: [
           ...state.auditEvents,
-          recordAuditEvent(state.patient.id, "assessment_recorded", "Check-in recorded")
+          recordAuditEvent(
+            state.patient.id,
+            "assessment_recorded",
+            instrumentTitle ? `${instrumentTitle} recorded` : "Check-in recorded"
+          )
         ]
       };
     }

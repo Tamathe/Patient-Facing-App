@@ -1,5 +1,7 @@
 import { defaultDemoState } from "@/domain/fixtures";
-import type { AssessmentEvent, SeverityBand } from "@/domain/assessment";
+import type { AssessmentEvent } from "@/domain/assessment";
+import { getInstrument } from "@/domain/instruments/registry";
+import type { InstrumentItem, ScreeningInstrument } from "@/domain/instruments/types";
 import type {
   AccessibilityPreference,
   AppState,
@@ -315,26 +317,54 @@ function isDoseEvent(value: unknown): value is DoseEvent {
   );
 }
 
-function isSeverityBand(value: unknown): value is SeverityBand {
+function isInstrumentResponse(
+  value: number,
+  item: InstrumentItem,
+  responses: number[],
+  instrument: ScreeningInstrument
+): boolean {
+  const condition = item.conditionalOn;
+  const conditionItemIndex = condition
+    ? instrument.items.findIndex((candidate) => candidate.id === condition.itemId)
+    : -1;
+  const conditionMet =
+    !condition || (conditionItemIndex >= 0 && responses[conditionItemIndex] >= condition.atLeast);
+
+  if (!conditionMet) {
+    return item.notApplicableValue !== undefined && value === item.notApplicableValue;
+  }
+  if (item.notApplicableValue !== undefined && value === item.notApplicableValue) {
+    return false;
+  }
+  if (item.kind === "choice") {
+    return (item.options ?? instrument.defaultOptions ?? []).some((option) => option.value === value);
+  }
   return (
-    value === "minimal" ||
-    value === "mild" ||
-    value === "moderate" ||
-    value === "moderately_severe" ||
-    value === "severe"
+    Number.isFinite(value) &&
+    (item.min === undefined || value >= item.min) &&
+    (item.max === undefined || value <= item.max)
   );
 }
 
 function isAssessmentEvent(value: unknown): value is AssessmentEvent {
+  if (!isObject(value) || !hasString(value, "instrumentId")) {
+    return false;
+  }
+  const instrument = getInstrument(value.instrumentId);
+  if (!instrument || !Array.isArray(value.itemResponses) || value.itemResponses.length !== instrument.items.length) {
+    return false;
+  }
+  const responses = value.itemResponses;
   return (
-    isObject(value) &&
     hasString(value, "id") &&
     hasString(value, "patientId") &&
-    value.instrumentId === "phq9" &&
-    Array.isArray(value.itemResponses) &&
-    value.itemResponses.every((item) => typeof item === "number" && Number.isFinite(item) && item >= 0 && item <= 3) &&
+    responses.every(
+      (response, index): response is number =>
+        typeof response === "number" && isInstrumentResponse(response, instrument.items[index], responses, instrument)
+    ) &&
     hasNumber(value, "totalScore") &&
-    isSeverityBand(value.severityBand) &&
+    typeof value.severityBand === "string" &&
+    instrument.bands.includes(value.severityBand) &&
     value.status === "patient_reported" &&
     hasString(value, "recordedAt")
   );

@@ -440,6 +440,25 @@ describe("healthReducer", () => {
 
     expect(next.assessmentEvents).toHaveLength(1);
     expect(next.auditEvents.at(-1)?.action).toBe("assessment_recorded");
+    expect(next.auditEvents.at(-1)?.label).toBe("PHQ-9 mood check-in recorded");
+  });
+
+  it("uses the generic audit fallback when an event references an unknown instrument", () => {
+    const next = healthReducer(demoState, {
+      type: "addAssessmentEvent",
+      event: {
+        id: "assessment-future",
+        patientId: "patient-1",
+        instrumentId: "future-screen",
+        itemResponses: [1],
+        totalScore: 1,
+        severityBand: "positive",
+        status: "patient_reported",
+        recordedAt: "2026-07-06T12:00:00.000Z"
+      }
+    });
+
+    expect(next.auditEvents.at(-1)?.label).toBe("Check-in recorded");
   });
 
   it("keeps the legacy Jordan fixture available through resetDemo with a patient argument", () => {

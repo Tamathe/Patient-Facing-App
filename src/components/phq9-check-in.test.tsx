@@ -29,7 +29,7 @@ describe("Phq9CheckIn", () => {
     const groups = screen.getAllByRole("group");
     for (const group of groups) {
       const options = group.querySelectorAll('input[type="radio"]');
-      (options[0] as HTMLInputElement).click();
+      await user.click(options[0]);
     }
 
     await user.click(screen.getByRole("button", { name: "Submit" }));

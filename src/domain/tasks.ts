@@ -7,10 +7,11 @@ const MAX_TODAY_TASKS = 3;
 const CHECKIN_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
 
 function isCheckinDue(state: AppState): boolean {
-  if (state.assessmentEvents.length === 0) {
+  const phq9Events = state.assessmentEvents.filter(({ instrumentId }) => instrumentId === "phq9");
+  if (phq9Events.length === 0) {
     return true;
   }
-  const latest = [...state.assessmentEvents].sort(
+  const latest = [...phq9Events].sort(
     (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
   )[0];
   return Date.now() - new Date(latest.recordedAt).valueOf() > CHECKIN_INTERVAL_MS;
@@ -133,7 +134,7 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
       id: "task-checkin",
       title: tHome(lang, "taskCheckinTitle"),
       body: tHome(lang, "taskCheckinBody"),
-      href: "/checkin",
+      href: "/checkin/phq9",
       priority: 2,
       kind: "checkin",
       status: "inferred"

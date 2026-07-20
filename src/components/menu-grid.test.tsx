@@ -17,6 +17,7 @@ const REQUIRED_ROUTES = [
   "/visits",
   "/chat",
   "/checkin",
+  "/checkin/phq9",
   "/support",
   "/family",
   "/intake",
@@ -46,5 +47,15 @@ describe("MenuGrid reachability", () => {
     rerender(<MenuGrid language="es" />);
     expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Navegador para familias");
     expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Encuentra recursos de desarrollo para tu hijo o hija");
+  });
+
+  it("keeps both the screening hub and moved PHQ-9 reachable", () => {
+    const { rerender } = render(<MenuGrid language="en" />);
+    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Screening Hub");
+    expect(document.querySelector('a[href="/checkin/phq9"]')).toHaveTextContent("Mood Check-in");
+
+    rerender(<MenuGrid language="es" />);
+    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Centro de Chequeos");
+    expect(document.querySelector('a[href="/checkin/phq9"]')).toHaveTextContent("Chequeo de Ánimo");
   });
 });

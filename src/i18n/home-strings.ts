@@ -66,6 +66,8 @@ export type HomeStringKey =
   | "menuCoachDesc"
   | "menuCheckinLabel"
   | "menuCheckinDesc"
+  | "menuMoodLabel"
+  | "menuMoodDesc"
   | "menuSupportLabel"
   | "menuSupportDesc"
   | "menuFamilyLabel"
@@ -146,8 +148,10 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuVisitsDesc: "Get ready for your next visit",
     menuCoachLabel: "Coach",
     menuCoachDesc: "Ask a question about your care",
-    menuCheckinLabel: "Check-in",
-    menuCheckinDesc: "A short, private mood check-in",
+    menuCheckinLabel: "Screening Hub",
+    menuCheckinDesc: "Check what is due and review your history",
+    menuMoodLabel: "Mood Check-in",
+    menuMoodDesc: "A short, private PHQ-9 mood check-in",
     menuSupportLabel: "Support",
     menuSupportDesc: "Find local food, housing, and utility help",
     menuFamilyLabel: "Family Navigator",
@@ -228,8 +232,10 @@ export const homeStrings: Record<Language, Record<HomeStringKey, string>> = {
     menuVisitsDesc: "Prepárate para tu próxima visita",
     menuCoachLabel: "Asesor",
     menuCoachDesc: "Haz una pregunta sobre tu cuidado",
-    menuCheckinLabel: "Chequeo",
-    menuCheckinDesc: "Un chequeo de ánimo breve y privado",
+    menuCheckinLabel: "Centro de Chequeos",
+    menuCheckinDesc: "Revisa lo pendiente y tu historial",
+    menuMoodLabel: "Chequeo de Ánimo",
+    menuMoodDesc: "Un chequeo de ánimo PHQ-9 breve y privado",
     menuSupportLabel: "Apoyo",
     menuSupportDesc: "Encuentra ayuda local de comida, vivienda y servicios",
     menuFamilyLabel: "Navegador para familias",

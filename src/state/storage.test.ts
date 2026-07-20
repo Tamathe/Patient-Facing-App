@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState, deletedDemoState, demoState } from "@/domain/fixtures";
+import { INSTRUMENTS } from "@/domain/instruments/registry";
+import type { ScreeningInstrument } from "@/domain/instruments/types";
 import { clearStoredState, loadStoredState, saveStoredState } from "./storage";
 import type { FamilyNavigatorState } from "@/domain/types";
 
@@ -758,6 +760,108 @@ describe("storage", () => {
 
     expect(loaded.assessmentEvents).toHaveLength(1);
     expect(loaded.assessmentEvents[0].severityBand).toBe("mild");
+  });
+
+  it("filters unknown and malformed instrument rows without resetting valid state", () => {
+    const valid = {
+      id: "assessment-valid",
+      patientId: "patient-1",
+      instrumentId: "phq9",
+      itemResponses: [0, 1, 2, 3, 0, 0, 0, 0, 0],
+      totalScore: 6,
+      severityBand: "mild",
+      status: "patient_reported",
+      recordedAt: "2026-07-06T12:00:00.000Z"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        patient: { ...demoState.patient, name: "Preserve Me" },
+        assessmentEvents: [
+          valid,
+          { ...valid, id: "unknown", instrumentId: "future-screen" },
+          { ...valid, id: "short", itemResponses: [0, 1] },
+          { ...valid, id: "bad-choice", itemResponses: [0, 1, 2, 4, 0, 0, 0, 0, 0] },
+          { ...valid, id: "bad-band", severityBand: "not-a-band" }
+        ]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Preserve Me");
+    expect(loaded.assessmentEvents.map(({ id }) => id)).toEqual(["assessment-valid"]);
+  });
+
+  it("validates registry number ranges and conditional sentinel values", () => {
+    const conditionalInstrument: ScreeningInstrument = {
+      id: "storage-conditional",
+      title: { en: "Storage conditional", es: "Condicional de almacenamiento" },
+      audience: "self",
+      tier: 1,
+      items: [
+        { id: "trigger", kind: "choice", en: "Trigger", es: "Activador" },
+        {
+          id: "count",
+          kind: "number",
+          en: "Count",
+          es: "Cantidad",
+          min: 1,
+          max: 3,
+          conditionalOn: { itemId: "trigger", atLeast: 1 },
+          notApplicableValue: -1
+        }
+      ],
+      defaultOptions: [
+        { value: 0, en: "No", es: "No" },
+        { value: 1, en: "Yes", es: "Sí" }
+      ],
+      score: (responses) => ({ totalScore: responses[0], band: "ok" }),
+      bands: ["ok"],
+      bandSummaries: { ok: { en: "Recorded.", es: "Registrado." } },
+      consent: {
+        en: { title: "Consent", points: ["Point"], acknowledge: "Continue" },
+        es: { title: "Consentimiento", points: ["Punto"], acknowledge: "Continuar" }
+      },
+      wordingVerified: true,
+      licenseStatus: "clear",
+      attribution: { en: "Test", es: "Prueba" }
+    };
+    const event = {
+      id: "conditional-skipped",
+      patientId: "patient-1",
+      instrumentId: conditionalInstrument.id,
+      itemResponses: [0, -1],
+      totalScore: 0,
+      severityBand: "ok",
+      status: "patient_reported",
+      recordedAt: "2026-07-06T12:00:00.000Z"
+    };
+    INSTRUMENTS[conditionalInstrument.id] = conditionalInstrument;
+
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ...demoState,
+          assessmentEvents: [
+            event,
+            { ...event, id: "conditional-shown", itemResponses: [1, 3] },
+            { ...event, id: "sentinel-while-shown", itemResponses: [1, -1] },
+            { ...event, id: "out-of-range", itemResponses: [1, 4] },
+            { ...event, id: "bad-choice", itemResponses: [2, -1] }
+          ]
+        })
+      );
+
+      expect(loadStoredState().assessmentEvents.map(({ id }) => id)).toEqual([
+        "conditional-skipped",
+        "conditional-shown"
+      ]);
+    } finally {
+      delete INSTRUMENTS[conditionalInstrument.id];
+    }
   });
 
   it("backfills a payload with no assessmentEvents array", () => {

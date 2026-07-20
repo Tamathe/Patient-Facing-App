@@ -105,7 +105,7 @@ test("a caregiver crisis from home opens crisis chat instead of feature navigati
 test("a positive PHQ-9 item 9 routes to the crisis surface", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
 
-  await page.goto("/checkin");
+  await page.goto("/checkin/phq9");
   await page.getByRole("button", { name: /start the check-in/i }).click();
 
   // Scope to the question area: the persistent UrgentHelp disclosure in the
