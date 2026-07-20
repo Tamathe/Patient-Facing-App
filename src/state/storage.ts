@@ -335,11 +335,11 @@ function isInstrumentResponse(
   if (!conditionMet) {
     return item.notApplicableValue !== undefined && value === item.notApplicableValue;
   }
-  if (item.notApplicableValue !== undefined && value === item.notApplicableValue) {
-    return false;
-  }
   if (item.kind === "choice") {
     return (item.options ?? instrument.defaultOptions ?? []).some((option) => option.value === value);
+  }
+  if (item.notApplicableValue !== undefined && value === item.notApplicableValue) {
+    return false;
   }
   return (
     Number.isFinite(value) &&

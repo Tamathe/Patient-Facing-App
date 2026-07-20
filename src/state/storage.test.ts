@@ -978,6 +978,80 @@ describe("storage", () => {
     expect(loadStoredState().assessmentEvents.map(({ id }) => id)).toEqual(["nida-valid"]);
   });
 
+  it("round-trips an eligible current-smoker lung event with the quit sentinel", () => {
+    const lungEvent = {
+      id: "lung-current-eligible",
+      patientId: demoState.patient.id,
+      instrumentId: "lung_ldct_eligibility",
+      itemResponses: [1, 60, 1, 20, -1, 0],
+      totalScore: 20,
+      severityBand: "eligible",
+      status: "patient_reported",
+      recordedAt: "2026-07-20T12:00:00.000Z"
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, assessmentEvents: [lungEvent] }));
+
+    expect(loadStoredState().assessmentEvents).toEqual([lungEvent]);
+  });
+
+  it("enforces P2 ranges, whole numbers, sentinels, and registered bands", () => {
+    const base = {
+      patientId: demoState.patient.id,
+      status: "patient_reported",
+      recordedAt: "2026-07-20T12:00:00.000Z"
+    };
+    const validMalePrediabetes = {
+      ...base,
+      id: "prediabetes-male-skip",
+      instrumentId: "prediabetes_risk",
+      itemResponses: [3, 1, 0, 1, 1, 1, 70, 280],
+      totalScore: 9,
+      severityBand: "high_risk"
+    };
+    const validWomanNoGestational = {
+      ...base,
+      id: "prediabetes-woman-no",
+      instrumentId: "prediabetes_risk",
+      itemResponses: [1, 0, 0, 0, 0, 0, 65, 130],
+      totalScore: 1,
+      severityBand: "lower_risk"
+    };
+    const validSteadiSkip = {
+      ...base,
+      id: "steadi-skip",
+      instrumentId: "steadi3",
+      itemResponses: [0, 0, 0, -1],
+      totalScore: 0,
+      severityBand: "lower_risk"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        assessmentEvents: [
+          validMalePrediabetes,
+          validWomanNoGestational,
+          validSteadiSkip,
+          { ...validMalePrediabetes, id: "bad-age-points", itemResponses: [4, 1, 0, 1, 1, 1, 70, 280] },
+          { ...validMalePrediabetes, id: "fractional-age", instrumentId: "lung_ldct_eligibility", itemResponses: [1, 60.5, 1, 20, -1, 0], totalScore: 20, severityBand: "eligible" },
+          { ...validMalePrediabetes, id: "current-with-quit-months", instrumentId: "lung_ldct_eligibility", itemResponses: [1, 60, 1, 20, 20, 0], totalScore: 20, severityBand: "eligible" },
+          { ...validMalePrediabetes, id: "former-with-sentinel", instrumentId: "lung_ldct_eligibility", itemResponses: [0, 60, 1, 20, -1, 0], totalScore: 20, severityBand: "eligible" },
+          { ...validMalePrediabetes, id: "bad-audit-choice", instrumentId: "audit_c", itemResponses: [1, 5, 0, 0], totalScore: 5, severityBand: "positive" },
+          { ...validMalePrediabetes, id: "bad-dds-range", instrumentId: "dds2", itemResponses: [0, 3], totalScore: 1.5, severityBand: "lower_distress" },
+          { ...validSteadiSkip, id: "steadi-answer-while-hidden", itemResponses: [0, 0, 0, 0] },
+          { ...validSteadiSkip, id: "steadi-sentinel-while-visible", itemResponses: [1, 0, 0, -1], severityBand: "at_risk" },
+          { ...validSteadiSkip, id: "unknown-band", severityBand: "unknown" }
+        ]
+      })
+    );
+
+    expect(loadStoredState().assessmentEvents.map(({ id }) => id)).toEqual([
+      "prediabetes-male-skip",
+      "prediabetes-woman-no",
+      "steadi-skip"
+    ]);
+  });
+
   it("backfills a payload with no assessmentEvents array", () => {
     const legacy: Record<string, unknown> = {
       ...demoState,

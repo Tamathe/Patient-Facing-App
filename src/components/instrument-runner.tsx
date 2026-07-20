@@ -23,14 +23,18 @@ const COPY = {
 export function InstrumentRunner({
   instrument,
   language,
-  onComplete
+  onComplete,
+  initialResponses,
+  hiddenItemIds = []
 }: {
   instrument: ScreeningInstrument;
   language: Language;
   onComplete: (responses: number[]) => void;
+  initialResponses?: Readonly<Record<string, number>>;
+  hiddenItemIds?: readonly string[];
 }) {
   const [consented, setConsented] = useState(false);
-  const [responses, setResponses] = useState<Record<string, number>>({});
+  const [responses, setResponses] = useState<Record<string, number>>(() => ({ ...initialResponses }));
   const [showError, setShowError] = useState(false);
 
   if (!consented) {
@@ -55,6 +59,9 @@ export function InstrumentRunner({
   }
 
   function isVisible(itemIndex: number): boolean {
+    if (hiddenItemIds.includes(instrument.items[itemIndex].id)) {
+      return false;
+    }
     const condition = instrument.items[itemIndex].conditionalOn;
     if (!condition) {
       return true;
@@ -63,10 +70,24 @@ export function InstrumentRunner({
   }
 
   function responseIsValid(itemIndex: number): boolean {
-    if (!isVisible(itemIndex)) {
-      return instrument.items[itemIndex].notApplicableValue !== undefined;
-    }
     const item = instrument.items[itemIndex];
+    if (hiddenItemIds.includes(item.id)) {
+      const value = responses[item.id];
+      if (value === undefined || !Number.isFinite(value)) {
+        return false;
+      }
+      if (item.kind === "choice") {
+        return (item.options ?? instrument.defaultOptions ?? []).some((option) => option.value === value);
+      }
+      return (
+        (item.min === undefined || value >= item.min) &&
+        (item.max === undefined || value <= item.max) &&
+        (item.integer !== true || Number.isInteger(value))
+      );
+    }
+    if (!isVisible(itemIndex)) {
+      return item.notApplicableValue !== undefined;
+    }
     const value = responses[item.id];
     if (value === undefined || !Number.isFinite(value)) {
       return false;
@@ -91,7 +112,11 @@ export function InstrumentRunner({
     setShowError(false);
     onComplete(
       instrument.items.map((item, index) =>
-        isVisible(index) ? responses[item.id] : (item.notApplicableValue as number)
+        hiddenItemIds.includes(item.id)
+          ? responses[item.id]
+          : isVisible(index)
+            ? responses[item.id]
+            : (item.notApplicableValue as number)
       )
     );
   }

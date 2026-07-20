@@ -179,7 +179,13 @@ describe("instrument registry", () => {
       "gad7",
       "hunger_vital_sign",
       "tobacco_use",
-      "nida_single"
+      "nida_single",
+      "lung_ldct_eligibility",
+      "crc_eligibility",
+      "prediabetes_risk",
+      "audit_c",
+      "dds2",
+      "steadi3"
     ]);
     expect(getInstrument("phq9")).toBe(PHQ9_INSTRUMENT);
     expect(getInstrument("missing")).toBeUndefined();

@@ -19,15 +19,15 @@ PASS
 ```
 RUN  v2.1.9 C:/Patient centered
 
- ✓ src/domain/safety.test.ts (16 tests) 5ms
  ✓ src/domain/crisis-red-flags.test.ts (183 tests) 37ms
- ✓ src/domain/front-door.test.ts (41 tests) 36ms
- ✓ src/ai/safety-gate.test.ts (46 tests) 54ms
+ ✓ src/domain/safety.test.ts (16 tests) 11ms
+ ✓ src/domain/front-door.test.ts (41 tests) 32ms
+ ✓ src/ai/safety-gate.test.ts (46 tests) 42ms
 
  Test Files  4 passed (4)
       Tests  286 passed (286)
-   Start at  10:23:29
-   Duration  1.33s (transform 301ms, setup 349ms, collect 584ms, tests 131ms, environment 1.88s, prepare 429ms)
+   Start at  10:49:16
+   Duration  1.33s (transform 248ms, setup 331ms, collect 479ms, tests 122ms, environment 1.99s, prepare 375ms)
 ```
 
 ## Interpretation

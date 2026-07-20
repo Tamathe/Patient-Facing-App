@@ -18,6 +18,9 @@ const COPY = {
     quick: "Quick check",
     quickBody: "Five short screens with follow-up questions only when needed.",
     quickStart: "Start the 2-minute check",
+    worthChecking: "Worth checking",
+    worthBody: "Optional adult health and screening checks.",
+    draft: "Draft wording",
     family: "Family support",
     familyBody: "Continue to family and caregiver support.",
     history: "History",
@@ -32,6 +35,9 @@ const COPY = {
     quick: "Chequeo rápido",
     quickBody: "Cinco chequeos breves con preguntas de seguimiento solo cuando sea necesario.",
     quickStart: "Comenzar el chequeo de 2 minutos",
+    worthChecking: "Vale la pena revisar",
+    worthBody: "Chequeos opcionales de salud y detección para adultos.",
+    draft: "Redacción preliminar",
     family: "Apoyo familiar",
     familyBody: "Continúa al apoyo para familias y personas cuidadoras.",
     history: "Historial",
@@ -57,12 +63,45 @@ function isDue(instrument: ScreeningInstrument, events: AssessmentEvent[]): bool
   );
 }
 
+function latestTobaccoBand(events: AssessmentEvent[]): string | undefined {
+  return events
+    .filter(({ instrumentId }) => instrumentId === "tobacco_use")
+    .sort((left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf())[0]
+    ?.severityBand;
+}
+
+function hasKnownAge65OrOlder(events: AssessmentEvent[]): boolean {
+  return events.some((event) => {
+    if (event.instrumentId === "lung_ldct_eligibility") {
+      return event.itemResponses[1] >= 65;
+    }
+    if (event.instrumentId === "crc_eligibility") {
+      return event.itemResponses[0] >= 65;
+    }
+    return false;
+  });
+}
+
 export default function CheckinPage() {
   const { state } = useHealthState();
   const language = state.patient.language;
   const copy = COPY[language];
   const instruments = Object.values(INSTRUMENTS);
-  const due = instruments.filter((instrument) => isDue(instrument, state.assessmentEvents));
+  const due = instruments.filter((instrument) => instrument.tier < 2 && isDue(instrument, state.assessmentEvents));
+  const tobaccoBand = latestTobaccoBand(state.assessmentEvents);
+  const hasOlderAdultAge = hasKnownAge65OrOlder(state.assessmentEvents);
+  const worthChecking = instruments.filter((instrument) => {
+    if (instrument.tier !== 2 || instrument.licenseStatus === "pending") {
+      return false;
+    }
+    if (instrument.id === "lung_ldct_eligibility") {
+      return tobaccoBand === "current" || tobaccoBand === "former";
+    }
+    if (instrument.id === "steadi3") {
+      return hasOlderAdultAge;
+    }
+    return true;
+  });
   const history = [...state.assessmentEvents].sort(
     (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
   );
@@ -96,6 +135,25 @@ export default function CheckinPage() {
           <Link className="mt-3 inline-flex min-h-12 items-center rounded-control bg-care px-4 py-2 font-semibold text-white" href="/checkin/quick">
             {copy.quickStart}
           </Link>
+        </section>
+
+        <section aria-label={copy.worthChecking} className="rounded-control border border-ink/10 bg-white p-5">
+          <h2 className="text-xl font-semibold">{copy.worthChecking}</h2>
+          <p className="mt-2 text-sm text-ink/70">{copy.worthBody}</p>
+          <div className="mt-3 grid gap-3">
+            {worthChecking.map((instrument) => (
+              <div className="rounded-control border border-ink/10 p-3" key={instrument.id}>
+                <Link className="font-semibold text-care underline" href={`/checkin/${instrument.id}`}>
+                  {instrument.title[language]}
+                </Link>
+                {!instrument.wordingVerified ? (
+                  <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                    {copy.draft}
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </section>
 
         {state.family ? (

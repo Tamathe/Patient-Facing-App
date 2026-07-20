@@ -3,8 +3,6 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { demoState } from "@/domain/fixtures";
-import { PHQ2_INSTRUMENT } from "@/domain/instruments/phq2";
-import { INSTRUMENTS } from "@/domain/instruments/registry";
 import type { AppState } from "@/domain/types";
 import { QuickCheck } from "./quick-check";
 
@@ -52,7 +50,6 @@ describe("QuickCheck", () => {
       tobacco_use: [0, 0],
       nida_single: [0]
     });
-    delete INSTRUMENTS.lung_ldct_eligibility;
   });
 
   it("renders each result before advancing and inserts positive expansions", async () => {
@@ -109,8 +106,11 @@ describe("QuickCheck", () => {
     expect(screen.getByText("Perry County food resources")).toBeVisible();
     expect(screen.getByText(/food access can make low blood sugar more likely/i)).toBeVisible();
     expect(screen.getByText("1-800-QUIT-NOW")).toBeVisible();
-    expect(screen.getByText("4 quick questions")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("Coming next")).toBeVisible();
+    expect(screen.getByRole("link", { name: "4 quick questions" })).toHaveAttribute(
+      "href",
+      "/checkin/lung_ldct_eligibility"
+    );
+    expect(screen.queryByText("Coming next")).not.toBeInTheDocument();
     expect(screen.getByText("Your answers stay on this device. You choose if and when to share them.")).toBeVisible();
   });
 
@@ -122,7 +122,6 @@ describe("QuickCheck", () => {
       ...demoState,
       medications: [{ ...demoState.medications[0], name: "Metformin" }]
     };
-    INSTRUMENTS.lung_ldct_eligibility = PHQ2_INSTRUMENT;
     render(<QuickCheck />);
 
     await completeCoreBattery(user);
@@ -134,7 +133,7 @@ describe("QuickCheck", () => {
     );
   });
 
-  it("provides Spanish progress, exit, completion, coming-next, and privacy parity", async () => {
+  it("provides Spanish progress, exit, completion, lung-link, and privacy parity", async () => {
     const user = userEvent.setup();
     responseByInstrument.tobacco_use = [1, -1];
     responseByInstrument.nida_single = [2];
@@ -144,7 +143,10 @@ describe("QuickCheck", () => {
     expect(screen.getByText("Chequeo 1 de 5")).toBeVisible();
     expect(screen.getByRole("link", { name: "Salir en cualquier momento" })).toHaveAttribute("href", "/checkin");
     await completeCoreBattery(user);
-    expect(screen.getByText("Próximamente")).toBeVisible();
+    expect(screen.getByRole("link", { name: "4 preguntas rápidas" })).toHaveAttribute(
+      "href",
+      "/checkin/lung_ldct_eligibility"
+    );
     expect(screen.getByText("Tus respuestas permanecen en este dispositivo. Tú eliges si las compartes y cuándo.")).toBeVisible();
   });
 });

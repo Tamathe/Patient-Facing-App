@@ -6,6 +6,7 @@ import type { ScreeningInstrument } from "@/domain/instruments/types";
 import type { AiMessage } from "@/domain/types";
 import { tSafety, type Language } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
+import { AdultOutcomeCard } from "./adult-outcome-card";
 import { MessageActions } from "./message-actions";
 
 export function InstrumentResult({
@@ -74,6 +75,12 @@ export function InstrumentResult({
         {language === "es" ? "Gracias por tu chequeo" : "Thanks for checking in"}
       </h2>
       <p className="mt-2 text-sm leading-6 text-ink/80">{instrument.bandSummaries[outcome.band][language]}</p>
+      <AdultOutcomeCard
+        band={outcome.band}
+        instrumentId={instrument.id}
+        language={language}
+        responses={responses}
+      />
     </section>
   );
 }
