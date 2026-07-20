@@ -39,3 +39,28 @@ export const caseyFamilyState: FamilyNavigatorState = {
   saved: [],
   alreadyEnrolled: []
 };
+
+export function eighteenMonthFamilyState(now: Date): FamilyNavigatorState {
+  if (Number.isNaN(now.valueOf())) {
+    throw new RangeError("A valid timestamp is required for the 18-month family example.");
+  }
+  const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 18, 1));
+  return {
+    profile: {
+      childFirstName: "Avery",
+      birthYear: birth.getUTCFullYear(),
+      birthMonth: birth.getUTCMonth() + 1,
+      schoolStage: "not_school_age",
+      county: "Fayette",
+      diagnoses: []
+    },
+    interviewDraft: "",
+    screenAnswers: [],
+    interviews: [],
+    facts: [],
+    latestInterviewDomains: [],
+    activeDomains: [],
+    saved: [],
+    alreadyEnrolled: []
+  };
+}

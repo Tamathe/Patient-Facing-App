@@ -52,6 +52,14 @@ const PROHIBITED_TERMS = [
 
 const APPROVED_TEMPLATES: ApprovedNudgeTemplate[] = [
   {
+    id: "development_check_nudge_v1",
+    requiredSlots: [],
+    bodyByLanguage: {
+      en: "A family development check-in is available in the app.",
+      es: "Hay un chequeo familiar del desarrollo disponible en la aplicación."
+    }
+  },
+  {
     id: "perinatal_check_nudge_v1",
     requiredSlots: ["firstName"],
     bodyByLanguage: {

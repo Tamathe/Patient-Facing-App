@@ -8,6 +8,7 @@ import type { ScreeningInstrument } from "@/domain/instruments/types";
 import type { AssessmentEvent } from "@/domain/assessment";
 import type { Language } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
+import { familyScreeningEntries } from "@/domain/family-screenings";
 
 const COPY = {
   en: {
@@ -23,6 +24,9 @@ const COPY = {
     draft: "Draft wording",
     family: "Family support",
     familyBody: "Continue to family and caregiver support.",
+    forFamily: "For your family",
+    forFamilyBody: "Age-appropriate child and teen check-ins based on the family profile.",
+    preview: "Demo preview",
     history: "History",
     emptyHistory: "No completed check-ins yet.",
     fallbackTitle: "Check-in"
@@ -40,6 +44,9 @@ const COPY = {
     draft: "Redacción preliminar",
     family: "Apoyo familiar",
     familyBody: "Continúa al apoyo para familias y personas cuidadoras.",
+    forFamily: "Para tu familia",
+    forFamilyBody: "Chequeos infantiles y para adolescentes apropiados para la edad según el perfil familiar.",
+    preview: "Vista previa de demostración",
     history: "Historial",
     emptyHistory: "Aún no hay chequeos completados.",
     fallbackTitle: "Chequeo"
@@ -87,7 +94,9 @@ export default function CheckinPage() {
   const language = state.patient.language;
   const copy = COPY[language];
   const instruments = Object.values(INSTRUMENTS);
-  const due = instruments.filter((instrument) => instrument.tier < 2 && isDue(instrument, state.assessmentEvents));
+  const due = instruments.filter(
+    (instrument) => instrument.licenseStatus === "clear" && instrument.tier < 2 && isDue(instrument, state.assessmentEvents)
+  );
   const tobaccoBand = latestTobaccoBand(state.assessmentEvents);
   const hasOlderAdultAge = hasKnownAge65OrOlder(state.assessmentEvents);
   const worthChecking = instruments.filter((instrument) => {
@@ -105,6 +114,10 @@ export default function CheckinPage() {
   const history = [...state.assessmentEvents].sort(
     (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
   );
+  const now = new Date();
+  const familyEntries = state.family?.profile
+    ? familyScreeningEntries(state.family.profile, now)
+    : [];
 
   return (
     <AppShell title={copy.title}>
@@ -155,6 +168,42 @@ export default function CheckinPage() {
             ))}
           </div>
         </section>
+
+        {familyEntries.length > 0 ? (
+          <section
+            aria-label={copy.forFamily}
+            className="rounded-control border border-ink/10 bg-white p-5"
+            id="for-family"
+          >
+            <h2 className="text-xl font-semibold">{copy.forFamily}</h2>
+            <p className="mt-2 text-sm text-ink/70">{copy.forFamilyBody}</p>
+            <div className="mt-3 grid gap-3">
+              {familyEntries.map((entry) => {
+                const familyInstrument = getInstrument(entry.routeId);
+                if (!familyInstrument) {
+                  return null;
+                }
+                return (
+                  <div className="rounded-control border border-ink/10 p-3" key={entry.routeId}>
+                    <Link className="font-semibold text-care underline" href={`/checkin/${entry.routeId}`}>
+                      {familyInstrument.title[language]}
+                    </Link>
+                    {entry.exposure === "hub_preview" ? (
+                      <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                        {copy.preview}
+                      </span>
+                    ) : null}
+                    {!familyInstrument.wordingVerified ? (
+                      <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                        {copy.draft}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {state.family ? (
           <section className="rounded-control border border-ink/10 bg-white p-5">

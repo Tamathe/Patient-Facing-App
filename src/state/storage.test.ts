@@ -1225,3 +1225,81 @@ describe("storage", () => {
     expect(loaded.screeningResults[0].id).toBe("result-cited");
   });
 });
+
+describe("P4 assessment storage", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  const family = {
+    profile: {
+      childFirstName: "Avery",
+      birthYear: 2025,
+      birthMonth: 1,
+      schoolStage: "not_school_age" as const,
+      county: "Fayette",
+      diagnoses: []
+    },
+    interviewDraft: "",
+    screenAnswers: [],
+    interviews: [],
+    facts: [],
+    latestInterviewDomains: [],
+    activeDomains: [],
+    saved: [],
+    alreadyEnrolled: []
+  };
+
+  const posiEvent = {
+    id: "posi-valid",
+    patientId: demoState.patient.id,
+    instrumentId: "swyc_posi",
+    itemResponses: [0, 0, 0, 0, 0, 0, 5],
+    totalScore: 1,
+    severityBand: "lower_risk",
+    status: "patient_reported" as const,
+    recordedAt: "2026-07-20T12:00:00.000Z"
+  };
+
+  it("round-trips zero and declared POSI masks plus a 13-value PHQ-A event", () => {
+    const phqAEvent = {
+      ...posiEvent,
+      id: "phqa-valid",
+      instrumentId: "phq_a",
+      itemResponses: Array(13).fill(0),
+      totalScore: 0,
+      severityBand: "minimal"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...demoState, family, assessmentEvents: [posiEvent, phqAEvent] })
+    );
+
+    expect(loadStoredState().assessmentEvents).toEqual([posiEvent, phqAEvent]);
+  });
+
+  it.each([
+    ["unknown bit", 32],
+    ["fractional mask", 1.5],
+    ["negative mask", -1],
+    ["declared plus unknown bit", 33],
+    ["high unknown bit", 2 ** 32],
+    ["high unknown bit plus declared bit", 2 ** 32 + 1],
+    ["another high unknown bit plus declared bit", 2 ** 40 + 8]
+  ])("filters a POSI %s without resetting patient or family state", (_, mask) => {
+    const malformed = {
+      ...posiEvent,
+      id: `invalid-${mask}`,
+      itemResponses: [0, 0, 0, 0, 0, 0, mask]
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...demoState, family, assessmentEvents: [posiEvent, malformed] })
+    );
+
+    const loaded = loadStoredState();
+    expect(loaded.patient).toEqual(demoState.patient);
+    expect(loaded.family).toEqual(family);
+    expect(loaded.assessmentEvents.map(({ id }) => id)).toEqual(["posi-valid"]);
+  });
+});

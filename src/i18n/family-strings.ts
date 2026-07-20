@@ -45,6 +45,7 @@ export type FamilyStringKey =
   | "examplesTitle"
   | "exampleMorgan"
   | "exampleCasey"
+  | "exampleEighteenMonth"
   | "entryQuestionsTitle"
   | "entryQuestionsBody"
   | "entryInterviewTitle"
@@ -191,7 +192,13 @@ export type FamilyStringKey =
   | "timelinePerinatalFourMonthTitle"
   | "timelinePerinatalFourMonthCta"
   | "timelinePerinatalSixMonthTitle"
-  | "timelinePerinatalSixMonthCta";
+  | "timelinePerinatalSixMonthCta"
+  | "timelineDevelopmentEighteenTitle"
+  | "timelineDevelopmentEighteenBody"
+  | "timelineDevelopmentEighteenCta"
+  | "timelineDevelopmentThirtyTitle"
+  | "timelineDevelopmentThirtyBody"
+  | "timelineDevelopmentThirtyCta";
 
 export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = {
   en: {
@@ -239,6 +246,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     examplesTitle: "Try a fictional example",
     exampleMorgan: "Morgan and Riley — Scott County",
     exampleCasey: "Casey — Perry County",
+    exampleEighteenMonth: "Avery — Fayette County, 18 months",
     entryQuestionsTitle: "Answer a few questions",
     entryQuestionsBody: "Choose yes, no, or prefer not to answer for eight support areas.",
     entryInterviewTitle: "Tell us about your child",
@@ -385,7 +393,13 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelinePerinatalFourMonthTitle: "Check in with yourself at 4 months",
     timelinePerinatalFourMonthCta: "Start your 4-month check-in",
     timelinePerinatalSixMonthTitle: "Check in with yourself at 6 months",
-    timelinePerinatalSixMonthCta: "Start your 6-month check-in"
+    timelinePerinatalSixMonthCta: "Start your 6-month check-in",
+    timelineDevelopmentEighteenTitle: "18-month development check",
+    timelineDevelopmentEighteenBody: "A family development check-in is available in the app.",
+    timelineDevelopmentEighteenCta: "Open family check-ins",
+    timelineDevelopmentThirtyTitle: "30-month development check",
+    timelineDevelopmentThirtyBody: "A family development check-in is available in the app.",
+    timelineDevelopmentThirtyCta: "Open family check-ins"
   },
   es: {
     pageTitle: "Navegador para familias",
@@ -432,6 +446,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     examplesTitle: "Prueba un ejemplo ficticio",
     exampleMorgan: "Morgan y Riley — condado de Scott",
     exampleCasey: "Casey — condado de Perry",
+    exampleEighteenMonth: "Avery — condado de Fayette, 18 meses",
     entryQuestionsTitle: "Responde unas preguntas",
     entryQuestionsBody: "Elige sí, no o prefiero no responder en ocho áreas de apoyo.",
     entryInterviewTitle: "Cuéntanos sobre tu hijo o hija",
@@ -578,7 +593,13 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelinePerinatalFourMonthTitle: "Revísate a los 4 meses",
     timelinePerinatalFourMonthCta: "Comienza tu chequeo de los 4 meses",
     timelinePerinatalSixMonthTitle: "Revísate a los 6 meses",
-    timelinePerinatalSixMonthCta: "Comienza tu chequeo de los 6 meses"
+    timelinePerinatalSixMonthCta: "Comienza tu chequeo de los 6 meses",
+    timelineDevelopmentEighteenTitle: "Chequeo del desarrollo de 18 meses",
+    timelineDevelopmentEighteenBody: "Hay un chequeo familiar del desarrollo disponible en la aplicación.",
+    timelineDevelopmentEighteenCta: "Abrir chequeos familiares",
+    timelineDevelopmentThirtyTitle: "Chequeo del desarrollo de 30 meses",
+    timelineDevelopmentThirtyBody: "Hay un chequeo familiar del desarrollo disponible en la aplicación.",
+    timelineDevelopmentThirtyCta: "Abrir chequeos familiares"
   }
 };
 

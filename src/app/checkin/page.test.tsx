@@ -192,4 +192,82 @@ describe("screening hub", () => {
       DDS2_INSTRUMENT.licenseStatus = originalLicense;
     }
   });
+
+  it("lists only age-appropriate family entries, labels SWYC preview, and excludes pending instruments from Due now", () => {
+    const now = new Date();
+    const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 18, 1));
+    context.state = {
+      ...demoState,
+      family: {
+        profile: {
+          childFirstName: "Avery",
+          birthYear: birth.getUTCFullYear(),
+          birthMonth: birth.getUTCMonth() + 1,
+          schoolStage: "not_school_age",
+          county: "Fayette",
+          diagnoses: []
+        },
+        interviewDraft: "",
+        screenAnswers: [],
+        interviews: [],
+        facts: [],
+        latestInterviewDomains: [],
+        activeDomains: [],
+        saved: [],
+        alreadyEnrolled: []
+      }
+    };
+
+    const { unmount } = render(<CheckinPage />);
+
+    const family = screen.getByRole("region", { name: "For your family" });
+    expect(family).toHaveAttribute("id", "for-family");
+    expect(within(family).getByRole("link", { name: /18-month development and social check/i })).toHaveAttribute(
+      "href",
+      "/checkin/swyc_18mo"
+    );
+    expect(within(family).getByText("Demo preview")).toBeVisible();
+    expect(within(family).queryByRole("link", { name: /PSC-17|teen/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Due now" }).closest("section")).not.toHaveTextContent(/SWYC|development/i);
+    unmount();
+
+    context.state = { ...context.state, patient: { ...context.state.patient, language: "es" } };
+    render(<CheckinPage />);
+    expect(screen.getByRole("region", { name: "Para tu familia" })).toHaveTextContent(
+      "Vista previa de demostración"
+    );
+  });
+
+  it("shows PSC-17 and PHQ-A together at age 11 and degrades year-only family profiles", () => {
+    const now = new Date();
+    const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 132, 1));
+    const family = {
+      profile: {
+        childFirstName: "Avery",
+        birthYear: birth.getUTCFullYear(),
+        birthMonth: birth.getUTCMonth() + 1,
+        schoolStage: "middle" as const,
+        county: "Fayette",
+        diagnoses: []
+      },
+      interviewDraft: "",
+      screenAnswers: [],
+      interviews: [],
+      facts: [],
+      latestInterviewDomains: [],
+      activeDomains: [],
+      saved: [],
+      alreadyEnrolled: []
+    };
+    context.state = { ...demoState, family };
+    const { unmount } = render(<CheckinPage />);
+    const section = screen.getByRole("region", { name: "For your family" });
+    expect(within(section).getByRole("link", { name: /PSC-17/i })).toBeVisible();
+    expect(within(section).getByRole("link", { name: /teen/i })).toBeVisible();
+    unmount();
+
+    context.state = { ...demoState, family: { ...family, profile: { ...family.profile, birthMonth: undefined } } };
+    render(<CheckinPage />);
+    expect(screen.queryByRole("region", { name: "For your family" })).not.toBeInTheDocument();
+  });
 });

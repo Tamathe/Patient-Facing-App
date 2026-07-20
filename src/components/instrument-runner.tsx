@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { conditionMatches } from "@/domain/instruments/conditions";
+import { isValidMultiChoiceMask } from "@/domain/instruments/multi-choice-mask";
 import type { ScreeningInstrument } from "@/domain/instruments/types";
 import type { Language } from "@/i18n/strings";
 
@@ -10,26 +11,36 @@ const COPY = {
     required: "Please answer every question.",
     submit: "Submit",
     draft: "Draft wording — verify against the official form before clinical use.",
-    license: "Demo preview — not for clinical use until the electronic-use agreement is in place."
+    license: "Demo preview — not for clinical use until the electronic-use agreement is in place.",
+    caregiverNamed: "Answer about {childName}.",
+    caregiverFallback: "Answer about your child.",
+    teenNamed: "Hand the device to {childName}. These questions are for your teen to answer themselves.",
+    teenFallback: "Hand the device to your teen. These questions are for your teen to answer themselves."
   },
   es: {
     required: "Por favor responde todas las preguntas.",
     submit: "Enviar",
     draft: "Borrador de redacción — verifica el formulario oficial antes del uso clínico.",
-    license: "Vista previa de demostración — no usar clínicamente hasta que esté vigente el acuerdo de uso electrónico."
+    license: "Vista previa de demostración — no usar clínicamente hasta que esté vigente el acuerdo de uso electrónico.",
+    caregiverNamed: "Responde sobre {childName}.",
+    caregiverFallback: "Responde sobre tu hijo o hija.",
+    teenNamed: "Dale el dispositivo a {childName}. Estas preguntas son para que tu adolescente responda por sí mismo.",
+    teenFallback: "Dale el dispositivo a tu adolescente. Estas preguntas son para que responda por sí mismo."
   }
-} satisfies Record<Language, Record<"required" | "submit" | "draft" | "license", string>>;
+} satisfies Record<Language, Record<"required" | "submit" | "draft" | "license" | "caregiverNamed" | "caregiverFallback" | "teenNamed" | "teenFallback", string>>;
 
 export function InstrumentRunner({
   instrument,
   language,
   onComplete,
+  childName,
   initialResponses,
   hiddenItemIds = []
 }: {
   instrument: ScreeningInstrument;
   language: Language;
   onComplete: (responses: number[]) => void;
+  childName?: string;
   initialResponses?: Readonly<Record<string, number>>;
   hiddenItemIds?: readonly string[];
 }) {
@@ -79,6 +90,13 @@ export function InstrumentRunner({
       if (item.kind === "choice") {
         return (item.options ?? instrument.defaultOptions ?? []).some((option) => option.value === value);
       }
+      if (item.kind === "multi_choice") {
+        return isValidMultiChoiceMask(
+          value,
+          (item.options ?? []).map((option) => option.value),
+          item.allowEmpty === true
+        );
+      }
       return (
         (item.min === undefined || value >= item.min) &&
         (item.max === undefined || value <= item.max) &&
@@ -89,12 +107,22 @@ export function InstrumentRunner({
       return item.notApplicableValue !== undefined;
     }
     const value = responses[item.id];
+    if (item.kind === "multi_choice" && value === undefined && item.allowEmpty === true) {
+      return true;
+    }
     if (value === undefined || !Number.isFinite(value)) {
       return false;
     }
     if (item.kind === "choice") {
       const options = item.options ?? instrument.defaultOptions ?? [];
       return options.some((option) => option.value === value);
+    }
+    if (item.kind === "multi_choice") {
+      return isValidMultiChoiceMask(
+        value,
+        (item.options ?? []).map((option) => option.value),
+        item.allowEmpty === true
+      );
     }
     return (
       (item.min === undefined || value >= item.min) &&
@@ -115,7 +143,9 @@ export function InstrumentRunner({
         hiddenItemIds.includes(item.id)
           ? responses[item.id]
           : isVisible(index)
-            ? responses[item.id]
+            ? item.kind === "multi_choice" && responses[item.id] === undefined
+              ? 0
+              : responses[item.id]
             : (item.notApplicableValue as number)
       )
     );
@@ -124,6 +154,17 @@ export function InstrumentRunner({
   return (
     <form className="grid gap-5" noValidate onSubmit={submit}>
       <h2 className="text-xl font-semibold">{instrument.title[language]}</h2>
+      {instrument.audience === "caregiver" ? (
+        <p className="rounded-control bg-calm p-3 text-sm font-medium">
+          {childName
+            ? COPY[language].caregiverNamed.replace("{childName}", childName)
+            : COPY[language].caregiverFallback}
+        </p>
+      ) : instrument.audience === "teen" ? (
+        <p className="rounded-control bg-calm p-3 text-sm font-medium">
+          {childName ? COPY[language].teenNamed.replace("{childName}", childName) : COPY[language].teenFallback}
+        </p>
+      ) : null}
       {instrument.instructions ? (
         <p className="text-sm leading-6 text-ink/80">{instrument.instructions[language]}</p>
       ) : null}
@@ -171,6 +212,35 @@ export function InstrumentRunner({
           );
         }
         const options = item.options ?? instrument.defaultOptions ?? [];
+        if (item.kind === "multi_choice") {
+          const selectedMask = responses[item.id] ?? 0;
+          return (
+            <fieldset key={item.id} className="grid gap-2 rounded-control border border-ink/10 bg-white p-4">
+              <legend className="text-sm font-medium">{item[language]}</legend>
+              <div className="grid gap-1">
+                {options.map((option) => (
+                  <label key={option.value} className="flex min-h-12 items-center gap-2 text-sm">
+                    <input
+                      checked={(selectedMask & option.value) !== 0}
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked;
+                        setResponses((current) => ({
+                          ...current,
+                          [item.id]: checked
+                            ? (current[item.id] ?? 0) | option.value
+                            : (current[item.id] ?? 0) & ~option.value
+                        }));
+                      }}
+                      type="checkbox"
+                      value={option.value}
+                    />
+                    {option[language]}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          );
+        }
         return (
           <fieldset key={item.id} className="grid gap-2 rounded-control border border-ink/10 bg-white p-4">
             <legend className="text-sm font-medium">{item[language]}</legend>

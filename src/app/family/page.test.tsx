@@ -367,3 +367,19 @@ describe("FamilyExperience", () => {
     expect(screen.queryByRole("heading", { name: "Review what we heard" })).not.toBeInTheDocument();
   });
 });
+
+describe("P4 eighteen-month family example", () => {
+  it("immediately renders the development stage and its hub link when clicked", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    await user.click(screen.getByRole("button", { name: /Avery.*Fayette County.*18 months/i }));
+
+    expect(screen.getByRole("heading", { name: "18-month development check" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Open family check-ins" })).toHaveAttribute(
+      "href",
+      "/checkin#for-family"
+    );
+    expect(screen.getByTestId("family-state")).toHaveTextContent('"county":"Fayette"');
+  });
+});

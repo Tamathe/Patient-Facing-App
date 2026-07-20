@@ -42,6 +42,27 @@ const CONDITIONAL_INSTRUMENT: ScreeningInstrument = {
   attribution: { en: "Demo source", es: "Fuente de demostración" }
 };
 
+const MULTI_INSTRUMENT: ScreeningInstrument = {
+  ...CONDITIONAL_INSTRUMENT,
+  id: "multi-demo",
+  title: { en: "Multi demo", es: "Demostración múltiple" },
+  audience: "caregiver",
+  items: [
+    {
+      id: "activities",
+      kind: "multi_choice",
+      allowEmpty: true,
+      en: "Choose every activity that applies.",
+      es: "Elige todas las actividades que correspondan.",
+      options: [
+        { value: 1, en: "Reading", es: "Leer", score: 0 },
+        { value: 2, en: "Running", es: "Correr", score: 1 },
+        { value: 4, en: "Drawing", es: "Dibujar", score: 0 }
+      ]
+    }
+  ]
+};
+
 describe("InstrumentRunner", () => {
   it("gates the form behind consent and emits a conditional sentinel for a skipped item", async () => {
     const user = userEvent.setup();
@@ -156,4 +177,80 @@ describe("InstrumentRunner", () => {
     expect(screen.getByText("Fuente de demostración")).toBeVisible();
     expect(screen.getByRole("radio", { name: "Sí" }).closest("label")).toHaveClass("min-h-12");
   });
+
+  it("renders generic caregiver and teen framing with named and fallback children in both languages", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <InstrumentRunner
+        childName="Avery"
+        instrument={MULTI_INSTRUMENT}
+        language="en"
+        onComplete={vi.fn()}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Answer about Avery.")).toBeVisible();
+
+    rerender(
+      <InstrumentRunner instrument={MULTI_INSTRUMENT} language="es" onComplete={vi.fn()} />
+    );
+    expect(screen.getByText("Responde sobre tu hijo o hija.")).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: "Leer" })).toBeVisible();
+
+    const teenInstrument: ScreeningInstrument = { ...CONDITIONAL_INSTRUMENT, audience: "teen" };
+    rerender(
+      <InstrumentRunner childName="Avery" instrument={teenInstrument} language="en" onComplete={vi.fn()} />
+    );
+    expect(screen.getByText(/Hand the device to Avery.*for your teen to answer themselves/i)).toBeVisible();
+
+    rerender(
+      <InstrumentRunner instrument={teenInstrument} language="es" onComplete={vi.fn()} />
+    );
+    expect(screen.getByText(/Dale el dispositivo a tu adolescente.*responda por sí mismo/i)).toBeVisible();
+  });
+
+  it("submits untouched and fully cleared allow-empty multi-choice rows as numeric zero", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const { unmount } = render(
+      <InstrumentRunner instrument={MULTI_INSTRUMENT} language="en" onComplete={onComplete} />
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onComplete).toHaveBeenLastCalledWith([0]);
+    unmount();
+
+    render(<InstrumentRunner instrument={MULTI_INSTRUMENT} language="en" onComplete={onComplete} />);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("checkbox", { name: "Reading" }));
+    await user.click(screen.getByRole("checkbox", { name: "Running" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onComplete).toHaveBeenLastCalledWith([3]);
+    await user.click(screen.getByRole("checkbox", { name: "Reading" }));
+    await user.click(screen.getByRole("checkbox", { name: "Running" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(onComplete).toHaveBeenLastCalledWith([0]);
+  });
+
+  it.each([2 ** 32, 2 ** 32 + 1, 2 ** 40 + 8])(
+    "rejects a high undeclared multi-choice mask of %s",
+    async (mask) => {
+      const user = userEvent.setup();
+      const onComplete = vi.fn();
+      render(
+        <InstrumentRunner
+          initialResponses={{ activities: mask }}
+          instrument={MULTI_INSTRUMENT}
+          language="en"
+          onComplete={onComplete}
+        />
+      );
+
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+      await user.click(screen.getByRole("button", { name: "Submit" }));
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Please answer every question.");
+      expect(onComplete).not.toHaveBeenCalled();
+    }
+  );
 });

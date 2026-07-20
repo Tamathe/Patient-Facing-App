@@ -227,12 +227,12 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     [family?.saved]
   );
 
-  function seedExample(example: "morgan" | "casey"): void {
+  function seedExample(example: "morgan" | "casey" | "eighteen_month", now: string): void {
     pendingReviewFocusRef.current = false;
     setReviewDetails(null);
     setSafetySuppressed(false);
     setSeedVersion((current) => current + 1);
-    dispatch({ type: "seedExampleFamily", example });
+    dispatch({ type: "seedExampleFamily", example, now });
   }
 
   function saveProfile(profile: FamilyProfile): void {

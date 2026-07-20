@@ -185,7 +185,12 @@ describe("instrument registry", () => {
       "prediabetes_risk",
       "audit_c",
       "dds2",
-      "steadi3"
+      "steadi3",
+      "swyc_18mo",
+      "swyc_30mo",
+      "swyc_posi",
+      "psc17",
+      "phq_a"
     ]);
     expect(getInstrument("phq9")).toBe(PHQ9_INSTRUMENT);
     expect(getInstrument("missing")).toBeUndefined();

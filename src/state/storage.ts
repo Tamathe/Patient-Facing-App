@@ -3,6 +3,7 @@ import { DEFAULT_DOSE_REMINDER, isDoseReminderPreference } from "@/domain/remind
 import type { AssessmentEvent } from "@/domain/assessment";
 import { getInstrument } from "@/domain/instruments/registry";
 import { conditionMatches } from "@/domain/instruments/conditions";
+import { isValidMultiChoiceMask } from "@/domain/instruments/multi-choice-mask";
 import type { InstrumentItem, ScreeningInstrument } from "@/domain/instruments/types";
 import type {
   AccessibilityPreference,
@@ -337,6 +338,13 @@ function isInstrumentResponse(
   }
   if (item.kind === "choice") {
     return (item.options ?? instrument.defaultOptions ?? []).some((option) => option.value === value);
+  }
+  if (item.kind === "multi_choice") {
+    return isValidMultiChoiceMask(
+      value,
+      (item.options ?? []).map((option) => option.value),
+      item.allowEmpty === true
+    );
   }
   if (item.notApplicableValue !== undefined && value === item.notApplicableValue) {
     return false;

@@ -1,6 +1,7 @@
 import type { Language } from "@/i18n/strings";
 import { renderNudge } from "./nudge-template";
 import { perinatalCheckpoints, type PerinatalCheckpointMonth } from "./perinatal";
+import { childAgeMonths } from "./family-screenings";
 import type { DevNeedDomain, FamilyNavigatorState, FamilyProfile } from "./types";
 
 export type FamilyStage = {
@@ -102,26 +103,30 @@ const STAGE_DEFINITIONS = {
     domains: [],
     templateId: "perinatal_check_nudge_v1",
     href: "/checkin/perinatal"
+  },
+  "development-check-18-month": {
+    title: "18-month development check",
+    domains: [],
+    templateId: "development_check_nudge_v1",
+    href: "/checkin#for-family"
+  },
+  "development-check-30-month": {
+    title: "30-month development check",
+    domains: [],
+    templateId: "development_check_nudge_v1",
+    href: "/checkin#for-family"
   }
 } satisfies Record<string, FamilyStageDefinition>;
 
 type FamilyStageId = keyof typeof STAGE_DEFINITIONS;
 
-function ageInMonths(profile: FamilyProfile, now: Date): number | null {
-  if (profile.birthMonth === undefined) {
-    return null;
-  }
-
-  return (now.getUTCFullYear() - profile.birthYear) * 12 + (now.getUTCMonth() + 1 - profile.birthMonth);
-}
-
 function hasReachedAge(profile: FamilyProfile, now: Date, years: number): boolean {
-  const months = ageInMonths(profile, now);
+  const months = childAgeMonths(profile, now);
   return months === null ? now.getUTCFullYear() - profile.birthYear >= years : months >= years * 12;
 }
 
 function isAgeSeventeen(profile: FamilyProfile, now: Date): boolean {
-  const months = ageInMonths(profile, now);
+  const months = childAgeMonths(profile, now);
   if (months !== null) {
     return months >= 204 && months < 216;
   }
@@ -131,7 +136,7 @@ function isAgeSeventeen(profile: FamilyProfile, now: Date): boolean {
 }
 
 function isUnderThree(profile: FamilyProfile, now: Date): boolean {
-  const months = ageInMonths(profile, now);
+  const months = childAgeMonths(profile, now);
   if (months !== null) {
     return months >= 0 && months < 36;
   }
@@ -141,7 +146,7 @@ function isUnderThree(profile: FamilyProfile, now: Date): boolean {
 }
 
 function transitionWindowHasOpened(profile: FamilyProfile, now: Date): boolean {
-  const months = ageInMonths(profile, now);
+  const months = childAgeMonths(profile, now);
   if (months !== null) {
     return months >= 27 && months < 36;
   }
@@ -151,7 +156,7 @@ function transitionWindowHasOpened(profile: FamilyProfile, now: Date): boolean {
 }
 
 function isInSchoolEnrollmentWindow(profile: FamilyProfile, now: Date): boolean {
-  const months = ageInMonths(profile, now);
+  const months = childAgeMonths(profile, now);
   if (months !== null) {
     return months >= 48 && months < 72;
   }
@@ -269,6 +274,14 @@ export function buildFamilyStages(
 
   if (isUnderThree(profile, now)) {
     pushStage(stages, "first-steps", "now", profile, language);
+  }
+
+  const completedMonths = childAgeMonths(profile, now);
+  if (completedMonths !== null && completedMonths >= 18 && completedMonths <= 22) {
+    pushStage(stages, "development-check-18-month", "now", profile, language);
+  }
+  if (completedMonths !== null && completedMonths >= 29 && completedMonths <= 34) {
+    pushStage(stages, "development-check-30-month", "now", profile, language);
   }
 
   if (transitionWindowHasOpened(profile, now)) {

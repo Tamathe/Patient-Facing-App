@@ -30,14 +30,18 @@ const STAGE_TITLE_KEYS: Record<string, FamilyStringKey> = {
   "perinatal-check-1-month": "timelinePerinatalOneMonthTitle",
   "perinatal-check-2-month": "timelinePerinatalTwoMonthTitle",
   "perinatal-check-4-month": "timelinePerinatalFourMonthTitle",
-  "perinatal-check-6-month": "timelinePerinatalSixMonthTitle"
+  "perinatal-check-6-month": "timelinePerinatalSixMonthTitle",
+  "development-check-18-month": "timelineDevelopmentEighteenTitle",
+  "development-check-30-month": "timelineDevelopmentThirtyTitle"
 };
 
 const STAGE_CTA_KEYS: Partial<Record<string, FamilyStringKey>> = {
   "perinatal-check-1-month": "timelinePerinatalOneMonthCta",
   "perinatal-check-2-month": "timelinePerinatalTwoMonthCta",
   "perinatal-check-4-month": "timelinePerinatalFourMonthCta",
-  "perinatal-check-6-month": "timelinePerinatalSixMonthCta"
+  "perinatal-check-6-month": "timelinePerinatalSixMonthCta",
+  "development-check-18-month": "timelineDevelopmentEighteenCta",
+  "development-check-30-month": "timelineDevelopmentThirtyCta"
 };
 
 const TIMING_KEYS: Record<FamilyStage["timing"], FamilyStringKey> = {

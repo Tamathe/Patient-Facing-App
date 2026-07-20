@@ -86,4 +86,111 @@ describe("dynamic instrument route", () => {
       })
     })));
   });
+
+  it("age-gates SWYC composites, blocks direct POSI, and uses caregiver framing", async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 18, 1));
+    context.state = {
+      ...demoState,
+      family: {
+        profile: {
+          childFirstName: "Avery",
+          birthYear: birth.getUTCFullYear(),
+          birthMonth: birth.getUTCMonth() + 1,
+          schoolStage: "not_school_age",
+          county: "Fayette",
+          diagnoses: []
+        },
+        interviewDraft: "",
+        screenAnswers: [],
+        interviews: [],
+        facts: [],
+        latestInterviewDomains: [],
+        activeDomains: [],
+        saved: [],
+        alreadyEnrolled: []
+      }
+    };
+    route.instrumentId = "swyc_18mo";
+    const { unmount } = render(<InstrumentPage />);
+    await user.click(screen.getByRole("button", { name: /start/i }));
+    expect(screen.getByText("Answer about Avery.")).toBeVisible();
+    expect(screen.getByText(/Draft wording/i)).toBeVisible();
+    expect(screen.getByText(/Demo preview/i)).toBeVisible();
+    unmount();
+
+    route.instrumentId = "swyc_posi";
+    render(<InstrumentPage />);
+    expect(screen.getByText("This check-in is not available.")).toBeVisible();
+  });
+
+  it("uses caregiver framing for PSC-17 and teen handoff framing for PHQ-A", async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 132, 1));
+    context.state = {
+      ...demoState,
+      family: {
+        profile: {
+          childFirstName: "Avery",
+          birthYear: birth.getUTCFullYear(),
+          birthMonth: birth.getUTCMonth() + 1,
+          schoolStage: "middle",
+          county: "Fayette",
+          diagnoses: []
+        },
+        interviewDraft: "",
+        screenAnswers: [],
+        interviews: [],
+        facts: [],
+        latestInterviewDomains: [],
+        activeDomains: [],
+        saved: [],
+        alreadyEnrolled: []
+      }
+    };
+
+    route.instrumentId = "psc17";
+    const { unmount } = render(<InstrumentPage />);
+    await user.click(screen.getByRole("button", { name: /start/i }));
+    expect(screen.getByText("Answer about Avery.")).toBeVisible();
+    unmount();
+
+    route.instrumentId = "phq_a";
+    render(<InstrumentPage />);
+    await user.click(screen.getByRole("button", { name: /start/i }));
+    expect(screen.getByText(/Hand the device to Avery.*teen to answer themselves/i)).toBeVisible();
+  });
+
+  it("makes family routes unavailable with no family profile or outside the locked age band", () => {
+    route.instrumentId = "psc17";
+    context.state = { ...demoState, family: null };
+    const { unmount } = render(<InstrumentPage />);
+    expect(screen.getByText("This check-in is not available.")).toBeVisible();
+    unmount();
+
+    context.state = {
+      ...demoState,
+      family: {
+        profile: {
+          birthYear: new Date().getUTCFullYear(),
+          birthMonth: new Date().getUTCMonth() + 1,
+          schoolStage: "not_school_age",
+          county: "Fayette",
+          diagnoses: []
+        },
+        interviewDraft: "",
+        screenAnswers: [],
+        interviews: [],
+        facts: [],
+        latestInterviewDomains: [],
+        activeDomains: [],
+        saved: [],
+        alreadyEnrolled: []
+      }
+    };
+    render(<InstrumentPage />);
+    expect(screen.getByText("This check-in is not available.")).toBeVisible();
+  });
 });

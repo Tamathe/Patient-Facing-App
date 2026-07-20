@@ -10,7 +10,7 @@ import {
   type ReactNode
 } from "react";
 import { brentState, defaultDemoState, deletedDemoState, demoState } from "@/domain/fixtures";
-import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
+import { caseyFamilyState, eighteenMonthFamilyState, morganFamilyState } from "@/domain/family-fixtures";
 import {
   backdatedDiagnosisMonth,
   type FamilyDiagnosisBackdateMonths
@@ -93,7 +93,7 @@ export type HealthAction =
   | { type: "confirmFamilyFact"; factId: string }
   | { type: "saveFamilyResource"; resource: SavedFamilyResource }
   | { type: "toggleFamilyEnrollment"; resourceId: string }
-  | { type: "seedExampleFamily"; example: "morgan" | "casey" }
+  | { type: "seedExampleFamily"; example: "morgan" | "casey" | "eighteen_month"; now?: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
@@ -629,6 +629,13 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         }
       };
     case "seedExampleFamily":
+      if (action.example === "eighteen_month") {
+        const now = new Date(action.now ?? "");
+        if (Number.isNaN(now.valueOf())) {
+          return state;
+        }
+        return { ...state, family: eighteenMonthFamilyState(now) };
+      }
       return {
         ...state,
         family: action.example === "morgan" ? morganFamilyState : caseyFamilyState

@@ -31,6 +31,7 @@ const TASK_7_REQUIRED_KEYS = [
   "schoolPostHigh",
   "exampleMorgan",
   "exampleCasey",
+  "exampleEighteenMonth",
   "entryQuestionsTitle",
   "entryInterviewTitle",
   "screenEarlyIntervention",
@@ -87,7 +88,13 @@ const TASK_7_REQUIRED_KEYS = [
   "timelineDemoThisMonth",
   "timelineDemoOneMonthAgo",
   "timelineDemoThreeMonthsAgo",
-  "timelineDemoSixMonthsAgo"
+  "timelineDemoSixMonthsAgo",
+  "timelineDevelopmentEighteenTitle",
+  "timelineDevelopmentEighteenBody",
+  "timelineDevelopmentEighteenCta",
+  "timelineDevelopmentThirtyTitle",
+  "timelineDevelopmentThirtyBody",
+  "timelineDevelopmentThirtyCta"
 ] satisfies FamilyStringKey[];
 
 describe("familyStrings", () => {

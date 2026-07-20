@@ -11,7 +11,7 @@ export type FamilyProfileFormProps = {
   initialProfile: FamilyProfile | null;
   defaultCounty?: string;
   onSave: (profile: FamilyProfile) => void;
-  onSeedExample: (example: "morgan" | "casey") => void;
+  onSeedExample: (example: "morgan" | "casey" | "eighteen_month", now: string) => void;
 };
 
 const DIAGNOSIS_OPTIONS: ReadonlyArray<{ label: DevDiagnosis; key: FamilyStringKey }> = [
@@ -150,16 +150,23 @@ export function FamilyProfileForm({
           <button
             type="button"
             className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-            onClick={() => onSeedExample("morgan")}
+            onClick={() => onSeedExample("morgan", new Date().toISOString())}
           >
             {tFamily(language, "exampleMorgan")}
           </button>
           <button
             type="button"
             className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-            onClick={() => onSeedExample("casey")}
+            onClick={() => onSeedExample("casey", new Date().toISOString())}
           >
             {tFamily(language, "exampleCasey")}
+          </button>
+          <button
+            type="button"
+            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
+            onClick={() => onSeedExample("eighteen_month", new Date().toISOString())}
+          >
+            {tFamily(language, "exampleEighteenMonth")}
           </button>
         </div>
       </div>

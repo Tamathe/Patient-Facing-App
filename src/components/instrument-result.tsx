@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { CRISIS_ACTIONS } from "@/ai/safety-gate";
-import type { ScreeningInstrument } from "@/domain/instruments/types";
+import type { ScreeningContext, ScreeningInstrument } from "@/domain/instruments/types";
 import type { AiMessage } from "@/domain/types";
 import { tSafety, type Language } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
@@ -12,15 +12,19 @@ import { MessageActions } from "./message-actions";
 export function InstrumentResult({
   instrument,
   language,
-  responses
+  responses,
+  context,
+  actions
 }: {
   instrument: ScreeningInstrument;
   language: Language;
   responses: number[];
+  context?: ScreeningContext;
+  actions?: React.ReactNode;
 }) {
   const { state, dispatch } = useHealthState();
   const recorded = useRef(false);
-  const outcome = instrument.score(responses);
+  const outcome = instrument.score(responses, context);
   const crisis = instrument.items.some(
     (item, index) => item.crisisOnPositive === true && (responses[index] ?? 0) > 0
   );
@@ -81,6 +85,7 @@ export function InstrumentResult({
         language={language}
         responses={responses}
       />
+      {actions ? <div className="mt-4">{actions}</div> : null}
     </section>
   );
 }

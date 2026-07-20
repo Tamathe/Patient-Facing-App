@@ -97,6 +97,17 @@ describe("renderNudge", () => {
       }
     }
   });
+
+  it("approves the neutral development-check nudge without sensitive disclosure in both languages", () => {
+    for (const language of ["en", "es"] as const) {
+      const rendered = renderNudge({ templateId: "development_check_nudge_v1", language, slots: {} });
+      expect(rendered).toMatchObject({ ok: true });
+      if (rendered.ok) {
+        expect(rendered.message).not.toMatch(/SWYC|diagnos|license|licencia/i);
+        expect(lintNudgeMessage(rendered.message)).toEqual({ ok: true });
+      }
+    }
+  });
 });
 
 describe("lintNudgeMessage", () => {

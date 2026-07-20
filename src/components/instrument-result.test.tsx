@@ -7,8 +7,10 @@ import { CRC_ELIGIBILITY_INSTRUMENT } from "@/domain/instruments/crc-eligibility
 import { DDS2_INSTRUMENT } from "@/domain/instruments/dds2";
 import { LUNG_LDCT_ELIGIBILITY_INSTRUMENT } from "@/domain/instruments/lung-ldct-eligibility";
 import { PHQ9_INSTRUMENT } from "@/domain/instruments/phq9";
+import { PHQ_A_INSTRUMENT } from "@/domain/instruments/phq-a";
 import { PREDIABETES_RISK_INSTRUMENT } from "@/domain/instruments/prediabetes-risk";
 import { STEADI3_INSTRUMENT } from "@/domain/instruments/steadi3";
+import { SWYC_18MO_INSTRUMENT } from "@/domain/instruments/swyc-milestones-18mo";
 import { tSafety } from "@/i18n/strings";
 import { InstrumentResult } from "./instrument-result";
 
@@ -177,5 +179,82 @@ describe("InstrumentResult", () => {
 
     expect(screen.getByRole("link", { name: /Call 988/i })).toBeVisible();
     expect(screen.queryByText(/yearly low-dose CT scan is recommended/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["core item 9", 8],
+    ["past-month serious ideation", 11],
+    ["lifetime attempt", 12]
+  ])("records PHQ-A %s then dispatches the byte-identical crisis response and suppresses actions", async (_, index) => {
+    const responses = Array(13).fill(0);
+    responses[index] = 1;
+    render(
+      <InstrumentResult
+        actions={<p>Family action must stay hidden</p>}
+        instrument={PHQ_A_INSTRUMENT}
+        language="en"
+        responses={responses}
+      />
+    );
+
+    await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(2));
+    expect(dispatch.mock.calls[0][0]).toMatchObject({
+      type: "addAssessmentEvent",
+      event: { instrumentId: "phq_a", itemResponses: responses }
+    });
+    expect(dispatch.mock.calls[1][0]).toMatchObject({
+      type: "addAiMessage",
+      message: { content: tSafety("en", "crisisResponse"), actions: CRISIS_ACTIONS }
+    });
+    expect(screen.queryByText("Family action must stay hidden")).not.toBeInTheDocument();
+    expect(screen.queryByText(PHQ_A_INSTRUMENT.bandSummaries.minimal.en)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["functional impairment", 9],
+    ["past-year depression", 10]
+  ])("keeps PHQ-A %s on the non-crisis result path", async (_, index) => {
+    const responses = Array(13).fill(0);
+    responses[index] = 1;
+    render(
+      <InstrumentResult
+        actions={<p>Bring these results</p>}
+        instrument={PHQ_A_INSTRUMENT}
+        language="en"
+        responses={responses}
+      />
+    );
+
+    await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(PHQ_A_INSTRUMENT.bandSummaries.minimal.en)).toBeVisible();
+    expect(screen.getByText("Bring these results")).toBeVisible();
+    expect(screen.queryByRole("link", { name: /988/i })).not.toBeInTheDocument();
+  });
+
+  it("passes child age context so the same Milestones total records adjacent-age bands", async () => {
+    const responses = [2, 2, 2, 2, 1, 0, 0, 0, 0, 0];
+    const { unmount } = render(
+      <InstrumentResult
+        context={{ childAgeMonths: 18 }}
+        instrument={SWYC_18MO_INSTRUMENT}
+        language="en"
+        responses={responses}
+      />
+    );
+    await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+    expect(dispatch.mock.calls[0][0]).toMatchObject({ event: { totalScore: 9, severityBand: "meets_expectations" } });
+    unmount();
+    dispatch.mockReset();
+
+    render(
+      <InstrumentResult
+        context={{ childAgeMonths: 19 }}
+        instrument={SWYC_18MO_INSTRUMENT}
+        language="en"
+        responses={responses}
+      />
+    );
+    await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1));
+    expect(dispatch.mock.calls[0][0]).toMatchObject({ event: { totalScore: 9, severityBand: "discuss" } });
   });
 });
