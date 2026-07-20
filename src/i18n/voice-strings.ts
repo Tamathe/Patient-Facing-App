@@ -13,7 +13,10 @@ export type VoiceStringKey =
   | "consentTypeInstead"
   | "consentAccept"
   | "answerByVoice"
-  | "chipsSpoken";
+  | "chipsSpoken"
+  | "goingToCancel"
+  | "takingYouTo"
+  | "didYouMean";
 
 export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
   en: {
@@ -29,7 +32,10 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     consentTypeInstead: "You can stop and type instead at any time.",
     consentAccept: "I understand, use voice",
     answerByVoice: "Answer by voice",
-    chipsSpoken: "You can say: {options}."
+    chipsSpoken: "You can say: {options}.",
+    goingToCancel: "Going to {label} — tap to cancel",
+    takingYouTo: "Taking you to {label}",
+    didYouMean: "Did you mean {options}?"
   },
   es: {
     listening: "Escuchando…",
@@ -44,7 +50,10 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     consentTypeInstead: "Puede detenerse y escribir en cualquier momento.",
     consentAccept: "Entiendo, usar voz",
     answerByVoice: "Responder por voz",
-    chipsSpoken: "Puede decir: {options}."
+    chipsSpoken: "Puede decir: {options}.",
+    goingToCancel: "Yendo a {label} — toque para cancelar",
+    takingYouTo: "Le llevo a {label}",
+    didYouMean: "¿Quiso decir {options}?"
   }
 };
 
