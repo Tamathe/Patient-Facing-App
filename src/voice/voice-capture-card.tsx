@@ -159,10 +159,14 @@ export function VoiceCaptureCard(props: Props) {
 
   const handleTranscript = useCallback((text: string): void => {
     setTranscript(text);
-    const parsed = props.kind === "bp"
-      ? parseBpUtterance(text, props.language)
-      : parseGlucoseUtterance(text, props.language);
-    if (!parsed) {
+    const parsedBp = props.kind === "bp" ? parseBpUtterance(text, props.language) : null;
+    const parsedGlucose = props.kind === "glucose" ? parseGlucoseUtterance(text, props.language) : null;
+    const next: Stage | null = parsedBp
+      ? { kind: "bp", ...parsedBp, note: "" }
+      : parsedGlucose
+        ? { kind: "glucose", ...parsedGlucose, note: "" }
+        : null;
+    if (!next) {
       setError(labels.fallback);
       if (parseFailures.current === 0) {
         const example = props.kind === "bp" ? "one twenty over eighty" : "one forty five";
@@ -176,9 +180,6 @@ export function VoiceCaptureCard(props: Props) {
     }
 
     parseFailures.current = 0;
-    const next: Stage = props.kind === "bp"
-      ? { kind: "bp", ...parsed, note: "" }
-      : { kind: "glucose", ...parsed, note: "" };
     setStage(next);
     if (!numericStageIsValid(next)) {
       setError(labels.invalid);

@@ -98,6 +98,7 @@ export function FamilyFollowUpTurn({
     [language, onAnswer, question.options]
   );
   const dictation = useDictation({ language, onFinalTranscript });
+  const stopDictation = dictation.stop;
 
   useEffect(() => subscribeSpeaking(setSpeaking), []);
 
@@ -111,10 +112,10 @@ export function FamilyFollowUpTurn({
 
   useEffect(
     () => () => {
-      dictation.stop();
+      stopDictation();
       stopSpeaking();
     },
-    [dictation.stop]
+    [stopDictation]
   );
 
   function beginVoice(): void {

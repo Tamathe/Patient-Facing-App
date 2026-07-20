@@ -152,15 +152,18 @@ export default function ChatPage() {
     onFinalTranscript: appendVoiceMessage,
     onSafetyIntercept: appendVoiceIntercept
   });
+  const startVoice = voice.start;
+  const stopVoice = voice.stop;
+  const auditVoiceStart = voiceEntry.onSessionStart;
   const liveVoiceActive = !["idle", "closed", "error"].includes(voice.status);
 
   const beginVoice = useCallback(async (): Promise<void> => {
-    voiceEntry.onSessionStart("chat");
-    await voice.start();
-  }, [voice.start, voiceEntry]);
+    auditVoiceStart("chat");
+    await startVoice();
+  }, [auditVoiceStart, startVoice]);
 
   useEffect(() => {
-    const teardown = (): void => voice.stop();
+    const teardown = (): void => stopVoice();
     const onHidden = (): void => {
       if (document.hidden) teardown();
     };
@@ -170,11 +173,11 @@ export default function ChatPage() {
       document.removeEventListener("visibilitychange", onHidden);
       window.removeEventListener("pagehide", teardown);
     };
-  }, [voice.stop]);
+  }, [stopVoice]);
 
   useEffect(() => {
-    if (crisisLock) voice.stop();
-  }, [crisisLock, voice.stop]);
+    if (crisisLock) stopVoice();
+  }, [crisisLock, stopVoice]);
 
   // A deep link from a task chip or notification (/chat?taskId=…) reconstructs
   // that task's prefilled turn and submits it exactly like typed input, so the

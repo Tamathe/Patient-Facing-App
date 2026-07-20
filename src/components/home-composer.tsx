@@ -162,6 +162,7 @@ export function HomeComposer() {
   );
 
   const dictation = useDictation({ language, onFinalTranscript });
+  const stopDictation = dictation.stop;
   dictationControlsRef.current = { start: dictation.start, stop: dictation.stop };
 
   useEffect(() => subscribeSpeaking(setSpeaking), []);
@@ -169,10 +170,10 @@ export function HomeComposer() {
   useEffect(
     () => () => {
       clearTimer();
-      dictation.stop();
+      stopDictation();
       stopSpeaking();
     },
-    [clearTimer, dictation.stop]
+    [clearTimer, stopDictation]
   );
 
   async function confirmNavigation(pending: PendingNavigation): Promise<void> {
