@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Eye } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { DoseCard } from "@/components/dose-card";
+import { DoseReminderCard } from "@/components/dose-reminder-card";
 import { HomeComposer } from "@/components/home-composer";
 import { TodayGreeting } from "@/components/today-greeting";
 import {
@@ -16,10 +17,12 @@ import {
   type TrendSummary
 } from "@/domain/adherence";
 import { isDiabetesMedication, pickFeaturedMedication } from "@/domain/featured-medication";
+import { isDoseReminderDue } from "@/domain/reminders";
 import { screeningLens, screeningLensHref, screeningLensLine } from "@/domain/screening-status";
 import { buildTodayTasks } from "@/domain/tasks";
 import type { DoseEvent, MedicationBarrier } from "@/domain/types";
 import { tScreening } from "@/i18n/strings";
+import { useDoseReminder } from "@/hooks/use-dose-reminder";
 import { useHealthState } from "@/state/store";
 
 export default function TodayPage() {
@@ -32,6 +35,14 @@ export default function TodayPage() {
   const todayDose = featuredMedication
     ? getDoseForDate(state.doseEvents, featuredMedication.id, todayKey)
     : undefined;
+  const reminderDue = featuredMedication
+    ? isDoseReminderDue(state.doseReminder, state.doseEvents, featuredMedication.id, now)
+    : false;
+  const { requestPermission } = useDoseReminder({
+    preference: state.doseReminder,
+    doseEvents: state.doseEvents,
+    medicationId: featuredMedication?.id ?? null
+  });
   const streak = featuredMedication ? getAdherenceStreak(state.doseEvents, featuredMedication.id, now) : 0;
   const rate = featuredMedication
     ? getAdherenceRate(state.doseEvents, featuredMedication.id, 7, now)
@@ -72,17 +83,25 @@ export default function TodayPage() {
         <TodayGreeting patientName={state.patient.preferredName} tasks={tasks} language={state.patient.language} />
         <HomeComposer />
         {featuredMedication ? (
-          <DoseCard
-            medication={featuredMedication}
-            todayDose={todayDose}
-            streak={streak}
-            rate={rate}
-            readingCount={featuredIsDiabetes ? state.glucoseReadings.length : state.readings.length}
-            trend={featuredTrend}
-            onTake={() => recordDose("taken", null)}
-            onSkip={(barrier) => recordDose("skipped", barrier)}
-            onUndo={() => dispatch({ type: "undoDose", medicationId: featuredMedication.id, date: todayKey })}
-          />
+          <>
+            <DoseCard
+              medication={featuredMedication}
+              todayDose={todayDose}
+              streak={streak}
+              rate={rate}
+              readingCount={featuredIsDiabetes ? state.glucoseReadings.length : state.readings.length}
+              trend={featuredTrend}
+              onTake={() => recordDose("taken", null)}
+              onSkip={(barrier) => recordDose("skipped", barrier)}
+              onUndo={() => dispatch({ type: "undoDose", medicationId: featuredMedication.id, date: todayKey })}
+            />
+            <DoseReminderCard
+              preference={state.doseReminder}
+              due={reminderDue}
+              onChange={(preference) => dispatch({ type: "setDoseReminder", preference })}
+              onEnableNotifications={requestPermission}
+            />
+          </>
         ) : null}
         {standaloneGlucoseTrend ? (
           <section className="rounded-control border border-ink/10 bg-white p-4">
