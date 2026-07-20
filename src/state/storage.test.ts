@@ -794,6 +794,32 @@ describe("storage", () => {
     expect(loaded.assessmentEvents.map(({ id }) => id)).toEqual(["assessment-valid"]);
   });
 
+  it("filters a prototype-key instrument row without resetting the rest of stored state", () => {
+    const valid = {
+      id: "assessment-valid",
+      patientId: "patient-1",
+      instrumentId: "phq9",
+      itemResponses: [0, 1, 2, 3, 0, 0, 0, 0, 0],
+      totalScore: 6,
+      severityBand: "mild",
+      status: "patient_reported",
+      recordedAt: "2026-07-06T12:00:00.000Z"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        patient: { ...demoState.patient, name: "Preserve Prototype State" },
+        assessmentEvents: [valid, { ...valid, id: "prototype-key", instrumentId: "constructor" }]
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.patient.name).toBe("Preserve Prototype State");
+    expect(loaded.assessmentEvents.map(({ id }) => id)).toEqual(["assessment-valid"]);
+  });
+
   it("validates registry number ranges and conditional sentinel values", () => {
     const conditionalInstrument: ScreeningInstrument = {
       id: "storage-conditional",

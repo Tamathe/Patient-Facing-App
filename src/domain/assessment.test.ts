@@ -186,4 +186,12 @@ describe("instrument registry", () => {
       expect(instrument.consent.en.points).toHaveLength(instrument.consent.es.points.length);
     }
   });
+
+  it.each(["constructor", "toString", "__proto__"])(
+    "rejects inherited Object prototype key %s",
+    (instrumentId) => {
+      expect(getInstrument(instrumentId)).toBeUndefined();
+      expect(isKnownInstrument(instrumentId)).toBe(false);
+    }
+  );
 });

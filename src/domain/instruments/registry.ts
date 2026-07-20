@@ -6,7 +6,7 @@ export const INSTRUMENTS: Record<string, ScreeningInstrument> = {
 };
 
 export function getInstrument(id: string): ScreeningInstrument | undefined {
-  return INSTRUMENTS[id];
+  return Object.prototype.hasOwnProperty.call(INSTRUMENTS, id) ? INSTRUMENTS[id] : undefined;
 }
 
 export function isKnownInstrument(id: string): boolean {
