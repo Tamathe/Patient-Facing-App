@@ -47,7 +47,7 @@ export function useDictation(options: {
   const acceptedResultsRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
   const [listening, setListening] = useState(false);
-  const supported = recognitionConstructor() !== null;
+  const [supported, setSupported] = useState(false);
 
   const cleanup = useCallback((target = recognitionRef.current, stop = true, updateState = true): void => {
     if (!target) {
@@ -115,6 +115,7 @@ export function useDictation(options: {
 
   useEffect(() => {
     mountedRef.current = true;
+    setSupported(recognitionConstructor() !== null);
     return () => {
       mountedRef.current = false;
       cleanup(recognitionRef.current, true, false);

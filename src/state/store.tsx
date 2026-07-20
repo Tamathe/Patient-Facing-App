@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type Dispatch,
   type ReactNode
 } from "react";
@@ -47,6 +48,7 @@ import type {
 import { isLanguage, loadStoredState, saveStoredState } from "./storage";
 
 export type HealthAction =
+  | { type: "hydrateStoredState"; state: AppState }
   | { type: "addReading"; reading: HomeReading }
   | { type: "addGlucoseReading"; reading: GlucoseReading }
   | { type: "setMedicationBarriers"; medicationId: string; barriers: MedicationBarrier[] }
@@ -103,6 +105,8 @@ function emptyFamilyState(profile: FamilyProfile): FamilyNavigatorState {
 
 export function healthReducer(state: AppState, action: HealthAction): AppState {
   switch (action.type) {
+    case "hydrateStoredState":
+      return action.state;
     case "addReading": {
       return {
         ...state,
@@ -627,17 +631,22 @@ type HealthStateContextValue = {
 const HealthStateContext = createContext<HealthStateContextValue | null>(null);
 
 export function HealthStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(healthReducer, defaultDemoState, loadStoredState);
+  const [state, dispatch] = useReducer(healthReducer, defaultDemoState);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Silence escalation runs on every app load; the reducer is a strict no-op
-  // (same state reference) when nothing is due, so this never dirties storage.
   useEffect(() => {
+    dispatch({ type: "hydrateStoredState", state: loadStoredState() });
     dispatch({ type: "checkReferralFollowup" });
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     saveStoredState(state);
-  }, [state]);
+  }, [hydrated, state]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 

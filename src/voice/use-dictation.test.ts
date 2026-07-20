@@ -1,4 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
+import React from "react";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useDictation } from "./use-dictation";
 
@@ -32,11 +34,23 @@ function installRecognition(): void {
   });
 }
 
+function DictationSupport() {
+  const dictation = useDictation({ language: "en", onFinalTranscript: () => undefined });
+
+  return React.createElement("span", null, String(dictation.supported));
+}
+
 describe("useDictation", () => {
   afterEach(() => {
     Reflect.deleteProperty(window, "SpeechRecognition");
     Reflect.deleteProperty(window, "webkitSpeechRecognition");
     MockSpeechRecognition.instances = [];
+  });
+
+  it("keeps speech support out of the deterministic server render", () => {
+    installRecognition();
+
+    expect(renderToString(React.createElement(DictationSupport))).toBe("<span>false</span>");
   });
 
   it("accepts final results once, ignores interim and replayed results, and uses the requested locale", () => {
