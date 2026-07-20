@@ -238,6 +238,15 @@ export type DoseEvent = {
   recordedAt: string;
 };
 
+export type ReminderPermission = "default" | "granted" | "denied" | "unsupported";
+
+export type DoseReminderPreference = {
+  enabled: boolean;
+  timeLocal: string;
+  weekends: boolean;
+  permission: ReminderPermission;
+};
+
 export type MedicationFill = {
   id: string;
   patientId: string;
@@ -391,6 +400,7 @@ export type AppState = {
   auditEvents: AuditEvent[];
   mealLog: MealLogEntry[];
   doseEvents: DoseEvent[];
+  doseReminder: DoseReminderPreference;
   medicationFills: MedicationFill[];
   assessmentEvents: AssessmentEvent[];
   screeningGaps: ScreeningGap[];

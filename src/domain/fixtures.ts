@@ -1,4 +1,5 @@
 import type { AppState } from "./types";
+import { DEFAULT_DOSE_REMINDER } from "./reminders";
 
 export const demoState: AppState = {
   patient: {
@@ -107,6 +108,7 @@ export const demoState: AppState = {
       recordedAt: "2026-07-04T08:05:00.000Z"
     }
   ],
+  doseReminder: { ...DEFAULT_DOSE_REMINDER },
   medicationFills: [],
   assessmentEvents: [],
   screeningGaps: [
@@ -155,6 +157,7 @@ export const deletedDemoState: AppState = {
   auditEvents: [],
   mealLog: [],
   doseEvents: [],
+  doseReminder: { ...DEFAULT_DOSE_REMINDER },
   medicationFills: [],
   assessmentEvents: [],
   screeningGaps: [],
@@ -1026,6 +1029,7 @@ export const brentState: AppState = {
       recordedAt: "2026-07-04T08:00:00.000Z"
     }
   ],
+  doseReminder: { ...DEFAULT_DOSE_REMINDER },
   medicationFills: [
     {
       id: "fill-brent-metformin-1",

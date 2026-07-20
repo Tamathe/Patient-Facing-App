@@ -1,4 +1,5 @@
 import { defaultDemoState } from "@/domain/fixtures";
+import { DEFAULT_DOSE_REMINDER, isDoseReminderPreference } from "@/domain/reminders";
 import type { AssessmentEvent } from "@/domain/assessment";
 import { getInstrument } from "@/domain/instruments/registry";
 import type { InstrumentItem, ScreeningInstrument } from "@/domain/instruments/types";
@@ -992,6 +993,10 @@ function isValidCoreAppState(value: unknown): value is PersistedAppState {
     return false;
   }
 
+  if (!isDoseReminderPreference(value.doseReminder)) {
+    return false;
+  }
+
   if (
     !isArrayOfObjects(value.medications, isMedication) ||
     !isArrayOfObjects(value.readings, isReading) ||
@@ -1071,6 +1076,9 @@ export function loadStoredState(): AppState {
     }
     if (isObject(parsed) && parsed.doseEvents === undefined) {
       parsed.doseEvents = [];
+    }
+    if (isObject(parsed) && !isDoseReminderPreference(parsed.doseReminder)) {
+      parsed.doseReminder = { ...DEFAULT_DOSE_REMINDER };
     }
     if (isObject(parsed) && parsed.medicationFills === undefined) {
       parsed.medicationFills = [];

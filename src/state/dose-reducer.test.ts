@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { demoState } from "@/domain/fixtures";
 import type { DoseEvent } from "@/domain/types";
+import { DEFAULT_DOSE_REMINDER } from "@/domain/reminders";
 import { healthReducer } from "./store";
 
 function doseEvent(overrides: Partial<DoseEvent> = {}): DoseEvent {
@@ -17,6 +18,22 @@ function doseEvent(overrides: Partial<DoseEvent> = {}): DoseEvent {
 }
 
 describe("healthReducer dose actions", () => {
+  it("updates the complete reminder preference and records an audit event", () => {
+    const preference = {
+      ...DEFAULT_DOSE_REMINDER,
+      enabled: true,
+      timeLocal: "08:30",
+      weekends: false,
+      permission: "granted" as const
+    };
+
+    const next = healthReducer(demoState, { type: "setDoseReminder", preference });
+
+    expect(next.doseReminder).toEqual(preference);
+    expect(next.auditEvents.at(-1)?.action).toBe("updated");
+    expect(next.auditEvents.at(-1)?.label).toBe("Dose reminder preference updated");
+  });
+
   it("logs a taken dose and records an audit event", () => {
     const next = healthReducer(demoState, { type: "logDose", event: doseEvent() });
 

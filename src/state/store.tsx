@@ -33,6 +33,7 @@ import type {
   CareContextItem,
   Condition,
   DoseEvent,
+  DoseReminderPreference,
   DrReportExtraction,
   ExtractedFact,
   FamilyFact,
@@ -63,6 +64,7 @@ export type HealthAction =
   | { type: "addMealLogEntry"; entry: MealLogEntry }
   | { type: "logDose"; event: DoseEvent }
   | { type: "undoDose"; medicationId: string; date: string }
+  | { type: "setDoseReminder"; preference: DoseReminderPreference }
   | { type: "logMedicationFill"; fill: MedicationFill }
   | { type: "addAssessmentEvent"; event: AssessmentEvent }
   | { type: "updateAccessibilityPreferences"; preferences: AccessibilityPreference[] }
@@ -224,6 +226,16 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
           (event) => !(event.medicationId === action.medicationId && event.date === action.date)
         ),
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "updated", "Medication dose entry removed")]
+      };
+    }
+    case "setDoseReminder": {
+      return {
+        ...state,
+        doseReminder: action.preference,
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Dose reminder preference updated")
+        ]
       };
     }
     case "logMedicationFill": {

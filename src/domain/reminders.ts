@@ -1,14 +1,7 @@
 import { toDateKey } from "./adherence";
-import type { DoseEvent } from "./types";
+import type { DoseEvent, DoseReminderPreference, ReminderPermission } from "./types";
 
-export type ReminderPermission = "default" | "granted" | "denied" | "unsupported";
-
-export type DoseReminderPreference = {
-  enabled: boolean;
-  timeLocal: string;
-  weekends: boolean;
-  permission: ReminderPermission;
-};
+export type { DoseReminderPreference, ReminderPermission } from "./types";
 
 export const DEFAULT_DOSE_REMINDER: DoseReminderPreference = {
   enabled: false,
