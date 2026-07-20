@@ -12,6 +12,7 @@ import { annotateGlucoseWithMedContext } from "@/domain/glucose-med-context";
 import { computeTimeInRange } from "@/domain/glucose-range";
 import type { GlucoseReading } from "@/domain/types";
 import { useHealthState } from "@/state/store";
+import { VoiceCaptureCard, type GlucoseVoiceCaptureValues } from "@/voice/voice-capture-card";
 
 export default function GlucosePage() {
   const { state, dispatch } = useHealthState();
@@ -31,6 +32,18 @@ export default function GlucosePage() {
     ])
   );
 
+  function saveReading(values: GlucoseVoiceCaptureValues): void {
+    const reading: GlucoseReading = {
+      id: crypto.randomUUID(),
+      patientId: state.patient.id,
+      valueMgDl: values.valueMgDl,
+      measuredAt: new Date().toISOString(),
+      contexts: values.contexts,
+      note: values.note
+    };
+    dispatch({ type: "addGlucoseReading", reading });
+  }
+
   return (
     <AppShell title="My Blood Sugar">
       <div className="grid gap-5">
@@ -40,19 +53,13 @@ export default function GlucosePage() {
             Use the number from your meter. The app helps you notice patterns and prepare for visits.
           </p>
         </section>
-        <GlucoseLogForm
-          onSubmit={(values) => {
-            const reading: GlucoseReading = {
-              id: crypto.randomUUID(),
-              patientId: state.patient.id,
-              valueMgDl: values.valueMgDl,
-              measuredAt: new Date().toISOString(),
-              contexts: values.contexts,
-              note: values.note
-            };
-            dispatch({ type: "addGlucoseReading", reading });
-          }}
+        <VoiceCaptureCard
+          kind="glucose"
+          language={state.patient.language}
+          onSave={saveReading}
+          voiceEntryContext={{ patientId: state.patient.id, dispatch }}
         />
+        <GlucoseLogForm onSubmit={saveReading} />
         {insight ? (
           <section className="rounded-control border border-care/30 bg-calm p-4">
             <h2 className="text-lg font-semibold">

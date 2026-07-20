@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { MessageActions } from "@/components/message-actions";
 import { Phq9CheckIn } from "@/components/phq9-check-in";
@@ -9,6 +9,7 @@ import { phq9Item9IsPositive, scorePhq9, severityBandSummary } from "@/domain/as
 import { tSafety } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
 import type { AiMessage } from "@/domain/types";
+import { speak } from "@/voice/tts";
 
 type CheckinResult = { severitySummary: string; crisis: boolean };
 
@@ -16,6 +17,12 @@ export default function CheckinPage() {
   const { state, dispatch } = useHealthState();
   const language = state.patient.language;
   const [result, setResult] = useState<CheckinResult | null>(null);
+
+  useEffect(() => {
+    if (result?.crisis) {
+      void speak(tSafety(language, "crisisResponse"), { language, rate: 0.9 });
+    }
+  }, [language, result?.crisis]);
 
   function handleComplete(itemResponses: number[]) {
     const { totalScore, severityBand } = scorePhq9(itemResponses);
@@ -58,7 +65,11 @@ export default function CheckinPage() {
   return (
     <AppShell title="Check-in">
       {result === null ? (
-        <Phq9CheckIn language={language} onComplete={handleComplete} />
+        <Phq9CheckIn
+          language={language}
+          onComplete={handleComplete}
+          voiceEntryContext={{ patientId: state.patient.id, dispatch }}
+        />
       ) : result.crisis ? (
         <section className="grid gap-3 rounded-control border border-rose-400 bg-rose-100 p-5">
           <p className="text-sm leading-6 font-medium text-rose-900">{tSafety(language, "crisisResponse")}</p>

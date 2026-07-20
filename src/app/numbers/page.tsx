@@ -5,11 +5,26 @@ import { AppShell } from "@/components/app-shell";
 import { interpretBloodPressure } from "@/domain/blood-pressure";
 import type { HomeReading } from "@/domain/types";
 import { useHealthState } from "@/state/store";
+import { VoiceCaptureCard, type BpVoiceCaptureValues } from "@/voice/voice-capture-card";
 
 export default function NumbersPage() {
   const { state, dispatch } = useHealthState();
   const latest = state.readings.at(-1);
   const insight = latest ? interpretBloodPressure(latest, state.readings.slice(0, -1), state.carePlan) : null;
+
+  function saveReading(values: BpVoiceCaptureValues): void {
+    const reading: HomeReading = {
+      id: crypto.randomUUID(),
+      patientId: state.patient.id,
+      systolic: values.systolic,
+      diastolic: values.diastolic,
+      pulse: values.pulse,
+      measuredAt: new Date().toISOString(),
+      contexts: values.contexts,
+      note: values.note
+    };
+    dispatch({ type: "addReading", reading });
+  }
 
   return (
     <AppShell title="My Numbers">
@@ -20,21 +35,13 @@ export default function NumbersPage() {
             Use the numbers from your cuff. The app helps you notice patterns and prepare for visits.
           </p>
         </section>
-        <BpLogForm
-          onSubmit={(values) => {
-            const reading: HomeReading = {
-              id: crypto.randomUUID(),
-              patientId: state.patient.id,
-              systolic: values.systolic,
-              diastolic: values.diastolic,
-              pulse: values.pulse,
-              measuredAt: new Date().toISOString(),
-              contexts: values.contexts,
-              note: values.note
-            };
-            dispatch({ type: "addReading", reading });
-          }}
+        <VoiceCaptureCard
+          kind="bp"
+          language={state.patient.language}
+          onSave={saveReading}
+          voiceEntryContext={{ patientId: state.patient.id, dispatch }}
         />
+        <BpLogForm onSubmit={saveReading} />
         {insight ? (
           <section className="rounded-control border border-care/30 bg-calm p-4">
             <h2 className="text-lg font-semibold">
