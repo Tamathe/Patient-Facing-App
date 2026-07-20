@@ -21,7 +21,7 @@ Lifecycle meanings: **Active** is being implemented now; **Complete** landed its
 | 10 | [Diabetes Provider-Legible Loop](10-diabetes-provider-legible-loop.md) | **Complete** | P0–P3 landed on `master` on 2026-07-07. |
 | 11 | [Diabetes Loop Tier 2](11-diabetes-loop-tier2.md) | **Complete** | P0–P4 landed on `master` on 2026-07-07. |
 | 12 | [Screening Hub](12-screening-hub.md) | **Active** | Implementation began from `eccdcd8` on 2026-07-20. Do not fold parked behavioral or SDOH scope into it beyond its locked questionnaire-engine plan. |
-| — | [Adherence & Trust Uplift](../adherence-trust-uplift-execution-plan.md) | **Retired** | The 55-task umbrella is non-executable. Any remainder restarts as one of three bounded candidates: adherence/barrier UX, reminders/PWA, or mode-aware privacy disclosure. |
+| — | [Adherence & Trust Uplift](../adherence-trust-uplift-execution-plan.md) | **Retired** | The 55-task umbrella remains non-executable. Its three bounded replacements landed on `master` on 2026-07-20: adherence/barrier UX, opt-in reminders/PWA, and runtime-mode privacy disclosure. |
 
 ## Retired branches
 

@@ -16,6 +16,12 @@
 
 Delivered overlap such as PDC coverage, crisis-safe voice interception, accessibility profiles, diabetes brief context, and existing privacy controls remains owned by the sprints that landed it. Completion of one candidate does not reopen the other two.
 
+## Bounded replacement status — 2026-07-20
+
+- **Adherence and barrier UX:** landed as barrier-specific Coach journeys, seven-day dose progress, reading-count guidance, and patient-context care-team drafting.
+- **Dose reminders / PWA:** landed as opt-in local preferences, non-destructive storage migration, in-app due state, installable metadata, and generic best-effort browser notifications. Closed-app delivery still requires a future push backend.
+- **Mode-aware privacy disclosure:** landed as runtime transport disclosure for on-device, cloud-text, and live-voice modes, with English/Spanish parity and delete confirmation. Patient-facing deployment still requires the named privacy/legal copy approval.
+
 ---
 
 ## Historical execution instructions (do not use)
