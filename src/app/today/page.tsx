@@ -8,6 +8,7 @@ import { HomeComposer } from "@/components/home-composer";
 import { TodayGreeting } from "@/components/today-greeting";
 import {
   getAdherenceStreak,
+  getAdherenceRate,
   getDoseForDate,
   summarizeBpTrend,
   summarizeGlucoseTrend,
@@ -32,6 +33,9 @@ export default function TodayPage() {
     ? getDoseForDate(state.doseEvents, featuredMedication.id, todayKey)
     : undefined;
   const streak = featuredMedication ? getAdherenceStreak(state.doseEvents, featuredMedication.id, now) : 0;
+  const rate = featuredMedication
+    ? getAdherenceRate(state.doseEvents, featuredMedication.id, 7, now)
+    : { taken: 0, of: 7 };
   // The featured medicine's own domain trend: blood sugar for a diabetes medicine,
   // blood pressure otherwise. When the card already shows glucose we do not repeat
   // it in the standalone panel below.
@@ -72,6 +76,8 @@ export default function TodayPage() {
             medication={featuredMedication}
             todayDose={todayDose}
             streak={streak}
+            rate={rate}
+            readingCount={featuredIsDiabetes ? state.glucoseReadings.length : state.readings.length}
             trend={featuredTrend}
             onTake={() => recordDose("taken", null)}
             onSkip={(barrier) => recordDose("skipped", barrier)}

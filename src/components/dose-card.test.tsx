@@ -41,6 +41,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={undefined}
         streak={2}
+        rate={{ taken: 4, of: 7 }}
+        readingCount={2}
         trend={null}
         onTake={noop}
         onSkip={noop}
@@ -51,6 +53,8 @@ describe("DoseCard", () => {
     expect(screen.getByRole("button", { name: "I took it" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "I skipped it" })).toBeInTheDocument();
     expect(screen.getByText(/2-day streak/)).toBeInTheDocument();
+    expect(screen.getByText("Taken 4 of the last 7 days.")).toBeInTheDocument();
+    expect(screen.getByText("Log 3 more readings to see a pattern.")).toBeInTheDocument();
   });
 
   it("calls onTake when the patient marks it taken", () => {
@@ -60,6 +64,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={undefined}
         streak={0}
+        rate={{ taken: 0, of: 7 }}
+        readingCount={0}
         trend={null}
         onTake={onTake}
         onSkip={noop}
@@ -79,6 +85,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={undefined}
         streak={0}
+        rate={{ taken: 0, of: 7 }}
+        readingCount={0}
         trend={null}
         onTake={noop}
         onSkip={onSkip}
@@ -98,6 +106,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={dose({ status: "taken" })}
         streak={3}
+        rate={{ taken: 3, of: 7 }}
+        readingCount={5}
         trend={null}
         onTake={noop}
         onSkip={noop}
@@ -115,6 +125,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={dose({ status: "skipped", barrier: "side_effects" })}
         streak={0}
+        rate={{ taken: 0, of: 7 }}
+        readingCount={0}
         trend={null}
         onTake={noop}
         onSkip={noop}
@@ -123,7 +135,33 @@ describe("DoseCard", () => {
     );
 
     expect(screen.getByText(/Feels side effects/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Get help with this" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Get help with side effects" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mode=trouble")
+    );
+  });
+
+  it("explains why the medicine matters when the patient doubts it is needed", () => {
+    render(
+      <DoseCard
+        medication={medication}
+        todayDose={dose({ status: "skipped", barrier: "does_not_feel_necessary" })}
+        streak={0}
+        rate={{ taken: 0, of: 7 }}
+        readingCount={1}
+        trend={null}
+        onTake={noop}
+        onSkip={noop}
+        onUndo={noop}
+      />
+    );
+
+    expect(screen.getByText(/Helps lower blood pressure/)).toBeInTheDocument();
+    expect(screen.getByText(/Lowers the chance of stroke/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Why it matters" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mode=why")
+    );
   });
 
   it("renders the working trend when provided", () => {
@@ -132,6 +170,8 @@ describe("DoseCard", () => {
         medication={medication}
         todayDose={undefined}
         streak={0}
+        rate={{ taken: 4, of: 7 }}
+        readingCount={5}
         trend={{ direction: "improving", message: "Your recent top numbers average about 20 points lower." }}
         onTake={noop}
         onSkip={noop}
@@ -141,5 +181,6 @@ describe("DoseCard", () => {
 
     expect(screen.getByText(/Is it working/)).toBeInTheDocument();
     expect(screen.getByText(/20 points lower/)).toBeInTheDocument();
+    expect(screen.queryByText(/more readings to see a pattern/)).not.toBeInTheDocument();
   });
 });

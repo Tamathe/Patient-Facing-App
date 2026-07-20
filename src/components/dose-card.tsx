@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import React, { useState } from "react";
-import type { TrendSummary } from "@/domain/adherence";
+import { MIN_TREND_READINGS, type TrendSummary } from "@/domain/adherence";
+import { buildBarrierSupport } from "@/domain/adherence-support";
 import { barrierLabel } from "@/domain/labels";
 import type { DoseEvent, Medication, MedicationBarrier } from "@/domain/types";
 
@@ -21,14 +22,20 @@ type DoseCardProps = {
   medication: Medication;
   todayDose: DoseEvent | undefined;
   streak: number;
+  rate: { taken: number; of: number };
+  readingCount: number;
   trend: TrendSummary | null;
   onTake: () => void;
   onSkip: (barrier: MedicationBarrier) => void;
   onUndo: () => void;
 };
 
-export function DoseCard({ medication, todayDose, streak, trend, onTake, onSkip, onUndo }: DoseCardProps) {
+export function DoseCard({ medication, todayDose, streak, rate, readingCount, trend, onTake, onSkip, onUndo }: DoseCardProps) {
   const [showSkip, setShowSkip] = useState(false);
+  const barrierSupport = todayDose?.status === "skipped" && todayDose.barrier
+    ? buildBarrierSupport(medication, todayDose.barrier)
+    : null;
+  const readingsRemaining = Math.max(0, MIN_TREND_READINGS - readingCount);
 
   const streakLine =
     streak > 0
@@ -102,9 +109,14 @@ export function DoseCard({ medication, todayDose, streak, trend, onTake, onSkip,
           <p className="mt-1 text-sm text-ink/75">
             That is okay to say. When you are ready, we can turn it into a question for your care team.
           </p>
+          {barrierSupport?.reassurance ? (
+            <p className="mt-2 rounded-control bg-calm p-3 text-sm leading-6 text-ink/80">
+              {barrierSupport.reassurance}
+            </p>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm font-medium">
-            <Link className="text-care underline" href="/chat">
-              Get help with this
+            <Link className="text-care underline" href={barrierSupport?.href ?? "/chat"}>
+              {barrierSupport?.linkLabel ?? "Get help with this"}
             </Link>
             <button className="text-ink/70 underline" onClick={onUndo} type="button">
               Undo
@@ -114,11 +126,16 @@ export function DoseCard({ medication, todayDose, streak, trend, onTake, onSkip,
       )}
 
       <p className="mt-4 text-sm font-medium text-ink/80">{streakLine}</p>
+      <p className="mt-1 text-sm text-ink/75">Taken {rate.taken} of the last {rate.of} days.</p>
 
       {trend ? (
         <p className="mt-2 rounded-control bg-calm p-3 text-sm leading-6 text-ink/80">
           <strong className="font-semibold">Is it working? </strong>
           {trend.message}
+        </p>
+      ) : readingsRemaining > 0 ? (
+        <p className="mt-2 rounded-control bg-calm p-3 text-sm leading-6 text-ink/80">
+          Log {readingsRemaining} more {readingsRemaining === 1 ? "reading" : "readings"} to see a pattern.
         </p>
       ) : null}
     </section>

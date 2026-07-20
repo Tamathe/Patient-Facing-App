@@ -1,6 +1,6 @@
 import type { DoseEvent, GlucoseReading, HomeReading } from "./types";
 
-const MIN_TREND_READINGS = 5;
+export const MIN_TREND_READINGS = 5;
 const GLUCOSE_TREND_DELTA = 10;
 
 export function toDateKey(date: Date): string {
