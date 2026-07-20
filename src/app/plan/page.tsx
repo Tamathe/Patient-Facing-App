@@ -7,6 +7,7 @@ import { screeningLens, screeningLensHref, screeningLensLine } from "@/domain/sc
 import { tScreening } from "@/i18n/strings";
 import { useHealthState } from "@/state/store";
 import { ReadAloud } from "@/voice/read-aloud";
+import { DraftPanel } from "@/voice/draft-panel";
 
 export default function PlanPage() {
   const { state } = useHealthState();
@@ -22,6 +23,7 @@ export default function PlanPage() {
   return (
     <AppShell title="My Plan">
       <div className="grid gap-5">
+        <DraftPanel />
         <section className="rounded-control border border-care/20 bg-calm p-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">What you are managing</h2>

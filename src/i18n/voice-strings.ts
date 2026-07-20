@@ -18,7 +18,8 @@ export type VoiceStringKey =
   | "takingYouTo"
   | "didYouMean"
   | "readAloud"
-  | "stopReading";
+  | "stopReading"
+  | "draftSourceLabel";
 
 export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
   en: {
@@ -39,7 +40,8 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     takingYouTo: "Taking you to {label}",
     didYouMean: "Did you mean {options}?",
     readAloud: "Read aloud",
-    stopReading: "Stop reading"
+    stopReading: "Stop reading",
+    draftSourceLabel: "Spoken plan note"
   },
   es: {
     listening: "Escuchando…",
@@ -59,7 +61,8 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     takingYouTo: "Le llevo a {label}",
     didYouMean: "¿Quiso decir {options}?",
     readAloud: "Leer en voz alta",
-    stopReading: "Detener lectura"
+    stopReading: "Detener lectura",
+    draftSourceLabel: "Nota hablada del plan"
   }
 };
 

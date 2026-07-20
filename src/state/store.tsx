@@ -51,6 +51,7 @@ export type HealthAction =
   | { type: "addGlucoseReading"; reading: GlucoseReading }
   | { type: "setMedicationBarriers"; medicationId: string; barriers: MedicationBarrier[] }
   | { type: "addContextItem"; item: CareContextItem; facts: ExtractedFact[] }
+  | { type: "removeContextItem"; contextItemId: string }
   | { type: "confirmFact"; factId: string }
   | { type: "addAiMessage"; message: AiMessage }
   | { type: "acknowledgeCrisis"; messageId: string }
@@ -131,6 +132,15 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         contextItems: [...state.contextItems, action.item],
         extractedFacts: [...state.extractedFacts, ...action.facts],
         auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "created", "Care instructions added")]
+      };
+    }
+    case "removeContextItem": {
+      if (!state.contextItems.some((item) => item.id === action.contextItemId)) return state;
+      return {
+        ...state,
+        contextItems: state.contextItems.filter((item) => item.id !== action.contextItemId),
+        extractedFacts: state.extractedFacts.filter((fact) => fact.contextItemId !== action.contextItemId),
+        auditEvents: [...state.auditEvents, recordAuditEvent(state.patient.id, "deleted", "Care note removed")]
       };
     }
     case "confirmFact": {

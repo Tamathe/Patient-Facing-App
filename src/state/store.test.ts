@@ -11,6 +11,42 @@ import type {
 } from "@/domain/types";
 
 describe("healthReducer", () => {
+  it("removes a care context item with its facts and audits the deletion", () => {
+    const contextItemId = demoState.contextItems[0]?.id ?? "voice-note-1";
+    const state = {
+      ...demoState,
+      contextItems: [
+        ...demoState.contextItems,
+        {
+          id: contextItemId,
+          patientId: demoState.patient.id,
+          title: "Voice note 1",
+          rawText: "Check blood pressure every morning.",
+          sourceLabel: "Spoken plan note",
+          createdAt: "2026-07-20T12:00:00.000Z"
+        }
+      ],
+      extractedFacts: [
+        ...demoState.extractedFacts,
+        {
+          id: "voice-fact-1",
+          contextItemId,
+          label: "Home monitoring",
+          value: "Check blood pressure at home",
+          confidence: "medium" as const,
+          status: "needs_review" as const,
+          sourceSnippet: "Check blood pressure every morning."
+        }
+      ]
+    };
+
+    const next = healthReducer(state, { type: "removeContextItem", contextItemId });
+
+    expect(next.contextItems.some((item) => item.id === contextItemId)).toBe(false);
+    expect(next.extractedFacts.some((fact) => fact.contextItemId === contextItemId)).toBe(false);
+    expect(next.auditEvents.at(-1)).toMatchObject({ action: "deleted", label: "Care note removed" });
+  });
+
   it("switches the patient language and audits the change", () => {
     const next = healthReducer(demoState, { type: "setLanguage", language: "es" });
 
