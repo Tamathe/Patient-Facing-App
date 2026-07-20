@@ -183,7 +183,15 @@ export type FamilyStringKey =
   | "timelineMissionTransitionTitle"
   | "timelineMissionTransitionBody"
   | "timelineBeforeEighteenTitle"
-  | "timelineBeforeEighteenBody";
+  | "timelineBeforeEighteenBody"
+  | "timelinePerinatalOneMonthTitle"
+  | "timelinePerinatalOneMonthCta"
+  | "timelinePerinatalTwoMonthTitle"
+  | "timelinePerinatalTwoMonthCta"
+  | "timelinePerinatalFourMonthTitle"
+  | "timelinePerinatalFourMonthCta"
+  | "timelinePerinatalSixMonthTitle"
+  | "timelinePerinatalSixMonthCta";
 
 export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = {
   en: {
@@ -369,7 +377,15 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelineMissionTransitionTitle: "Start transition planning",
     timelineMissionTransitionBody: "Use the school ARC process and Kentucky transition resources to begin planning for adult life.",
     timelineBeforeEighteenTitle: "Prepare for age eighteen",
-    timelineBeforeEighteenBody: "Review SSI re-application, supported decision-making versus guardianship, and STABLE account options before age eighteen."
+    timelineBeforeEighteenBody: "Review SSI re-application, supported decision-making versus guardianship, and STABLE account options before age eighteen.",
+    timelinePerinatalOneMonthTitle: "Check in with yourself at 1 month",
+    timelinePerinatalOneMonthCta: "Start your 1-month check-in",
+    timelinePerinatalTwoMonthTitle: "Check in with yourself at 2 months",
+    timelinePerinatalTwoMonthCta: "Start your 2-month check-in",
+    timelinePerinatalFourMonthTitle: "Check in with yourself at 4 months",
+    timelinePerinatalFourMonthCta: "Start your 4-month check-in",
+    timelinePerinatalSixMonthTitle: "Check in with yourself at 6 months",
+    timelinePerinatalSixMonthCta: "Start your 6-month check-in"
   },
   es: {
     pageTitle: "Navegador para familias",
@@ -554,7 +570,15 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     timelineMissionTransitionTitle: "Empieza la planificación de transición",
     timelineMissionTransitionBody: "Usa el proceso ARC escolar y los recursos de transición de Kentucky para empezar a planificar la vida adulta.",
     timelineBeforeEighteenTitle: "Prepárate para los dieciocho años",
-    timelineBeforeEighteenBody: "Revisa la nueva solicitud de SSI, la toma de decisiones con apoyo frente a la tutela y las opciones de cuenta STABLE antes de los dieciocho años."
+    timelineBeforeEighteenBody: "Revisa la nueva solicitud de SSI, la toma de decisiones con apoyo frente a la tutela y las opciones de cuenta STABLE antes de los dieciocho años.",
+    timelinePerinatalOneMonthTitle: "Revísate al primer mes",
+    timelinePerinatalOneMonthCta: "Comienza tu chequeo del primer mes",
+    timelinePerinatalTwoMonthTitle: "Revísate a los 2 meses",
+    timelinePerinatalTwoMonthCta: "Comienza tu chequeo de los 2 meses",
+    timelinePerinatalFourMonthTitle: "Revísate a los 4 meses",
+    timelinePerinatalFourMonthCta: "Comienza tu chequeo de los 4 meses",
+    timelinePerinatalSixMonthTitle: "Revísate a los 6 meses",
+    timelinePerinatalSixMonthCta: "Comienza tu chequeo de los 6 meses"
   }
 };
 

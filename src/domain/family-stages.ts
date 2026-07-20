@@ -1,5 +1,6 @@
 import type { Language } from "@/i18n/strings";
 import { renderNudge } from "./nudge-template";
+import { perinatalCheckpoints, type PerinatalCheckpointMonth } from "./perinatal";
 import type { DevNeedDomain, FamilyNavigatorState, FamilyProfile } from "./types";
 
 export type FamilyStage = {
@@ -9,6 +10,7 @@ export type FamilyStage = {
   description: string;
   domains: DevNeedDomain[];
   templateId: string;
+  href?: string;
 };
 
 export type FamilyDiagnosisBackdateMonths = 0 | 1 | 3 | 6;
@@ -18,6 +20,7 @@ type FamilyStageDefinition = {
   domains: DevNeedDomain[];
   templateId: string;
   ageSensitive?: boolean;
+  href?: string;
 };
 
 const YEAR_ONLY_TIMING_NOTE: Record<Language, string> = {
@@ -75,6 +78,30 @@ const STAGE_DEFINITIONS = {
     domains: ["future_planning"],
     templateId: "family_stage_before_eighteen_v1",
     ageSensitive: true
+  },
+  "perinatal-check-1-month": {
+    title: "Your 1-month check-in",
+    domains: [],
+    templateId: "perinatal_check_nudge_v1",
+    href: "/checkin/perinatal"
+  },
+  "perinatal-check-2-month": {
+    title: "Your 2-month check-in",
+    domains: [],
+    templateId: "perinatal_check_nudge_v1",
+    href: "/checkin/perinatal"
+  },
+  "perinatal-check-4-month": {
+    title: "Your 4-month check-in",
+    domains: [],
+    templateId: "perinatal_check_nudge_v1",
+    href: "/checkin/perinatal"
+  },
+  "perinatal-check-6-month": {
+    title: "Your 6-month check-in",
+    domains: [],
+    templateId: "perinatal_check_nudge_v1",
+    href: "/checkin/perinatal"
   }
 } satisfies Record<string, FamilyStageDefinition>;
 
@@ -176,10 +203,14 @@ function buildStage(
   id: FamilyStageId,
   timing: FamilyStage["timing"],
   profile: FamilyProfile,
-  language: Language
+  language: Language,
+  nudgeFirstName?: string
 ): FamilyStage | null {
   const definition = STAGE_DEFINITIONS[id];
-  const rendered = renderNudge({ templateId: definition.templateId, language, slots: {} });
+  const slots: Record<string, string> = definition.templateId === "perinatal_check_nudge_v1"
+    ? { firstName: nudgeFirstName ?? "" }
+    : {};
+  const rendered = renderNudge({ templateId: definition.templateId, language, slots });
   if (!rendered.ok) {
     return null;
   }
@@ -195,7 +226,8 @@ function buildStage(
     title: definition.title,
     description,
     domains: [...definition.domains],
-    templateId: definition.templateId
+    templateId: definition.templateId,
+    ...("href" in definition ? { href: definition.href } : {})
   };
 }
 
@@ -204,9 +236,10 @@ function pushStage(
   id: FamilyStageId,
   timing: FamilyStage["timing"],
   profile: FamilyProfile,
-  language: Language
+  language: Language,
+  nudgeFirstName?: string
 ): void {
-  const stage = buildStage(id, timing, profile, language);
+  const stage = buildStage(id, timing, profile, language, nudgeFirstName);
   if (stage) {
     stages.push(stage);
   }
@@ -224,7 +257,8 @@ export function backdatedDiagnosisMonth(now: Date, monthsAgo: number): string {
 export function buildFamilyStages(
   family: FamilyNavigatorState,
   now: Date,
-  language: Language = "en"
+  language: Language = "en",
+  nudgeFirstName?: string
 ): FamilyStage[] {
   const { profile } = family;
   if (!profile) {
@@ -275,6 +309,11 @@ export function buildFamilyStages(
 
   if (isAgeSeventeen(profile, now)) {
     pushStage(stages, "before-eighteen", "now", profile, language);
+  }
+
+  for (const checkpoint of perinatalCheckpoints(profile, now)) {
+    const id = `perinatal-check-${checkpoint.month}-month` as `perinatal-check-${PerinatalCheckpointMonth}-month`;
+    pushStage(stages, id, checkpoint.timing, profile, language, nudgeFirstName);
   }
 
   const timingOrder: Record<FamilyStage["timing"], number> = { now: 0, next: 1, later: 2 };

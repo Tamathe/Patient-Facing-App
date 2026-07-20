@@ -77,4 +77,52 @@ describe("FamilyStageTimeline", () => {
     expect(screen.queryByText("Add a family profile to see planning moments.")).not.toBeInTheDocument();
     expect(screen.getByText("No planning moments match the current profile yet.")).toBeVisible();
   });
+
+  it("links perinatal stages to the caregiver check-in while existing stages stay non-links", () => {
+    render(
+      <FamilyStageTimeline
+        family={{
+          ...morganFamilyState,
+          profile: {
+            childFirstName: "Baby",
+            birthYear: 2026,
+            birthMonth: 7,
+            schoolStage: "not_school_age",
+            county: "Scott",
+            diagnoses: []
+          }
+        }}
+        language="en"
+        now={new Date("2026-07-20T12:00:00.000Z")}
+        nudgeFirstName="Jordan"
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "Start your 1-month check-in" })).toHaveAttribute(
+      "href",
+      "/checkin/perinatal"
+    );
+    expect(screen.getByRole("heading", { name: "Contact First Steps now" }).closest("a")).toBeNull();
+  });
+
+  it("does not infer perinatal stages from a birth year alone", () => {
+    render(
+      <FamilyStageTimeline
+        family={{
+          ...morganFamilyState,
+          profile: {
+            birthYear: 2026,
+            schoolStage: "not_school_age",
+            county: "Scott",
+            diagnoses: []
+          }
+        }}
+        language="en"
+        now={new Date("2026-07-20T12:00:00.000Z")}
+        nudgeFirstName="Jordan"
+      />
+    );
+
+    expect(screen.queryByRole("link", { name: /check-in/i })).not.toBeInTheDocument();
+  });
 });

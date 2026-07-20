@@ -52,6 +52,31 @@ describe("renderNudge", () => {
     expect(rendered).toMatchObject({ ok: false, reason: "disclosure_lint_failed" });
   });
 
+  it("renders the approved perinatal check-in nudge in English and Spanish", () => {
+    for (const language of ["en", "es"] as const) {
+      const rendered = renderNudge({
+        templateId: "perinatal_check_nudge_v1",
+        language,
+        slots: { firstName: "Jordan" }
+      });
+
+      expect(rendered, language).toMatchObject({ ok: true });
+      if (rendered.ok) {
+        expect(rendered.message).toContain("Jordan");
+        expect(lintNudgeMessage(rendered.message)).toEqual({ ok: true });
+      }
+    }
+  });
+
+  it("rejects a missing or blank caregiver name for the perinatal nudge", () => {
+    const slotCases: Record<string, string>[] = [{}, { firstName: "   " }];
+    for (const slots of slotCases) {
+      expect(
+        renderNudge({ templateId: "perinatal_check_nudge_v1", language: "en", slots })
+      ).toMatchObject({ ok: false, reason: "missing_slot" });
+    }
+  });
+
   it("approves every Family Navigator stage template in English and Spanish", () => {
     const templateIds = [
       "family_stage_first_steps_v1",

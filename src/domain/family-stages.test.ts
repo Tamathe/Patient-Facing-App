@@ -117,6 +117,58 @@ describe("buildFamilyStages", () => {
     }
   });
 
+  it("maps infant checkpoints into linked stages using the caregiver name", () => {
+    const family = familyWith({
+      childFirstName: "Baby",
+      birthYear: 2026,
+      birthMonth: 7,
+      schoolStage: "not_school_age",
+      county: "Scott",
+      diagnoses: []
+    });
+    const stages = buildFamilyStages(
+      family,
+      new Date("2026-07-20T12:00:00.000Z"),
+      "en",
+      "Jordan"
+    ).filter(({ id }) => id.startsWith("perinatal-check-"));
+
+    expect(stages).toMatchObject([
+      { id: "perinatal-check-1-month", timing: "next", href: "/checkin/perinatal" },
+      { id: "perinatal-check-2-month", timing: "later", href: "/checkin/perinatal" },
+      { id: "perinatal-check-4-month", timing: "later", href: "/checkin/perinatal" },
+      { id: "perinatal-check-6-month", timing: "later", href: "/checkin/perinatal" }
+    ]);
+    for (const stage of stages) {
+      expect(stage.description).toContain("Jordan");
+      expect(stage.description).not.toContain("Baby");
+      expect(stage.templateId).toBe("perinatal_check_nudge_v1");
+    }
+  });
+
+  it("suppresses perinatal stages without birth month or a nonblank caregiver name", () => {
+    const preciseProfile = {
+      childFirstName: "Baby",
+      birthYear: 2026,
+      birthMonth: 7,
+      schoolStage: "not_school_age" as const,
+      county: "Scott",
+      diagnoses: []
+    };
+    const now = new Date("2026-07-20T12:00:00.000Z");
+
+    expect(
+      buildFamilyStages(familyWith({ ...preciseProfile, birthMonth: undefined }), now, "en", "Jordan")
+        .some(({ id }) => id.startsWith("perinatal-check-"))
+    ).toBe(false);
+    for (const caregiverName of [undefined, "   "]) {
+      expect(
+        buildFamilyStages(familyWith(preciseProfile), now, "en", caregiverName)
+          .some(({ id }) => id.startsWith("perinatal-check-"))
+      ).toBe(false);
+    }
+  });
+
   it("uses exact UTC birth-month age for the 2-year-3-month transition trigger", () => {
     const family = familyWith({
       birthYear: 2024,

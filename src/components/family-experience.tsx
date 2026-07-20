@@ -555,6 +555,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
           <FamilyStageTimeline
             family={family}
             language={language}
+            nudgeFirstName={state.patient.preferredName}
             onBackdateDiagnoses={backdateFamilyDiagnoses}
           />
         </>

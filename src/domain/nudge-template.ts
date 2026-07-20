@@ -52,6 +52,14 @@ const PROHIBITED_TERMS = [
 
 const APPROVED_TEMPLATES: ApprovedNudgeTemplate[] = [
   {
+    id: "perinatal_check_nudge_v1",
+    requiredSlots: ["firstName"],
+    bodyByLanguage: {
+      en: "Hi {{firstName}} — a quick check-in for you is ready in the app.",
+      es: "Hola {{firstName}} — tienes un chequeo rápido para ti listo en la aplicación."
+    }
+  },
+  {
     id: "screening_nudge_v1",
     requiredSlots: ["firstName", "months"],
     bodyByLanguage: {

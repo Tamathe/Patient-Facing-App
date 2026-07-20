@@ -13,6 +13,8 @@ import { STEADI3_INSTRUMENT } from "./steadi3";
 import { TOBACCO_USE_INSTRUMENT } from "./tobacco-use";
 import type { ScreeningInstrument } from "./types";
 
+// EPDS is deferred pending the RCPsych electronic-use permission gate.
+
 export const INSTRUMENTS: Record<string, ScreeningInstrument> = {
   phq9: PHQ9_INSTRUMENT,
   phq2: PHQ2_INSTRUMENT,

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import React from "react";
 import {
   buildFamilyStages,
@@ -12,6 +13,7 @@ export type FamilyStageTimelineProps = {
   family: FamilyNavigatorState;
   language: Language;
   now?: Date;
+  nudgeFirstName?: string;
   onBackdateDiagnoses?: (monthsAgo: FamilyDiagnosisBackdateMonths, now: Date) => void;
 };
 
@@ -24,7 +26,18 @@ const STAGE_TITLE_KEYS: Record<string, FamilyStringKey> = {
   "parent-connection": "timelineParentConnectionTitle",
   "sibling-respite": "timelineSiblingRespiteTitle",
   "mission-transition": "timelineMissionTransitionTitle",
-  "before-eighteen": "timelineBeforeEighteenTitle"
+  "before-eighteen": "timelineBeforeEighteenTitle",
+  "perinatal-check-1-month": "timelinePerinatalOneMonthTitle",
+  "perinatal-check-2-month": "timelinePerinatalTwoMonthTitle",
+  "perinatal-check-4-month": "timelinePerinatalFourMonthTitle",
+  "perinatal-check-6-month": "timelinePerinatalSixMonthTitle"
+};
+
+const STAGE_CTA_KEYS: Partial<Record<string, FamilyStringKey>> = {
+  "perinatal-check-1-month": "timelinePerinatalOneMonthCta",
+  "perinatal-check-2-month": "timelinePerinatalTwoMonthCta",
+  "perinatal-check-4-month": "timelinePerinatalFourMonthCta",
+  "perinatal-check-6-month": "timelinePerinatalSixMonthCta"
 };
 
 const TIMING_KEYS: Record<FamilyStage["timing"], FamilyStringKey> = {
@@ -49,9 +62,10 @@ export function FamilyStageTimeline({
   family,
   language,
   now = new Date(),
+  nudgeFirstName,
   onBackdateDiagnoses
 }: FamilyStageTimelineProps) {
-  const stages = buildFamilyStages(family, now, language);
+  const stages = buildFamilyStages(family, now, language, nudgeFirstName);
 
   return (
     <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-timeline-title">
@@ -107,12 +121,21 @@ export function FamilyStageTimeline({
                       {entries.map((stage) => {
                         const titleKey = STAGE_TITLE_KEYS[stage.id];
                         if (!titleKey) return null;
+                        const ctaKey = STAGE_CTA_KEYS[stage.id];
                         return (
                           <li key={stage.id} className="min-w-0 rounded-control border border-ink/10 bg-white p-3">
                             <h4 className="break-words font-semibold">{tFamily(language, titleKey)}</h4>
                             <p className="mt-1 break-words text-sm leading-6 text-ink/75">
                               {stage.description}
                             </p>
+                            {stage.href && ctaKey ? (
+                              <Link
+                                className="mt-3 inline-flex min-h-11 items-center font-semibold text-care underline"
+                                href={stage.href}
+                              >
+                                {tFamily(language, ctaKey)}
+                              </Link>
+                            ) : null}
                           </li>
                         );
                       })}
