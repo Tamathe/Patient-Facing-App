@@ -1,6 +1,11 @@
 import type { Language } from "@/i18n/strings";
 
 export type ResponseOption = { value: number; en: string; es: string };
+export type InstrumentCondition = {
+  itemId: string;
+  atLeast?: number;
+  atMost?: number;
+};
 export type InstrumentItem = {
   id: string;
   kind: "choice" | "number";
@@ -9,8 +14,9 @@ export type InstrumentItem = {
   options?: ResponseOption[];
   min?: number;
   max?: number;
+  integer?: boolean;
   crisisOnPositive?: boolean;
-  conditionalOn?: { itemId: string; atLeast: number };
+  conditionalOn?: InstrumentCondition;
   notApplicableValue?: number;
 };
 export type ScreeningOutcome = { totalScore: number; band: string };
@@ -18,6 +24,7 @@ export type ConsentCopy = Record<Language, { title: string; points: string[]; ac
 export type ScreeningInstrument = {
   id: string;
   title: { en: string; es: string };
+  instructions?: { en: string; es: string };
   audience: "self" | "caregiver";
   tier: 0 | 1 | 2 | 3;
   items: InstrumentItem[];

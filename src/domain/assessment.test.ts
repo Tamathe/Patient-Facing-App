@@ -172,7 +172,15 @@ describe("PHQ-9 content parity", () => {
 
 describe("instrument registry", () => {
   it("exposes one internally consistent source of truth", () => {
-    expect(Object.keys(INSTRUMENTS)).toEqual(["phq9"]);
+    expect(Object.keys(INSTRUMENTS)).toEqual([
+      "phq9",
+      "phq2",
+      "gad2",
+      "gad7",
+      "hunger_vital_sign",
+      "tobacco_use",
+      "nida_single"
+    ]);
     expect(getInstrument("phq9")).toBe(PHQ9_INSTRUMENT);
     expect(getInstrument("missing")).toBeUndefined();
     expect(isKnownInstrument("phq9")).toBe(true);

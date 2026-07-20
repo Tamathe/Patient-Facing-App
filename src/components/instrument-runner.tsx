@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { conditionMatches } from "@/domain/instruments/conditions";
 import type { ScreeningInstrument } from "@/domain/instruments/types";
 import type { Language } from "@/i18n/strings";
 
@@ -58,7 +59,7 @@ export function InstrumentRunner({
     if (!condition) {
       return true;
     }
-    return (responses[condition.itemId] ?? Number.NEGATIVE_INFINITY) >= condition.atLeast;
+    return conditionMatches(condition, responses[condition.itemId]);
   }
 
   function responseIsValid(itemIndex: number): boolean {
@@ -74,7 +75,11 @@ export function InstrumentRunner({
       const options = item.options ?? instrument.defaultOptions ?? [];
       return options.some((option) => option.value === value);
     }
-    return (item.min === undefined || value >= item.min) && (item.max === undefined || value <= item.max);
+    return (
+      (item.min === undefined || value >= item.min) &&
+      (item.max === undefined || value <= item.max) &&
+      (item.integer !== true || Number.isInteger(value))
+    );
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -94,6 +99,9 @@ export function InstrumentRunner({
   return (
     <form className="grid gap-5" noValidate onSubmit={submit}>
       <h2 className="text-xl font-semibold">{instrument.title[language]}</h2>
+      {instrument.instructions ? (
+        <p className="text-sm leading-6 text-ink/80">{instrument.instructions[language]}</p>
+      ) : null}
       {!instrument.wordingVerified ? (
         <p className="rounded-control border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900">
           {COPY[language].draft}
@@ -119,6 +127,7 @@ export function InstrumentRunner({
                 id={`instrument-${instrument.id}-${item.id}`}
                 max={item.max}
                 min={item.min}
+                step={item.integer ? 1 : undefined}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
                   setResponses((current) => {

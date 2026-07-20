@@ -76,6 +76,62 @@ describe("InstrumentRunner", () => {
     expect(onComplete).toHaveBeenCalledWith([1, 3]);
   });
 
+  it("uses inclusive lower and upper condition bounds for an equality-only item", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const equalityInstrument: ScreeningInstrument = {
+      ...CONDITIONAL_INSTRUMENT,
+      id: "equality-demo",
+      items: [
+        CONDITIONAL_INSTRUMENT.items[0],
+        {
+          ...CONDITIONAL_INSTRUMENT.items[1],
+          conditionalOn: { itemId: "need", atLeast: 0, atMost: 0 }
+        }
+      ]
+    };
+    render(<InstrumentRunner instrument={equalityInstrument} language="en" onComplete={onComplete} />);
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("radio", { name: "No" }));
+    expect(screen.getByRole("spinbutton", { name: "How many days?" })).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: "Yes" }));
+    expect(screen.queryByRole("spinbutton", { name: "How many days?" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(onComplete).toHaveBeenCalledWith([1, -1]);
+  });
+
+  it("rejects a fractional response for a whole-number item", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const integerInstrument: ScreeningInstrument = {
+      ...CONDITIONAL_INSTRUMENT,
+      id: "integer-demo",
+      items: [
+        {
+          id: "count",
+          kind: "number",
+          en: "Whole-number count",
+          es: "Cantidad entera",
+          min: 0,
+          max: 365,
+          integer: true
+        }
+      ]
+    };
+    render(<InstrumentRunner instrument={integerInstrument} language="en" onComplete={onComplete} />);
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    const input = screen.getByRole("spinbutton", { name: "Whole-number count" });
+    expect(input).toHaveAttribute("step", "1");
+    await user.type(input, "1.5");
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Please answer every question.");
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
   it("shows localized draft and license warnings plus attribution", async () => {
     const user = userEvent.setup();
     const { unmount } = render(

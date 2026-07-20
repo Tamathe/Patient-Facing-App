@@ -16,8 +16,8 @@ const COPY = {
     upToDate: "You're up to date.",
     start: "Start",
     quick: "Quick check",
-    comingSoon: "Coming soon",
-    quickBody: "A shorter check-in will be available here.",
+    quickBody: "Five short screens with follow-up questions only when needed.",
+    quickStart: "Start the 2-minute check",
     family: "Family support",
     familyBody: "Continue to family and caregiver support.",
     history: "History",
@@ -30,8 +30,8 @@ const COPY = {
     upToDate: "Estás al día.",
     start: "Comenzar",
     quick: "Chequeo rápido",
-    comingSoon: "Próximamente",
-    quickBody: "Pronto habrá un chequeo más breve aquí.",
+    quickBody: "Cinco chequeos breves con preguntas de seguimiento solo cuando sea necesario.",
+    quickStart: "Comenzar el chequeo de 2 minutos",
     family: "Apoyo familiar",
     familyBody: "Continúa al apoyo para familias y personas cuidadoras.",
     history: "Historial",
@@ -91,11 +91,11 @@ export default function CheckinPage() {
         </section>
 
         <section className="rounded-control border border-ink/10 bg-white p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold">{copy.quick}</h2>
-            <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink/60">{copy.comingSoon}</span>
-          </div>
+          <h2 className="text-xl font-semibold">{copy.quick}</h2>
           <p className="mt-2 text-sm text-ink/70">{copy.quickBody}</p>
+          <Link className="mt-3 inline-flex min-h-12 items-center rounded-control bg-care px-4 py-2 font-semibold text-white" href="/checkin/quick">
+            {copy.quickStart}
+          </Link>
         </section>
 
         {state.family ? (

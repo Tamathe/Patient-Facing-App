@@ -2,6 +2,7 @@ import { defaultDemoState } from "@/domain/fixtures";
 import { DEFAULT_DOSE_REMINDER, isDoseReminderPreference } from "@/domain/reminders";
 import type { AssessmentEvent } from "@/domain/assessment";
 import { getInstrument } from "@/domain/instruments/registry";
+import { conditionMatches } from "@/domain/instruments/conditions";
 import type { InstrumentItem, ScreeningInstrument } from "@/domain/instruments/types";
 import type {
   AccessibilityPreference,
@@ -329,7 +330,7 @@ function isInstrumentResponse(
     ? instrument.items.findIndex((candidate) => candidate.id === condition.itemId)
     : -1;
   const conditionMet =
-    !condition || (conditionItemIndex >= 0 && responses[conditionItemIndex] >= condition.atLeast);
+    !condition || (conditionItemIndex >= 0 && conditionMatches(condition, responses[conditionItemIndex]));
 
   if (!conditionMet) {
     return item.notApplicableValue !== undefined && value === item.notApplicableValue;
@@ -343,7 +344,8 @@ function isInstrumentResponse(
   return (
     Number.isFinite(value) &&
     (item.min === undefined || value >= item.min) &&
-    (item.max === undefined || value <= item.max)
+    (item.max === undefined || value <= item.max) &&
+    (item.integer !== true || Number.isInteger(value))
   );
 }
 

@@ -22,14 +22,15 @@ describe("screening hub", () => {
     context.state = demoState;
   });
 
-  it("shows the due PHQ-9, quick-check placeholder, and empty history in English", () => {
+  it("shows due instruments, the live quick check, and empty history in English", () => {
     render(<CheckinPage />);
 
     expect(screen.getByRole("heading", { name: "Screening hub" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Due now" })).toBeVisible();
     expect(screen.getByRole("link", { name: /PHQ-9 mood check-in/i })).toHaveAttribute("href", "/checkin/phq9");
     expect(screen.getByRole("heading", { name: "Quick check" })).toBeVisible();
-    expect(screen.getByText("Coming soon")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Start the 2-minute check/i })).toHaveAttribute("href", "/checkin/quick");
+    expect(screen.queryByText("Coming soon")).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "History" })).toHaveTextContent("No completed check-ins yet.");
     expect(screen.queryByRole("link", { name: "Family support" })).not.toBeInTheDocument();
   });

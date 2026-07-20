@@ -890,6 +890,94 @@ describe("storage", () => {
     }
   });
 
+  it("uses the same inclusive upper-bound condition semantics when loading stored results", () => {
+    const equalityInstrument: ScreeningInstrument = {
+      id: "storage-equality",
+      title: { en: "Storage equality", es: "Igualdad de almacenamiento" },
+      audience: "self",
+      tier: 0,
+      items: [
+        { id: "trigger", kind: "choice", en: "Trigger", es: "Activador" },
+        {
+          id: "answer",
+          kind: "choice",
+          en: "Answer",
+          es: "Respuesta",
+          conditionalOn: { itemId: "trigger", atLeast: 0, atMost: 0 },
+          notApplicableValue: -1
+        }
+      ],
+      defaultOptions: [
+        { value: 0, en: "No", es: "No" },
+        { value: 1, en: "Yes", es: "Sí" }
+      ],
+      score: (responses) => ({ totalScore: responses[0], band: "ok" }),
+      bands: ["ok"],
+      bandSummaries: { ok: { en: "Recorded.", es: "Registrado." } },
+      consent: {
+        en: { title: "Consent", points: ["Point"], acknowledge: "Continue" },
+        es: { title: "Consentimiento", points: ["Punto"], acknowledge: "Continuar" }
+      },
+      wordingVerified: true,
+      licenseStatus: "clear",
+      attribution: { en: "Test", es: "Prueba" }
+    };
+    const event = {
+      id: "equality-visible",
+      patientId: "patient-1",
+      instrumentId: equalityInstrument.id,
+      itemResponses: [0, 1],
+      totalScore: 0,
+      severityBand: "ok",
+      status: "patient_reported",
+      recordedAt: "2026-07-06T12:00:00.000Z"
+    };
+    INSTRUMENTS[equalityInstrument.id] = equalityInstrument;
+
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ...demoState,
+          assessmentEvents: [
+            event,
+            { ...event, id: "equality-hidden", itemResponses: [1, -1] },
+            { ...event, id: "answer-while-hidden", itemResponses: [1, 1] }
+          ]
+        })
+      );
+
+      expect(loadStoredState().assessmentEvents.map(({ id }) => id)).toEqual([
+        "equality-visible",
+        "equality-hidden"
+      ]);
+    } finally {
+      delete INSTRUMENTS[equalityInstrument.id];
+    }
+  });
+
+  it("filters a fractional NIDA count while preserving a valid whole-number result", () => {
+    const valid = {
+      id: "nida-valid",
+      patientId: "patient-1",
+      instrumentId: "nida_single",
+      itemResponses: [1],
+      totalScore: 1,
+      severityBand: "positive",
+      status: "patient_reported",
+      recordedAt: "2026-07-06T12:00:00.000Z"
+    };
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        assessmentEvents: [valid, { ...valid, id: "nida-fractional", itemResponses: [1.5], totalScore: 1.5 }]
+      })
+    );
+
+    expect(loadStoredState().assessmentEvents.map(({ id }) => id)).toEqual(["nida-valid"]);
+  });
+
   it("backfills a payload with no assessmentEvents array", () => {
     const legacy: Record<string, unknown> = {
       ...demoState,
