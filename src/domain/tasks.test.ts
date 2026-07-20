@@ -3,6 +3,8 @@ import { demoState } from "./fixtures";
 import { buildTodayTasks } from "./tasks";
 import type { AssessmentEvent } from "./assessment";
 import type { HomeReading } from "./types";
+import { TIER0_BATTERY } from "./instruments/battery";
+import { NIDA_SINGLE_INSTRUMENT } from "./instruments/nida-single";
 
 const NOW = new Date("2026-07-05T12:00:00.000Z");
 
@@ -18,7 +20,17 @@ const recentCheckin: AssessmentEvent[] = [
     severityBand: "minimal",
     status: "patient_reported",
     recordedAt: "2026-07-04T12:00:00.000Z"
-  }
+  },
+  ...["crc_eligibility", "prediabetes_risk", "audit_c", "dds2"].map((instrumentId, index) => ({
+    id: `assessment-adult-${index}`,
+    patientId: "patient-1",
+    instrumentId,
+    itemResponses: [0],
+    totalScore: 0,
+    severityBand: "negative",
+    status: "patient_reported" as const,
+    recordedAt: "2026-07-04T12:00:00.000Z"
+  }))
 ];
 
 const dangerousReading: HomeReading = {
@@ -354,45 +366,130 @@ describe("buildTodayTasks", () => {
   });
 
   it("adds a check-in nudge when no recent check-in exists", () => {
-    const tasks = buildTodayTasks({ ...demoState, readings: [] });
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [routineReading],
+      medications: [],
+      carePlan: { ...demoState.carePlan, nextVisitReason: "" },
+      screeningGaps: []
+    });
 
-    expect(tasks.some((task) => task.kind === "checkin")).toBe(true);
-    expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/phq9");
+    expect(tasks.filter((task) => task.kind === "checkin")).toHaveLength(1);
+    expect(tasks.find((task) => task.kind === "checkin")).toMatchObject({
+      href: "/checkin/phq9",
+      priority: 3,
+      status: "inferred"
+    });
   });
 
-  it("does not add a check-in nudge when one was recorded recently", () => {
-    const tasks = buildTodayTasks({ ...demoState, assessmentEvents: recentCheckin });
+  it("does not add a check-in nudge when all eligible recurring checks are fresh", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: recentCheckin,
+      screeningGaps: []
+    });
 
     expect(tasks.some((task) => task.kind === "checkin")).toBe(false);
   });
 
-  it("does not let another instrument reset the legacy PHQ-9 recurrence clock", () => {
+  it("prefers PHQ-9 when it and the clear-license battery are both due", () => {
+    const original = NIDA_SINGLE_INSTRUMENT.licenseStatus;
+    NIDA_SINGLE_INSTRUMENT.licenseStatus = "clear";
+    try {
+      const tasks = buildTodayTasks({ ...demoState, screeningGaps: [] });
+      expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/phq9");
+    } finally {
+      NIDA_SINGLE_INSTRUMENT.licenseStatus = original;
+    }
+  });
+
+  it("selects the clear-license battery only while one or more core checks are stale", () => {
+    const original = NIDA_SINGLE_INSTRUMENT.licenseStatus;
+    NIDA_SINGLE_INSTRUMENT.licenseStatus = "clear";
+    try {
+      const quiet = {
+        ...demoState,
+        assessmentEvents: recentCheckin,
+        readings: [routineReading],
+        medications: [],
+        carePlan: { ...demoState.carePlan, nextVisitReason: "" },
+        screeningGaps: []
+      };
+      expect(buildTodayTasks(quiet).find((task) => task.kind === "checkin")?.href).toBe("/checkin/quick");
+
+      const freshBattery = TIER0_BATTERY.map((instrumentId, index) => ({
+        ...recentCheckin[0],
+        id: `battery-${index}`,
+        instrumentId,
+        itemResponses: [0]
+      }));
+      expect(
+        buildTodayTasks({ ...quiet, assessmentEvents: [...recentCheckin, ...freshBattery] })
+          .some((task) => task.kind === "checkin")
+      ).toBe(false);
+    } finally {
+      NIDA_SINGLE_INSTRUMENT.licenseStatus = original;
+    }
+  });
+
+  it("excludes the pending battery and ineligible lung and STEADI checks", () => {
     const tasks = buildTodayTasks({
       ...demoState,
-      assessmentEvents: [
-        {
-          ...recentCheckin[0],
-          id: "other-recent",
-          instrumentId: "future-screen",
-          itemResponses: [0]
-        }
-      ]
+      assessmentEvents: recentCheckin,
+      readings: [routineReading],
+      medications: [],
+      carePlan: { ...demoState.carePlan, nextVisitReason: "" },
+      screeningGaps: []
     });
 
-    expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/phq9");
+    expect(tasks.some((task) => task.kind === "checkin")).toBe(false);
+  });
+
+  it("selects an eligible lung recheck from the registry-owned gate", () => {
+    const tobaccoEvent: AssessmentEvent = {
+      ...recentCheckin[0],
+      id: "tobacco-current",
+      instrumentId: "tobacco_use",
+      itemResponses: [2, -1],
+      severityBand: "current"
+    };
+    const tasks = buildTodayTasks({
+      ...demoState,
+      assessmentEvents: [...recentCheckin, tobaccoEvent],
+      readings: [routineReading],
+      medications: [],
+      carePlan: { ...demoState.carePlan, nextVisitReason: "" },
+      screeningGaps: []
+    });
+
+    expect(tasks.find((task) => task.kind === "checkin")?.href).toBe("/checkin/lung_ldct_eligibility");
+  });
+
+  it("suppresses only the screening chip while DR work is open", () => {
+    const tasks = buildTodayTasks({
+      ...demoState,
+      readings: [routineReading],
+      medications: [],
+      carePlan: { ...demoState.carePlan, nextVisitReason: "" },
+      screeningGaps: [{ ...demoState.screeningGaps[0], status: "overdue" }]
+    });
+
+    expect(tasks.some((task) => task.kind === "checkin")).toBe(false);
   });
 
   it("keeps the priority-1 clinical task in the top three when a check-in nudge competes (FR-14)", () => {
     const tasks = buildTodayTasks({
       ...demoState,
       readings: [dangerousReading],
-      medications: [{ ...demoState.medications[0], activeBarriers: ["cost"] }]
+      medications: [{ ...demoState.medications[0], activeBarriers: ["cost"] }],
+      screeningGaps: []
     });
 
     expect(tasks).toHaveLength(3);
     expect(tasks[0].priority).toBe(1);
     expect(tasks.map((task) => task.id)).toContain("task-bp-clinical");
     expect(tasks.some((task) => task.kind === "checkin")).toBe(true);
+    expect(tasks.find((task) => task.kind === "checkin")?.priority).toBe(3);
   });
 
   it("does not add a medicine task when medications are empty", () => {

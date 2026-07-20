@@ -51,11 +51,11 @@ describe("MenuGrid reachability", () => {
 
   it("keeps both the screening hub and moved PHQ-9 reachable", () => {
     const { rerender } = render(<MenuGrid language="en" />);
-    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Screening Hub");
+    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Check-ins & screenings");
     expect(document.querySelector('a[href="/checkin/phq9"]')).toHaveTextContent("Mood Check-in");
 
     rerender(<MenuGrid language="es" />);
-    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Centro de Chequeos");
+    expect(document.querySelector('a[href="/checkin"]')).toHaveTextContent("Chequeos y evaluaciones");
     expect(document.querySelector('a[href="/checkin/phq9"]')).toHaveTextContent("Chequeo de Ánimo");
   });
 });

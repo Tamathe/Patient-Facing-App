@@ -43,6 +43,24 @@ export const STEADI3_INSTRUMENT: ScreeningInstrument = {
     es: { title: "Antes de este chequeo de caídas", points: ["Este chequeo opcional usa tres elementos de materiales en español de CDC STEADI.", "La pregunta sobre lesiones y la banda de urgencia son política de la aplicación."], acknowledge: "Entiendo — comenzar" }
   },
   recurrenceDays: 365,
+  eligibility: (state, now) => {
+    const nowMs = now.valueOf();
+    if (Number.isNaN(nowMs)) {
+      return false;
+    }
+    return state.assessmentEvents.some((event) => {
+      const recordedAtMs = new Date(event.recordedAt).valueOf();
+      if (Number.isNaN(recordedAtMs) || recordedAtMs > nowMs) {
+        return false;
+      }
+      const age = event.instrumentId === "lung_ldct_eligibility"
+        ? event.itemResponses[1]
+        : event.instrumentId === "crc_eligibility"
+          ? event.itemResponses[0]
+          : undefined;
+      return age !== undefined && Number.isFinite(age) && age >= 65;
+    });
+  },
   wordingVerified: false,
   licenseStatus: "clear",
   attribution: {

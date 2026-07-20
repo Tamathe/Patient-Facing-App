@@ -19,7 +19,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/plan": "My Plan",
   "/visits": "My Visits",
   "/chat": "Coach",
-  "/checkin": "Check-in",
+  "/checkin": "Check-ins & screenings",
   "/checkin/phq9": "Mood check-in",
   "/support": "Support",
   "/family": "Family navigator",
@@ -72,7 +72,8 @@ const NAV_LEXICON: NavRule[] = [
   { test: /\b(support|resources?|rent|utilities|food stamps)\b/, href: "/support", label: "Support" },
   { test: /\b(privacy|my data)\b/, href: "/privacy", label: "Privacy" },
   { test: /\b(add instructions|instructions|paste)\b/, href: "/intake", label: "Add Instructions" },
-  { test: /\b(eye check|eye exam|eye screening|eye photo|eyes?|vision)\b/, href: "/screening", label: "Eye Check" }
+  { test: /\b(eye check|eye exam|eye screening|eye photo|eyes?|vision|screening)\b/, href: "/screening", label: "Eye Check" },
+  { test: /\b(health check|wellness check|questionnaire)\b/, href: "/checkin", label: "Check-ins & screenings" }
 ];
 
 const NAV_VERB = /\b(show|open|see|view|go to|take me to|where'?s|where is|bring up|pull up)\b/;
@@ -98,12 +99,13 @@ const NAV_LEXICON_ES: NavRule[] = [
   { test: /\b(visitas?|citas?)\b/, href: "/visits", label: "Mis Visitas" },
   { test: /\b(comidas?|comer)\b/, href: "/food", label: "Comida" },
   { test: /\b(retinopat(?:ia|ía)|enfermedad diab(?:e|é)tica del ojo)\b/, href: "/learn/retinopathy", label: "Retinopatía diabética" },
-  // "chequeo de ojos" belongs to the screening route below, not the mood check-in.
-  { test: /\b(chequeo(?!\s+de\s+ojos)|[aá]nimo)\b/, href: "/checkin/phq9", label: "Chequeo de ánimo" },
+  // Eye and health checks belong to their routes below, not the mood check-in.
+  { test: /\b(chequeo(?!\s+de\s+(?:ojos|salud))|[aá]nimo)\b/, href: "/checkin/phq9", label: "Chequeo de ánimo" },
   { test: /\b(apoyo|recursos?|renta|servicios)\b/, href: "/support", label: "Apoyo" },
   { test: /\b(privacidad|mis datos)\b/, href: "/privacy", label: "Privacidad" },
   { test: /\binstrucciones\b/, href: "/intake", label: "Agregar Instrucciones" },
-  { test: /\b(ojos?|vista)\b/, href: "/screening", label: "Chequeo de Ojos" }
+  { test: /\b(ojos?|vista)\b/, href: "/screening", label: "Chequeo de Ojos" },
+  { test: /\bchequeo de salud\b/, href: "/checkin", label: "Chequeos y evaluaciones" }
 ];
 
 const NAV_VERB_ES = /\b(mostrar|mu[eé]strame|abrir|abre|ver|ir a|ll[eé]vame a|d[oó]nde est[aá]|d[oó]nde)\b/;

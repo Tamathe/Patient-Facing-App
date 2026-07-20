@@ -72,6 +72,26 @@ export const LUNG_LDCT_ELIGIBILITY_INSTRUMENT: ScreeningInstrument = {
     es: { title: "Antes de este chequeo de pulmón", points: ["Este chequeo opcional pregunta sobre la edad, el historial de cigarrillos y dos síntomas de advertencia.", "Un profesional clínico confirma si la detección es adecuada para usted."], acknowledge: "Entiendo — comenzar" }
   },
   recurrenceDays: 365,
+  eligibility: (state, now) => {
+    const nowMs = now.valueOf();
+    if (Number.isNaN(nowMs)) {
+      return false;
+    }
+    const latest = state.assessmentEvents.reduce<{ recordedAtMs: number; severityBand: string } | null>(
+      (current, event) => {
+        if (event.instrumentId !== "tobacco_use") {
+          return current;
+        }
+        const recordedAtMs = new Date(event.recordedAt).valueOf();
+        if (Number.isNaN(recordedAtMs) || recordedAtMs > nowMs || (current && current.recordedAtMs >= recordedAtMs)) {
+          return current;
+        }
+        return { recordedAtMs, severityBand: event.severityBand };
+      },
+      null
+    );
+    return latest?.severityBand === "current" || latest?.severityBand === "former";
+  },
   wordingVerified: false,
   licenseStatus: "clear",
   attribution: {

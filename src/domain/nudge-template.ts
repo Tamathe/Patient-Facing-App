@@ -17,7 +17,7 @@ export type NudgeLintResult = { ok: true } | { ok: false; reason: "prohibited_te
 
 export type RenderNudgeResult =
   | { ok: true; message: string }
-  | { ok: false; reason: "template_not_approved" | "missing_slot" | "disclosure_lint_failed"; message: string };
+  | { ok: false; reason: "template_not_approved" | "missing_slot" | "unexpected_slot" | "slot_value_not_approved" | "disclosure_lint_failed"; message: string };
 
 type ApprovedNudgeTemplate = {
   id: string;
@@ -31,6 +31,14 @@ const PROHIBITED_TERMS = [
   "depression",
   "depresion",
   "depresión",
+  "mood",
+  "animo",
+  "ánimo",
+  "anxiety",
+  "ansiedad",
+  "alcohol",
+  "drug",
+  "droga",
   "self-harm",
   "hiv",
   "vih",
@@ -42,6 +50,7 @@ const PROHIBITED_TERMS = [
   "metadona",
   "pregnancy",
   "embarazo",
+  "perinatal",
   "abortion",
   "aborto",
   "abuse",
@@ -49,6 +58,11 @@ const PROHIBITED_TERMS = [
   "violence",
   "violencia"
 ];
+
+const APPROVED_CHECK_NAMES: Record<Language, string> = {
+  en: "quick health check",
+  es: "chequeo rápido de salud"
+};
 
 const APPROVED_TEMPLATES: ApprovedNudgeTemplate[] = [
   {
@@ -65,6 +79,14 @@ const APPROVED_TEMPLATES: ApprovedNudgeTemplate[] = [
     bodyByLanguage: {
       en: "Hi {{firstName}} — a quick check-in for you is ready in the app.",
       es: "Hola {{firstName}} — tienes un chequeo rápido para ti listo en la aplicación."
+    }
+  },
+  {
+    id: "checkin_nudge_v1",
+    requiredSlots: ["firstName", "checkName"],
+    bodyByLanguage: {
+      en: "Hi {{firstName}} — your {{checkName}} is ready when you are.",
+      es: "Hola {{firstName}} — tu {{checkName}} está listo cuando quieras."
     }
   },
   {
@@ -167,6 +189,21 @@ export function renderNudge(input: RenderNudgeInput): RenderNudgeResult {
 
   if (template.requiredSlots.some((slot) => !input.slots[slot]?.trim())) {
     return { ok: false, reason: "missing_slot", message: "Nudge template is missing a required slot." };
+  }
+
+  if (Object.keys(input.slots).some((slot) => !template.requiredSlots.includes(slot))) {
+    return { ok: false, reason: "unexpected_slot", message: "Nudge template received an unexpected slot." };
+  }
+
+  if (
+    template.id === "checkin_nudge_v1" &&
+    input.slots.checkName !== APPROVED_CHECK_NAMES[input.language]
+  ) {
+    return {
+      ok: false,
+      reason: "slot_value_not_approved",
+      message: "Nudge template received a slot value that is not approved."
+    };
   }
 
   const message = template.requiredSlots.reduce(

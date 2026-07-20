@@ -44,6 +44,13 @@ describe("decideFrontDoor — safety first", () => {
       reason: "safety"
     });
   });
+
+  it("keeps a safety phrase containing a hub synonym with the Coach", () => {
+    expect(decideFrontDoor("I want to die during this wellness check", en)).toMatchObject({
+      kind: "coach",
+      reason: "safety"
+    });
+  });
 });
 
 describe("decideFrontDoor — deterministic navigation (English)", () => {
@@ -77,6 +84,15 @@ describe("decideFrontDoor — deterministic navigation (English)", () => {
     expect(decideFrontDoor("book my eye screening", en)).toMatchObject({ kind: "navigate", href: "/screening" });
     expect(decideFrontDoor("eye check", en)).toMatchObject({ kind: "navigate", href: "/screening" });
     expect(decideFrontDoor("show my eye exam options", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+    expect(decideFrontDoor("screening", en)).toMatchObject({ kind: "navigate", href: "/screening" });
+  });
+
+  it.each(["health check", "wellness check", "questionnaire"])("routes a health-check phrase to the hub: %s", (utterance) => {
+    expect(decideFrontDoor(utterance, en)).toEqual({
+      kind: "navigate",
+      href: "/checkin",
+      label: "Check-ins & screenings"
+    });
   });
 
   it("routes retinopathy learning asks to the learning page, not the booking flow", () => {
@@ -167,6 +183,11 @@ describe("decideFrontDoor — Spanish", () => {
   it("keeps the eye check and the mood check-in apart in Spanish", () => {
     expect(decideFrontDoor("chequeo de ojos", es)).toMatchObject({ kind: "navigate", href: "/screening" });
     expect(decideFrontDoor("chequeo", es)).toMatchObject({ kind: "navigate", href: "/checkin/phq9" });
+    expect(decideFrontDoor("chequeo de salud", es)).toEqual({
+      kind: "navigate",
+      href: "/checkin",
+      label: "Chequeos y evaluaciones"
+    });
   });
 
   it("routes Spanish retinopathy learning asks to the learning page", () => {

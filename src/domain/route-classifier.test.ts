@@ -32,6 +32,23 @@ describe("mockRouteClassifier", () => {
     });
   });
 
+  it.each(["health check", "wellness check", "questionnaire"])(
+    "routes a check-in hub synonym to the hub: %s",
+    (utterance) => {
+      expect(mockRouteClassifier.classify(utterance, CLASSIFIER_HREFS)).toMatchObject({
+        kind: "navigate",
+        href: "/checkin"
+      });
+    }
+  );
+
+  it("keeps bare screening with the eye-screening route", () => {
+    expect(mockRouteClassifier.classify("screening", CLASSIFIER_HREFS)).toMatchObject({
+      kind: "navigate",
+      href: "/screening"
+    });
+  });
+
   it.each([
     "help for my daughter",
     "resources for my child",

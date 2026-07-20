@@ -4,6 +4,8 @@ import { summarizeFoodGlucoseLink } from "./glucose-correlation";
 import { computeTimeInRange } from "./glucose-range";
 import { getPdcToDate } from "./medication-fills";
 import { screeningLens, screeningLensLine } from "./screening-status";
+import { dueInstruments } from "./instruments/due";
+import { getInstrument, INSTRUMENTS } from "./instruments/registry";
 import type { AppState, EvidenceStatus, HealthBrief } from "./types";
 
 type HealthBriefBuildOptions = {
@@ -91,6 +93,56 @@ function eyeScreeningSection(state: AppState, asOf: Date): BriefSection | null {
     return null;
   }
   return { title: "Eye screening", items: [screeningLensLine(lens, state.patient.language)], status: "inferred" };
+}
+
+export function screeningsSection(state: AppState, asOf: Date): BriefSection | null {
+  const asOfMs = asOf.valueOf();
+  if (Number.isNaN(asOfMs)) {
+    return null;
+  }
+  const latestByInstrument = new Map<string, { event: AppState["assessmentEvents"][number]; recordedAtMs: number }>();
+  for (const event of state.assessmentEvents) {
+    const instrument = getInstrument(event.instrumentId);
+    const recordedAtMs = new Date(event.recordedAt).valueOf();
+    if (
+      !instrument ||
+      instrument.licenseStatus !== "clear" ||
+      Number.isNaN(recordedAtMs) ||
+      recordedAtMs > asOfMs ||
+      !Number.isFinite(event.totalScore) ||
+      !instrument.bands.includes(event.severityBand)
+    ) {
+      continue;
+    }
+    const current = latestByInstrument.get(event.instrumentId);
+    if (!current || recordedAtMs > current.recordedAtMs) {
+      latestByInstrument.set(event.instrumentId, { event, recordedAtMs });
+    }
+  }
+  if (latestByInstrument.size === 0) {
+    return null;
+  }
+
+  const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC"
+  });
+  const items = Object.values(INSTRUMENTS).flatMap((instrument) => {
+    const latest = latestByInstrument.get(instrument.id);
+    if (!latest) {
+      return [];
+    }
+    const label = instrument.briefLabel?.en ?? instrument.title.en;
+    const band = latest.event.severityBand.replaceAll("_", " ");
+    return [
+      `${label}: ${latest.event.totalScore} — ${band} — ${dateFormatter.format(new Date(latest.recordedAtMs))}, patient-reported.`
+    ];
+  });
+  const dueCount = dueInstruments(state, asOf).length;
+  items.push(`App-derived due summary: ${dueCount} check-in${dueCount === 1 ? "" : "s"} due.`);
+
+  return { title: "Check-ins and screenings", items, status: "patient_reported" };
 }
 
 export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptions = {}): HealthBrief {
@@ -181,6 +233,7 @@ export function buildHealthBrief(state: AppState, options: HealthBriefBuildOptio
     },
     adherenceSection(state, asOf),
     eyeScreeningSection(state, asOf),
+    screeningsSection(state, asOf),
     {
       title: "Confirmed instructions",
       items: confirmedInstructions.length > 0 ? confirmedInstructions : ["No uploaded instructions confirmed yet."],

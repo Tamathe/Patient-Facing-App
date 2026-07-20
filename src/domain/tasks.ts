@@ -2,20 +2,9 @@ import type { AppState, HomeReading, TaskItem } from "./types";
 import { findRecentClinicalReading, type ClinicalReadingCandidate } from "./recent-clinical-reading";
 import { getSiteById } from "./screening-sites";
 import { tHome } from "@/i18n/home-strings";
+import { dueInstruments } from "./instruments/due";
 
 const MAX_TODAY_TASKS = 3;
-const CHECKIN_INTERVAL_MS = 14 * 24 * 60 * 60 * 1000;
-
-function isCheckinDue(state: AppState): boolean {
-  const phq9Events = state.assessmentEvents.filter(({ instrumentId }) => instrumentId === "phq9");
-  if (phq9Events.length === 0) {
-    return true;
-  }
-  const latest = [...phq9Events].sort(
-    (left, right) => new Date(right.recordedAt).valueOf() - new Date(left.recordedAt).valueOf()
-  )[0];
-  return Date.now() - new Date(latest.recordedAt).valueOf() > CHECKIN_INTERVAL_MS;
-}
 
 export function buildTodayTasks(state: AppState): TaskItem[] {
   const tasks: TaskItem[] = [];
@@ -129,13 +118,14 @@ export function buildTodayTasks(state: AppState): TaskItem[] {
     });
   }
 
-  if (isCheckinDue(state)) {
+  const dueCheckin = hasOpenScreeningWork ? undefined : dueInstruments(state, new Date())[0];
+  if (dueCheckin) {
     tasks.push({
       id: "task-checkin",
       title: tHome(lang, "taskCheckinTitle"),
       body: tHome(lang, "taskCheckinBody"),
-      href: "/checkin/phq9",
-      priority: 2,
+      href: dueCheckin.href,
+      priority: 3,
       kind: "checkin",
       status: "inferred"
     });

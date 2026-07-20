@@ -2,6 +2,7 @@ import type { ScreeningInstrument } from "./types";
 
 export const PHQ9_INSTRUMENT: ScreeningInstrument = {
   id: "phq9",
+  briefLabel: { en: "Mood check-in (PHQ-9)", es: "Chequeo de ánimo (PHQ-9)" },
   title: { en: "PHQ-9 mood check-in", es: "Chequeo de ánimo PHQ-9" },
   audience: "self",
   tier: 1,

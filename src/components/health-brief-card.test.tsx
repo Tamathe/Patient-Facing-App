@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -7,6 +7,55 @@ import { demoState } from "@/domain/fixtures";
 import { HealthBriefCard } from "./health-brief-card";
 
 describe("HealthBriefCard", () => {
+  it("renders and exports the patient-reported screenings section", async () => {
+    const user = userEvent.setup();
+    const previousShare = (window.navigator as { share?: () => Promise<void> }).share;
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "share", {
+      configurable: true,
+      writable: true,
+      value: share
+    });
+    const state = {
+      ...demoState,
+      assessmentEvents: [
+        {
+          id: "phq9-brief",
+          patientId: demoState.patient.id,
+          instrumentId: "phq9",
+          itemResponses: [1, 1, 1, 1, 1, 1, 1, 0, 0],
+          totalScore: 7,
+          severityBand: "mild",
+          status: "patient_reported" as const,
+          recordedAt: "2026-07-12T12:00:00.000Z"
+        }
+      ]
+    };
+
+    try {
+      render(
+        <HealthBriefCard brief={buildHealthBrief(state, { generatedAt: "2026-07-20T12:00:00.000Z" })} />
+      );
+      const heading = screen.getByRole("heading", { name: "Check-ins and screenings", level: 3 });
+      const section = heading.closest("section");
+      expect(section).not.toBeNull();
+      expect(within(section as HTMLElement).getByText("patient reported", { exact: true })).toBeVisible();
+      expect(within(section as HTMLElement).getByText(/Mood check-in \(PHQ-9\): 7/)).toBeVisible();
+
+      await user.click(await screen.findByRole("button", { name: /share/i }));
+      expect(share).toHaveBeenCalledWith({
+        title: "My Health Brief",
+        text: expect.stringContaining("Check-ins and screenings\nStatus: patient reported")
+      });
+    } finally {
+      Object.defineProperty(window.navigator, "share", {
+        configurable: true,
+        writable: true,
+        value: previousShare
+      });
+    }
+  });
+
   it("renders the compiled sections", () => {
     render(<HealthBriefCard brief={buildHealthBrief(demoState)} />);
 

@@ -1,9 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { brentState, demoState } from "./fixtures";
 import { buildHealthBrief } from "./health-brief";
+import type { AssessmentEvent } from "./assessment";
 import type { AppState, GlucoseReading, IdentifiedFood, MealLogEntry } from "./types";
 
 const FIXED = "2026-07-05T12:00:00.000Z";
+const SCREENING_AS_OF = "2026-07-20T12:00:00.000Z";
+
+function assessmentEvent(overrides: Partial<AssessmentEvent> = {}): AssessmentEvent {
+  return {
+    id: "phq9-latest",
+    patientId: demoState.patient.id,
+    instrumentId: "phq9",
+    itemResponses: [1, 1, 1, 1, 1, 1, 1, 0, 0],
+    totalScore: 7,
+    severityBand: "mild",
+    status: "patient_reported",
+    recordedAt: "2026-07-12T23:30:00.000+05:00",
+    ...overrides
+  };
+}
 
 function titles(state: AppState): string[] {
   return buildHealthBrief(state, { generatedAt: FIXED }).sections.map((section) => section.title);
@@ -84,6 +100,65 @@ function pairedDiabetesState(): AppState {
 }
 
 describe("buildHealthBrief", () => {
+  it("omits the screening section when there are no valid clear-license assessment events", () => {
+    const brief = buildHealthBrief(demoState, { generatedAt: SCREENING_AS_OF });
+    expect(brief.sections.map(({ title }) => title)).not.toContain("Check-ins and screenings");
+  });
+
+  it("keeps the newest event per instrument in registry order with UTC date and patient-reported provenance", () => {
+    const state = {
+      ...demoState,
+      assessmentEvents: [
+        assessmentEvent(),
+        assessmentEvent({ id: "phq9-older", totalScore: 3, severityBand: "minimal", recordedAt: "2026-07-01T12:00:00.000Z" }),
+        assessmentEvent({
+          id: "gad2-row",
+          instrumentId: "gad2",
+          itemResponses: [0, 0],
+          totalScore: 0,
+          severityBand: "negative",
+          recordedAt: "2026-07-10T12:00:00.000Z"
+        })
+      ]
+    };
+
+    const section = buildHealthBrief(state, { generatedAt: SCREENING_AS_OF }).sections.find(
+      ({ title }) => title === "Check-ins and screenings"
+    );
+
+    expect(section).toEqual({
+      title: "Check-ins and screenings",
+      status: "patient_reported",
+      items: [
+        "Mood check-in (PHQ-9): 7 — mild — Jul 12, patient-reported.",
+        "GAD-2 anxiety check: 0 — negative — Jul 10, patient-reported.",
+        "App-derived due summary: 4 check-ins due."
+      ]
+    });
+  });
+
+  it("ignores unknown, invalid, future-dated, and pending-license assessment rows", () => {
+    const state = {
+      ...demoState,
+      assessmentEvents: [
+        assessmentEvent({ id: "unknown", instrumentId: "unknown", recordedAt: "2026-07-10T12:00:00.000Z" }),
+        assessmentEvent({ id: "invalid", recordedAt: "not-a-date" }),
+        assessmentEvent({ id: "future", recordedAt: "2026-07-21T12:00:00.000Z" }),
+        assessmentEvent({
+          id: "pending-nida",
+          instrumentId: "nida_single",
+          itemResponses: [0],
+          totalScore: 0,
+          severityBand: "negative",
+          recordedAt: "2026-07-10T12:00:00.000Z"
+        })
+      ]
+    };
+
+    const brief = buildHealthBrief(state, { generatedAt: SCREENING_AS_OF });
+    expect(brief.sections.map(({ title }) => title)).not.toContain("Check-ins and screenings");
+  });
+
   it("includes care goal and medication sections", () => {
     const brief = buildHealthBrief(demoState);
 

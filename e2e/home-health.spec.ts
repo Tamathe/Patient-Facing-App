@@ -36,7 +36,7 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
   await page.getByRole("button", { name: "Why does this matter?" }).click();
   await page.getByLabel("Message").fill("Why am I taking lisinopril?");
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.getByText(/Lisinopril is listed in your medicines as/i)).toBeVisible();
+  await expect(page.getByText(/Lisinopril is in your plan because/i)).toBeVisible();
 
   await page.getByRole("link", { name: "All my health" }).click();
   await page.getByRole("link", { name: /^My Visits/ }).click();

@@ -2,6 +2,101 @@ import { describe, expect, it } from "vitest";
 import { lintNudgeMessage, renderNudge } from "./nudge-template";
 
 describe("renderNudge", () => {
+  it("renders the neutral check-in nudge in English and Spanish with exactly the approved slots", () => {
+    const cases = [
+      {
+        language: "en" as const,
+        checkName: "quick health check",
+        message: "Hi Jordan — your quick health check is ready when you are."
+      },
+      {
+        language: "es" as const,
+        checkName: "chequeo rápido de salud",
+        message: "Hola Jordan — tu chequeo rápido de salud está listo cuando quieras."
+      }
+    ];
+
+    for (const { language, checkName, message } of cases) {
+      expect(
+        renderNudge({
+          templateId: "checkin_nudge_v1",
+          language,
+          slots: { firstName: "Jordan", checkName }
+        })
+      ).toEqual({ ok: true, message });
+    }
+  });
+
+  it("refuses missing, blank, or extra check-in nudge slots", () => {
+    const slotCases: Record<string, string>[] = [
+      { firstName: "Jordan" },
+      { firstName: "Jordan", checkName: "   " },
+      { firstName: "   ", checkName: "quick health check" },
+      { firstName: "Jordan", checkName: "quick health check", instrument: "phq9" }
+    ];
+
+    for (const slots of slotCases) {
+      expect(
+        renderNudge({ templateId: "checkin_nudge_v1", language: "en", slots })
+      ).toMatchObject({ ok: false });
+    }
+  });
+
+  it.each([
+    "mood check",
+    "anxiety check",
+    "alcohol check",
+    "drug use check",
+    "substance use check",
+    "pregnancy check",
+    "perinatal check",
+    "chequeo de ánimo",
+    "chequeo de ansiedad",
+    "chequeo de alcohol",
+    "chequeo de drogas",
+    "chequeo de sustancias",
+    "chequeo de embarazo"
+  ])("refuses a sensitive checkName disclosure: %s", (checkName) => {
+    expect(
+      renderNudge({
+        templateId: "checkin_nudge_v1",
+        language: checkName.startsWith("chequeo") ? "es" : "en",
+        slots: { firstName: "Jordan", checkName }
+      })
+    ).toMatchObject({ ok: false, reason: "slot_value_not_approved" });
+  });
+
+  it.each([
+    { language: "en" as const, checkName: "PHQ-9" },
+    { language: "en" as const, checkName: "NIDA" },
+    { language: "en" as const, checkName: "prenatal check" },
+    { language: "en" as const, checkName: "postpartum check" },
+    { language: "es" as const, checkName: "posparto" },
+    { language: "es" as const, checkName: "salud mental" },
+    { language: "en" as const, checkName: "general wellness check" },
+    { language: "es" as const, checkName: "chequeo general" },
+    { language: "en" as const, checkName: "chequeo rápido de salud" },
+    { language: "es" as const, checkName: "quick health check" }
+  ])("refuses a non-allowlisted $language checkName: $checkName", ({ language, checkName }) => {
+    expect(
+      renderNudge({
+        templateId: "checkin_nudge_v1",
+        language,
+        slots: { firstName: "Jordan", checkName }
+      })
+    ).toMatchObject({ ok: false, reason: "slot_value_not_approved" });
+  });
+
+  it("still disclosure-lints firstName with an allowlisted checkName", () => {
+    expect(
+      renderNudge({
+        templateId: "checkin_nudge_v1",
+        language: "en",
+        slots: { firstName: "Depression Study", checkName: "quick health check" }
+      })
+    ).toMatchObject({ ok: false, reason: "disclosure_lint_failed" });
+  });
+
   it("renders the approved screening nudge in English", () => {
     const rendered = renderNudge({
       templateId: "screening_nudge_v1",
