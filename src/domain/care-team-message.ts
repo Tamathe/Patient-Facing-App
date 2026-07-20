@@ -1,9 +1,13 @@
 import { barrierLabel } from "./labels";
 import type { AppState } from "./types";
 
+export function latestPatientConcern(state: Pick<AppState, "aiMessages">): string | undefined {
+  return [...state.aiMessages].reverse().find((message) => message.role === "patient")?.content;
+}
+
 // Builds a plain-text message the patient can copy or share with their care team.
 // Everything comes from on-device state; nothing is sent anywhere by this function.
-export function buildCareTeamMessage(state: AppState): string {
+export function buildCareTeamMessage(state: AppState, concern?: string): string {
   const lines: string[] = ["For my care team:"];
 
   lines.push(`- What I am working on: ${state.carePlan.plainLanguageSummary}`);
@@ -23,7 +27,12 @@ export function buildCareTeamMessage(state: AppState): string {
     lines.push(`- Medicine: ${medication.name} ${medication.dose}, ${medication.schedule}.${barrierText}`);
   }
 
-  lines.push("- My question: I want to talk about whether my plan is working and any side effects I am noticing.");
+  const normalizedConcern = concern?.trim().replace(/\s+/g, " ").slice(0, 500) ?? "";
+  if (normalizedConcern.length > 0) {
+    lines.push(`- What I want help with: ${normalizedConcern}`);
+  } else {
+    lines.push("- My question: I want to talk about whether my plan is working and any side effects I am noticing.");
+  }
 
   return lines.join("\n");
 }

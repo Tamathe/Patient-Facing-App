@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ConversationPanel } from "@/components/conversation-panel";
 import { OpenAiCoachProvider } from "@/ai/coach-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
-import { buildCareTeamMessage } from "@/domain/care-team-message";
+import { buildCareTeamMessage, latestPatientConcern } from "@/domain/care-team-message";
 import { parseBarrierSupportQuery } from "@/domain/adherence-support";
 import { prefilledMessageForTask } from "@/domain/task-prefill";
 import { recordAuditEvent } from "@/domain/audit";
@@ -137,7 +137,7 @@ function ChatPanel() {
       initialMode={supportQuery.mode}
       initialInput={supportQuery.concern}
       clinic={{ name: state.patient.primaryClinicName, phone: state.patient.primaryClinicPhone }}
-      careTeamDraft={buildCareTeamMessage(state)}
+      careTeamDraft={buildCareTeamMessage(state, latestPatientConcern(state))}
       describeSource={describeSource}
       language={state.patient.language}
       onAcknowledgeCrisis={(messageId) => dispatch({ type: "acknowledgeCrisis", messageId })}

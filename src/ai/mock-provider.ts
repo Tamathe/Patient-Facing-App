@@ -46,6 +46,30 @@ function getLatestReadingId(readings: HomeReading[]): string | null {
   )[0].id;
 }
 
+function buildWhyAnswer(medication: Medication): string {
+  return `${medication.name} is in your plan because ${medication.purpose} ${medication.preventionBenefit} Blood pressure and blood sugar can cause harm even when you feel fine. ${medication.safetyNote}`;
+}
+
+function buildTroubleAnswer(patientInput: string): string {
+  if (/cost|afford|expensive|price/i.test(patientInput)) {
+    return "Ask your pharmacy or care team whether a lower-cost generic, a longer refill, or an assistance program could help you stay on the prescribed plan. They can tell you which option fits your medicine and coverage.";
+  }
+
+  if (/ran out|refill|pharmacy|pick.?up|fill/i.test(patientInput)) {
+    return "Contact your pharmacy or care team and tell them the medicine name and what kept the refill from happening. Ask what to do next rather than changing the plan on your own.";
+  }
+
+  if (/forgot|remember|routine/i.test(patientInput)) {
+    return "Choose one daily cue you already do, such as breakfast or brushing your teeth, and place a reminder there. If a dose was already missed and you are unsure what to do, ask your pharmacist or care team.";
+  }
+
+  if (/confus|scared|afraid|worried/i.test(patientInput)) {
+    return "Write down what feels confusing or scary and share those words with your care team. They can explain the plan and answer the concern without you changing the medicine on your own.";
+  }
+
+  return "Tell me what got in the way â€” for example cost, a refill problem, forgetting, confusion, or a concern about how you felt â€” and I can help turn it into a question for your care team.";
+}
+
 function buildFoodAnswer(food: IdentifiedFood | undefined, aceMedication: Medication | null): string {
   if (!food) {
     return "Point your camera at any food and ask me about it — for example how many carbs or how much sodium it has — and I'll tell you how it fits your plan.";
@@ -147,11 +171,27 @@ export class MockHealthAiProvider implements HealthAiProvider {
 
       if (medication) {
         return {
-          content: `${medication.name} is listed in your medicines as: ${medication.purpose} ${medication.preventionBenefit} ${medication.safetyNote}`,
+          content: buildWhyAnswer(medication),
           safety: "allowed",
           sources: [medication.id]
         };
       }
+    }
+
+    if (request.mode === "trouble") {
+      return {
+        content: buildTroubleAnswer(request.patientInput),
+        safety: "allowed",
+        sources: [request.state.carePlan.id]
+      };
+    }
+
+    if (request.mode === "today" && /forgot|remember|routine/i.test(request.patientInput)) {
+      return {
+        content: buildTroubleAnswer(request.patientInput),
+        safety: "allowed",
+        sources: [request.state.carePlan.id]
+      };
     }
 
     if (request.mode === "visit") {

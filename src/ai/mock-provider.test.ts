@@ -14,7 +14,47 @@ describe("MockHealthAiProvider", () => {
 
     expect(response.content).toContain("Lisinopril");
     expect(response.content).toContain("stroke");
+    expect(response.content).toContain("feel fine");
     expect(response.sources).toContain("med-1");
+  });
+
+  it.each([
+    ["The cost of Lisinopril is getting in the way.", "lower-cost", "pharmacy"],
+    ["I ran out of Lisinopril.", "pharmacy", "care team"],
+    ["A pharmacy problem is keeping me from getting Lisinopril.", "pharmacy", "care team"]
+  ])("gives concrete trouble support for %s", async (patientInput, firstExpected, secondExpected) => {
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({ mode: "trouble", patientInput, state: demoState });
+
+    expect(response.content).toContain(firstExpected);
+    expect(response.content).toContain(secondExpected);
+    expect(response.sources).toContain("plan-1");
+    expect(response.content).not.toMatch(/\$\d/);
+  });
+
+  it("offers a routine for remembering without guessing what to do about a missed dose", async () => {
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({
+      mode: "today",
+      patientInput: "I forgot my Lisinopril. Help me make a simple routine.",
+      state: demoState
+    });
+
+    expect(response.content).toContain("daily cue");
+    expect(response.content).toContain("pharmacist");
+    expect(response.sources).toContain("plan-1");
+  });
+
+  it("asks for the barrier when a trouble request has no specific signal", async () => {
+    const provider = new MockHealthAiProvider();
+    const response = await provider.respond({
+      mode: "trouble",
+      patientInput: "I need help with my medicine.",
+      state: demoState
+    });
+
+    expect(response.content).toContain("what got in the way");
+    expect(response.sources).toContain("plan-1");
   });
 
   it("uses the named medication in a multi-medication state", async () => {
