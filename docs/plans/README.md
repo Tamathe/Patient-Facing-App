@@ -25,7 +25,7 @@ Lifecycle meanings: **Active** is being implemented now; **Complete** landed its
 
 ## Retired branches
 
-- `claude/agitated-tharp-cccd48` — retired 2026-07-20 at `078ca302596759b804f1dee4958fe18179ac9f7d`. This unmerged July 7 voice-safety experiment was superseded by Sprint 08 and later `master` work; the local branch was deleted after its tip was recorded here. The remote ref was intentionally left untouched because no remote deletion was requested.
+- `claude/agitated-tharp-cccd48` — retired 2026-07-20 at `078ca302596759b804f1dee4958fe18179ac9f7d`. This unmerged July 7 voice-safety experiment was superseded by Sprint 08 and later `master` work; both the local and remote branches were deleted after the tip was recorded here.
 
 ## Historical planning detail
 
