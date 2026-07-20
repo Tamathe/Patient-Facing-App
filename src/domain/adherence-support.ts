@@ -8,6 +8,20 @@ export type BarrierSupport = {
   href: string;
 };
 
+const aiModes: AiMode[] = ["explain", "today", "why", "ask", "trouble", "visit", "summarize", "food"];
+
+export function parseBarrierSupportQuery(params: { get(name: string): string | null }): {
+  mode: AiMode;
+  concern: string;
+} {
+  const requestedMode = params.get("mode");
+
+  return {
+    mode: aiModes.find((mode) => mode === requestedMode) ?? "explain",
+    concern: params.get("concern")?.trim() ?? ""
+  };
+}
+
 export function buildBarrierSupport(medication: Medication, barrier: MedicationBarrier): BarrierSupport {
   const support = supportContent(medication, barrier);
   const params = new URLSearchParams({ mode: support.mode, concern: support.prompt });

@@ -6,6 +6,30 @@ import type { AiMessage } from "@/domain/types";
 import React from "react";
 
 describe("ConversationPanel", () => {
+  it("prefills an editable support journey without submitting it", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const prompt = "The cost of Lisinopril is getting in the way.";
+
+    render(
+      <ConversationPanel
+        initialMode="trouble"
+        initialInput={prompt}
+        onSubmit={onSubmit}
+        messages={[]}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "I am having trouble" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Message")).toHaveValue(prompt);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(onSubmit).toHaveBeenCalledOnce();
+    expect(onSubmit).toHaveBeenCalledWith("trouble", prompt);
+  });
+
   it("submits patient input with the selected mode", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

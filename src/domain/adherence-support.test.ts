@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AiMode, Medication, MedicationBarrier } from "./types";
-import { buildBarrierSupport } from "./adherence-support";
+import { buildBarrierSupport, parseBarrierSupportQuery } from "./adherence-support";
 
 const medication: Medication = {
   id: "med-1",
@@ -47,5 +47,19 @@ describe("buildBarrierSupport", () => {
     expect(whySupport.reassurance).toContain(medication.purpose);
     expect(whySupport.reassurance).toContain(medication.preventionBenefit);
     expect(costSupport.reassurance).toBeUndefined();
+  });
+
+  it("parses a valid editable Coach support query", () => {
+    const parsed = parseBarrierSupportQuery(
+      new URLSearchParams("mode=trouble&concern=%20Cost%20is%20getting%20in%20the%20way.%20")
+    );
+
+    expect(parsed).toEqual({ mode: "trouble", concern: "Cost is getting in the way." });
+  });
+
+  it("falls back safely for an unknown mode and missing concern", () => {
+    const parsed = parseBarrierSupportQuery(new URLSearchParams("mode=unsafe"));
+
+    expect(parsed).toEqual({ mode: "explain", concern: "" });
   });
 });

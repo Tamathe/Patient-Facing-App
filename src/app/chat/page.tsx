@@ -5,14 +5,18 @@ import { ConversationPanel } from "@/components/conversation-panel";
 import { OpenAiCoachProvider } from "@/ai/coach-provider";
 import { createSafeAiResponse } from "@/ai/safety-gate";
 import { buildCareTeamMessage } from "@/domain/care-team-message";
+import { parseBarrierSupportQuery } from "@/domain/adherence-support";
 import { prefilledMessageForTask } from "@/domain/task-prefill";
 import { recordAuditEvent } from "@/domain/audit";
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import type { AiMessage, AiMode } from "@/domain/types";
 import { useHealthState } from "@/state/store";
 
-export default function ChatPage() {
+function ChatPanel() {
   const { state, dispatch } = useHealthState();
+  const searchParams = useSearchParams();
+  const supportQuery = parseBarrierSupportQuery(searchParams);
   const latestStateRef = useRef(state);
   const prefillHandled = useRef(false);
   // Live text coach when a key is configured (and the demo passcode from ?k= is
@@ -127,16 +131,26 @@ export default function ChatPage() {
   }, []);
 
   return (
+    <ConversationPanel
+      messages={state.aiMessages}
+      onSubmit={handleSubmit}
+      initialMode={supportQuery.mode}
+      initialInput={supportQuery.concern}
+      clinic={{ name: state.patient.primaryClinicName, phone: state.patient.primaryClinicPhone }}
+      careTeamDraft={buildCareTeamMessage(state)}
+      describeSource={describeSource}
+      language={state.patient.language}
+      onAcknowledgeCrisis={(messageId) => dispatch({ type: "acknowledgeCrisis", messageId })}
+    />
+  );
+}
+
+export default function ChatPage() {
+  return (
     <AppShell title="Coach">
-      <ConversationPanel
-        messages={state.aiMessages}
-        onSubmit={handleSubmit}
-        clinic={{ name: state.patient.primaryClinicName, phone: state.patient.primaryClinicPhone }}
-        careTeamDraft={buildCareTeamMessage(state)}
-        describeSource={describeSource}
-        language={state.patient.language}
-        onAcknowledgeCrisis={(messageId) => dispatch({ type: "acknowledgeCrisis", messageId })}
-      />
+      <Suspense fallback={<p className="text-sm text-ink/70">Preparing your Coach…</p>}>
+        <ChatPanel />
+      </Suspense>
     </AppShell>
   );
 }

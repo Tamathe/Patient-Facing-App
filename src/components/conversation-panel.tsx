@@ -41,6 +41,8 @@ const bannerClass: Record<AiMessage["safety"], string> = {
 type ConversationPanelProps = {
   messages: AiMessage[];
   onSubmit: (mode: AiMode, input: string) => void;
+  initialMode?: AiMode;
+  initialInput?: string;
   clinic?: { name: string; phone: string };
   careTeamDraft?: string;
   describeSource?: (id: string) => string | null;
@@ -51,14 +53,16 @@ type ConversationPanelProps = {
 export function ConversationPanel({
   messages,
   onSubmit,
+  initialMode = "explain",
+  initialInput = "",
   clinic,
   careTeamDraft,
   describeSource,
   language = "en",
   onAcknowledgeCrisis
 }: ConversationPanelProps) {
-  const [mode, setMode] = useState<AiMode>("explain");
-  const [input, setInput] = useState("");
+  const [mode, setMode] = useState<AiMode>(initialMode);
+  const [input, setInput] = useState(initialInput);
   const [draftShared, setDraftShared] = useState(false);
 
   const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
@@ -122,6 +126,7 @@ export function ConversationPanel({
           <button
             className={`rounded-control border px-3 py-2 text-sm font-medium ${mode === item.mode ? "border-care bg-calm text-care" : "border-ink/15 bg-white"}`}
             key={item.mode}
+            aria-pressed={mode === item.mode}
             onClick={() => setMode(item.mode)}
             type="button"
           >
