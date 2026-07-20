@@ -1,5 +1,7 @@
 # Implementation Plan — Integrated Behavioral Health & Crisis Escalation
 
+> **Lifecycle: Rescoped (2026-07-20). Not an active sprint.** [Sprint 08](08-rhtp-integration.md) delivered crisis routing and the minimal PHQ-9 path. [Sprint 12](12-screening-hub.md) owns questionnaire generalization, including GAD-2/GAD-7 delivery. Longitudinal behavioral escalation, behavioral-care messaging, and review surfaces require a later clinically owned workflow plan; do not resume the unchecked umbrella below.
+
 **Spec:** `docs/specs/04-behavioral-health.md`
 **Foundations:** `docs/plans/00-foundations.md` (row "04 Behavioral Health / Crisis")
 

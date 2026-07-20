@@ -1,10 +1,35 @@
 # Patient Centered — Implementation Plans
 
-Executable, sequenced build plans for the seven upstream-care specs in [../specs/](../specs/README.md), all resting on a shared [foundations plan](00-foundations.md) (F1–F10 platform prerequisites).
+This index is the authoritative lifecycle record for implementation plans. The plan bodies preserve their original reasoning and acceptance criteria; their lifecycle banners and the table below determine whether they are executable now.
 
-**Start here:** [00-foundations.md](00-foundations.md) — the two hard gates (F1 backend + F3 audit before any multi-patient PHI surface; F4 crisis gate / task_e569880c before any crisis/voice slice) govern the global build order.
+Lifecycle meanings: **Active** is being implemented now; **Complete** landed its explicit sprint scope; **Rescoped** delivered a useful slice but requires a new bounded plan for any remainder; **Parked** cannot restart until its named gates are met; **Retired** must not be executed.
 
-## Plans
+## Current lifecycle
+
+| # | Plan | Status | Delivered / restart boundary |
+|---|---|---|---|
+| 00 | [Foundations](00-foundations.md) | **Rescoped** | F4 crisis routing landed in Sprint 08. Treat remaining portions of F1–F3 and F5–F10 as independent platform backlog items; restart one only when an approved consumer names its owner and acceptance gate. |
+| 01 | [Early Detection](01-early-detection-plan.md) | **Parked** | No coherent implementation began. Restart only after demographics (F2), regulatory provenance (F5), and licensed dataset ownership (F10) are named. |
+| 02 | [Between-Visit Monitoring](02-between-visit-monitoring-plan.md) | **Parked** | No coherent implementation began. Restart only after a heart-failure clinical owner, approved threshold source, and backend/worklist posture are settled. |
+| 03 | [SDOH Resource Connection](03-sdoh-resource-connection-plan.md) | **Rescoped** | Sprint 08 delivered the deterministic material-needs screen and seeded resource finder. Closed-loop referrals, benefits workflows, and interoperability require separate backend-dependent plans. |
+| 04 | [Behavioral Health](04-behavioral-health-plan.md) | **Rescoped** | Sprint 08 delivered crisis routing and minimal PHQ-9. Sprint 12 owns questionnaire generalization; longitudinal escalation and behavioral-care surfaces require a later clinical-workflow plan. |
+| 05 | [Chronic Loops](05-chronic-loops-plan.md) | **Rescoped** | Diabetes work landed through the diabetes-first-class, provider-legible, and Tier-2 sprints. Deprescribing, cost transparency, and COPD must return as separate clinically owned and licensed plans. |
+| 06 | [Care Coordination](06-care-coordination-plan.md) | **Parked** | No clinician/multi-patient implementation should begin before backend authorization, actor-bearing audit, and regulatory-copy gates land. |
+| 07 | [Access Equity](07-access-equity-plan.md) | **Rescoped** | Sprint 08 delivered the core voice-safety and accessibility slice. Broader multilingual and offline work must return as discrete, release-gated plans. |
+| 08 | [rhtp Integration](08-rhtp-integration.md) | **Complete** | P0–P8 landed on `master` on 2026-07-06. |
+| 09 | [DR Pathway Fold-In](09-dr-pathway-fold-in-and-retire.md) | **Complete** | P0–P8 landed and the prototype was archived and retired on 2026-07-07. |
+| 10 | [Diabetes Provider-Legible Loop](10-diabetes-provider-legible-loop.md) | **Complete** | P0–P3 landed on `master` on 2026-07-07. |
+| 11 | [Diabetes Loop Tier 2](11-diabetes-loop-tier2.md) | **Complete** | P0–P4 landed on `master` on 2026-07-07. |
+| 12 | [Screening Hub](12-screening-hub.md) | **Active** | Implementation began from `eccdcd8` on 2026-07-20. Do not fold parked behavioral or SDOH scope into it beyond its locked questionnaire-engine plan. |
+| — | [Adherence & Trust Uplift](../adherence-trust-uplift-execution-plan.md) | **Retired** | The 55-task umbrella is non-executable. Any remainder restarts as one of three bounded candidates: adherence/barrier UX, reminders/PWA, or mode-aware privacy disclosure. |
+
+## Retired branches
+
+- `claude/agitated-tharp-cccd48` — retired 2026-07-20 at `078ca302596759b804f1dee4958fe18179ac9f7d`. This unmerged July 7 voice-safety experiment was superseded by Sprint 08 and later `master` work; the local branch was deleted after its tip was recorded here. The remote ref was intentionally left untouched because no remote deletion was requested.
+
+## Historical planning detail
+
+The table below is preserved as the pre-execution decision record for plans 01–07. It is not a current queue; the lifecycle table above controls.
 
 | # | Plan | Spec | Decisions needed before build |
 |---|------|------|-------------------------------|

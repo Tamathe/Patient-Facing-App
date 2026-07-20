@@ -1,5 +1,7 @@
 # Foundations Plan — Shared Platform Work
 
+> **Lifecycle: Rescoped platform backlog (2026-07-20). Not an active sprint.** F4 landed in [Sprint 08](08-rhtp-integration.md). Remaining portions of F1–F3 and F5–F10 are independent proposals and may restart only when an approved consuming feature names an owner, release posture, and acceptance gate. Do not execute this document end-to-end.
+
 _Companion to the seven feature specs in `docs/specs/01..07`. Source primitives verified against the live codebase (Next.js 15 / React 19, localStorage-backed prototype, mock-or-OpenAI provider behind a deterministic safety gate)._
 
 ## Purpose

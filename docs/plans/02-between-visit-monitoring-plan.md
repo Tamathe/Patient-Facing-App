@@ -1,5 +1,7 @@
 # Implementation Plan — Triaged Between-Visit Remote Monitoring (HF & Post-Discharge)
 
+> **Lifecycle: Parked (2026-07-20). No coherent implementation began.** Restart as a new bounded plan only after a heart-failure clinical owner, an approved threshold source, and the backend/worklist release posture are settled. This historical plan is not executable as written.
+
 **Spec:** `docs/specs/02-between-visit-monitoring.md`
 **Status of this revision:** Every symbol, line number, guard, and test assertion below was re-verified against live source. Corrections from the draft are marked **[FIX]**. The most consequential change is a hard gating requirement on the safety-gate branch (§4 P0-7) that the draft's "above stored-vitals" ordering silently violated.
 

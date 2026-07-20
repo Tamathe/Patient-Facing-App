@@ -1,12 +1,24 @@
 # Adherence & Trust Uplift — Execution Plan (Runbook)
 
 **Companion to:** [`docs/adherence-trust-uplift-spec.md`](./adherence-trust-uplift-spec.md) — read the spec for the *what/why*; this runbook is the *how*, in order.
-**Status:** Ready to execute
-**Scope:** 6 phases · 55 tasks · ~29 hours of focused work (~4–5 dev-days solo; ~2 weeks calendar with review)
+**Status:** Retired — superseded and rescoped 2026-07-20
+**Scope:** Historical 6-phase / 55-task umbrella; not executable against the current tree
+
+> **Do not execute this runbook.** Later sprints delivered overlapping adherence, accessibility, diabetes, safety, and privacy work with different contracts. The phase order, file assumptions, estimates, and unchecked definition-of-done below are retained only as historical acceptance research. Start remaining work from one of the bounded candidates below and re-verify it against the live tree.
+
+## Rescoped backlog candidates
+
+| Candidate | Current boundary | Restart gate |
+|---|---|---|
+| **Adherence and barrier UX** | Audit the current dose card, Today tasks, care-team draft, and Health Brief; keep only user-visible gaps that remain after the diabetes and Family Navigator sprints. Do not rebuild PDC, glucose context, or existing safety routing. | A fresh spec must name the exact remaining patient journey, prove safety-gate ordering is unchanged, and fit in one independently verifiable sprint. |
+| **Dose reminders / PWA** | Treat reminders, notification permission, service-worker registration, and in-app due logic as one standalone product decision. No reminder schema or service worker from this runbook exists on `master`. | Product approves notification behavior and fallback expectations; privacy review approves notification content; the plan includes non-destructive storage migration and service-worker rollback tests. |
+| **Mode-aware privacy disclosure** | Re-audit mock, text-model, and live-voice data flows and render disclosure from actual runtime mode. Keep delete confirmation and general privacy controls separate if they are already satisfied. | The active voice-infrastructure contract is merged, disclosure wording has privacy/legal approval, and EN/ES parity is release-gated. |
+
+Delivered overlap such as PDC coverage, crisis-safe voice interception, accessibility profiles, diabetes brief context, and existing privacy controls remains owned by the sprints that landed it. Completion of one candidate does not reopen the other two.
 
 ---
 
-## 0. How to use this runbook
+## Historical execution instructions (do not use)
 
 - Each phase is a self-contained, shippable unit gated by `npm run check` (lint + full vitest + `next build`) **plus** the phase-specific checklist.
 - Work tasks **top to bottom within a phase** — they're dependency-ordered.
@@ -180,7 +192,7 @@ Strips jargon/enums from every patient- and clinician-facing surface, gives Jord
 
 ---
 
-## Definition of done (whole program)
+## Historical definition of done (never certified against the current tree)
 
 - [ ] All 6 phases merged; `npm run check` green on `master`.
 - [ ] **Adherence:** opt-in weekend-aware reminder ships; the in-app Today nudge fires when a dose is due and unlogged; "Is it working?" shows a progress cue below 5 readings; a plain, weekday-aware adherence rate is visible; the visit brief carries the dose-taking record.

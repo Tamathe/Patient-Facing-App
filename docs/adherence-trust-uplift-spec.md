@@ -1,9 +1,11 @@
 # Adherence & Trust Uplift — Implementation Spec
 
-**Status:** Ready for engineering
+**Status:** Retired — superseded and rescoped 2026-07-20
 **Author:** Product (from the "Jordan Taylor" usability walkthrough + code-grounded audit)
 **Date:** 2026-07-05
-**Scope:** 29 verified findings from a 55-year-old-patient walkthrough of the home blood-pressure app, turned into a phased, buildable plan.
+**Scope:** Historical product research; not an executable current specification
+
+> Later sprints delivered overlapping adherence, accessibility, diabetes, safety, and privacy work against newer contracts. Preserve the findings below as research, but start new work only from the three bounded candidates in the [retired execution plan](adherence-trust-uplift-execution-plan.md): adherence/barrier UX, dose reminders/PWA, or mode-aware privacy disclosure.
 
 ---
 

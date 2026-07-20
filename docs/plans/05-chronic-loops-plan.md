@@ -1,5 +1,7 @@
 # Implementation Plan — Chronic-Disease Self-Management Loops + Deprescribing & Cost
 
+> **Lifecycle: Rescoped (2026-07-20). Not an active sprint.** The diabetes delivery slice landed through the diabetes-first-class, [provider-legible](10-diabetes-provider-legible-loop.md), and [Tier-2](11-diabetes-loop-tier2.md) sprints. Deprescribing, cost transparency, and COPD are separate future products with distinct licensing, clinical-ownership, and regulatory gates; do not resume this umbrella plan.
+
 **Spec:** `docs/specs/05-chronic-loops.md`
 **Foundations:** `docs/plans/00-foundations.md`
 

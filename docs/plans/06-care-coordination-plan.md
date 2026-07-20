@@ -1,5 +1,7 @@
 # Implementation Plan — Care-Coordination Quarterback (Transitions & Referral Loops)
 
+> **Lifecycle: Parked (2026-07-20). No coherent implementation began.** Do not restart clinician or multi-patient work until a HIPAA-grade backend, patient-scoped authorization, actor-bearing audit, and regulatory-copy review are complete. Any restart must be a new plan against the then-current server architecture.
+
 **Spec:** `docs/specs/06-care-coordination.md`
 **Plan location:** `docs/specs/06-care-coordination-implementation-plan.md` (the `docs/specs/` directory exists with `docs/plans/00-foundations.md` + `01..07`; the spec footer that says "no `docs/specs/` exists" is stale — ignore it).
 

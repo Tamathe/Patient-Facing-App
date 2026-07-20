@@ -1,5 +1,7 @@
 # Implementation Plan — Social Determinants Screening & Resource Connection (Food-is-Medicine)
 
+> **Lifecycle: Rescoped (2026-07-20). Not an active sprint.** [Sprint 08](08-rhtp-integration.md) delivered the deterministic material-needs screen, material-emergency routing, and seeded resource finder as a deliberately smaller slice. Closed-loop referrals, benefits workflows, Food-is-Medicine operations, and interoperability must return as separate backend-dependent plans; do not resume the unchecked umbrella below.
+
 **Spec:** `docs/specs/03-sdoh-resource-connection.md`
 **Foundations dependencies:** `docs/plans/00-foundations.md`
 

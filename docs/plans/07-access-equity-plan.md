@@ -1,4 +1,8 @@
-The critique below is followed by the corrected FINAL plan.
+# Reaching the Unreached — Historical Access-Equity Plan
+
+> **Lifecycle: Rescoped (2026-07-20). Not an active sprint.** [Sprint 08](08-rhtp-integration.md) delivered the core voice-safety and accessibility slice. Broader multilingual coverage, offline behavior, and channel-parity release work must return as discrete plans against the current app; do not execute the historical umbrella below.
+
+The critique below is followed by the corrected historical plan.
 
 ## Critique of the draft (what I verified and what's wrong)
 

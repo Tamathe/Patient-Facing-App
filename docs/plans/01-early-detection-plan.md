@@ -1,5 +1,7 @@
 # Implementation Plan — Silent-Killer Early Detection & Risk Stratification
 
+> **Lifecycle: Parked (2026-07-20). No coherent implementation began.** Restart as a new bounded plan only after F2 demographics, F5 regulatory provenance, and F10 licensed-dataset ownership have named owners and approved gates. This historical plan is not executable as written.
+
 **Spec:** `docs/specs/01-early-detection.md`
 **Foundations:** `docs/plans/00-foundations.md` (reference, do not duplicate)
 
