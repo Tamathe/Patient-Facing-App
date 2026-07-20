@@ -19,7 +19,8 @@ export type VoiceStringKey =
   | "didYouMean"
   | "readAloud"
   | "stopReading"
-  | "draftSourceLabel";
+  | "draftSourceLabel"
+  | "outputBlockedCopy";
 
 export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
   en: {
@@ -41,7 +42,8 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     didYouMean: "Did you mean {options}?",
     readAloud: "Read aloud",
     stopReading: "Stop reading",
-    draftSourceLabel: "Spoken plan note"
+    draftSourceLabel: "Spoken plan note",
+    outputBlockedCopy: "Let me stop there — that's something to check with your care team."
   },
   es: {
     listening: "Escuchando…",
@@ -62,7 +64,8 @@ export const voiceStrings: Record<Language, Record<VoiceStringKey, string>> = {
     didYouMean: "¿Quiso decir {options}?",
     readAloud: "Leer en voz alta",
     stopReading: "Detener lectura",
-    draftSourceLabel: "Nota hablada del plan"
+    draftSourceLabel: "Nota hablada del plan",
+    outputBlockedCopy: "Déjame detenerme ahí — eso es algo que debes consultar con tu equipo de atención."
   }
 };
 

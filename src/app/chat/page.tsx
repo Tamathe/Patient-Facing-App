@@ -8,14 +8,24 @@ import { createSafeAiResponse } from "@/ai/safety-gate";
 import { buildCareTeamMessage } from "@/domain/care-team-message";
 import { prefilledMessageForTask } from "@/domain/task-prefill";
 import { recordAuditEvent } from "@/domain/audit";
-import { useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AiMessage, AiMode } from "@/domain/types";
 import { useHealthState } from "@/state/store";
+import { hasUnacknowledgedCrisis } from "@/state/selectors";
+import { useChatVoiceSession } from "@/hooks/use-chat-voice-session";
+import type { VoiceSafetyIntercept } from "@/hooks/use-food-voice-session";
+import { useVoiceEntry } from "@/voice/voice-consent";
+import { VoiceConsentSheet } from "@/voice/voice-consent-sheet";
+import { VoiceIndicator } from "@/voice/voice-indicator";
 
 export default function ChatPage() {
   const { state, dispatch } = useHealthState();
   const latestStateRef = useRef(state);
+  latestStateRef.current = state;
   const prefillHandled = useRef(false);
+  const [showVoiceConsent, setShowVoiceConsent] = useState(false);
+  const crisisLock = hasUnacknowledgedCrisis(state);
+  const voiceEntry = useVoiceEntry();
   // Live text coach when a key is configured (and the demo passcode from ?k= is
   // present); otherwise the provider degrades to the on-device mock. The answer
   // always flows back through createSafeAiResponse, so crisis + grounding hold.
@@ -100,6 +110,72 @@ export default function ChatPage() {
     dispatch({ type: "addAiMessage", message: assistantMessage });
   }
 
+  const appendVoiceMessage = useCallback((role: "patient" | "assistant", content: string): void => {
+    const message: AiMessage = {
+      id: crypto.randomUUID(),
+      mode: "ask",
+      role,
+      content,
+      createdAt: new Date().toISOString(),
+      safety: "allowed",
+      sources: role === "assistant" ? [latestStateRef.current.carePlan.id] : []
+    };
+    latestStateRef.current = {
+      ...latestStateRef.current,
+      aiMessages: [...latestStateRef.current.aiMessages, message]
+    };
+    dispatch({ type: "addAiMessage", message });
+  }, [dispatch]);
+
+  const appendVoiceIntercept = useCallback((intercept: VoiceSafetyIntercept): void => {
+    const message: AiMessage = {
+      id: crypto.randomUUID(),
+      mode: "ask",
+      role: "assistant",
+      content: intercept.content,
+      createdAt: new Date().toISOString(),
+      safety: intercept.safety,
+      sources: [],
+      banner: intercept.banner,
+      actions: intercept.actions
+    };
+    latestStateRef.current = {
+      ...latestStateRef.current,
+      aiMessages: [...latestStateRef.current.aiMessages, message]
+    };
+    dispatch({ type: "addAiMessage", message });
+  }, [dispatch]);
+
+  const voice = useChatVoiceSession({
+    language: state.patient.language,
+    getState: () => latestStateRef.current,
+    onFinalTranscript: appendVoiceMessage,
+    onSafetyIntercept: appendVoiceIntercept
+  });
+  const liveVoiceActive = !["idle", "closed", "error"].includes(voice.status);
+
+  const beginVoice = useCallback(async (): Promise<void> => {
+    voiceEntry.onSessionStart("chat");
+    await voice.start();
+  }, [voice.start, voiceEntry]);
+
+  useEffect(() => {
+    const teardown = (): void => voice.stop();
+    const onHidden = (): void => {
+      if (document.hidden) teardown();
+    };
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("pagehide", teardown);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      window.removeEventListener("pagehide", teardown);
+    };
+  }, [voice.stop]);
+
+  useEffect(() => {
+    if (crisisLock) voice.stop();
+  }, [crisisLock, voice.stop]);
+
   // A deep link from a task chip or notification (/chat?taskId=…) reconstructs
   // that task's prefilled turn and submits it exactly like typed input, so the
   // safety gate + grounding still run. The param is stripped so a refresh does
@@ -133,8 +209,69 @@ export default function ChatPage() {
         messages={state.aiMessages}
         language={state.patient.language}
         enabled={state.patient.accessibilityPreferences?.includes("read_aloud") ?? false}
-        liveVoiceActive={false}
+        liveVoiceActive={liveVoiceActive}
       />
+      <section className="mb-4 rounded-control border border-care/20 bg-calm p-4">
+        <h2 className="text-lg font-semibold">
+          {state.patient.language === "es" ? "Hablar con el orientador" : "Talk with the coach"}
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-ink/75">
+          {state.patient.language === "es"
+            ? "La voz en vivo es opcional. También puedes usar el cuadro de mensajes de abajo."
+            : "Live voice is optional. You can always use the message box below."}
+        </p>
+        {!crisisLock ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {liveVoiceActive ? (
+              <button
+                type="button"
+                onClick={voice.stop}
+                className="min-h-12 rounded-control border border-care bg-white px-4 py-2 font-semibold text-care"
+              >
+                {state.patient.language === "es" ? "Detener orientador por voz" : "Stop voice coach"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (voiceEntry.consentRequired) setShowVoiceConsent(true);
+                  else void beginVoice();
+                }}
+                className="min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white"
+              >
+                {state.patient.language === "es" ? "Iniciar orientador por voz" : "Start voice coach"}
+              </button>
+            )}
+            <VoiceIndicator
+              listening={voice.status === "listening"}
+              speaking={voice.status === "speaking"}
+              onStop={voice.stop}
+            />
+          </div>
+        ) : null}
+        {showVoiceConsent && !crisisLock ? (
+          <div className="mt-3">
+            <VoiceConsentSheet
+              language={state.patient.language}
+              onAccept={() => {
+                voiceEntry.grantConsent();
+                setShowVoiceConsent(false);
+                void beginVoice();
+              }}
+              onCancel={() => setShowVoiceConsent(false)}
+            />
+          </div>
+        ) : null}
+        {voice.mode === "mock" ? (
+          <p className="mt-3 text-sm text-ink/70">
+            {state.patient.language === "es"
+              ? "La voz en vivo no está disponible. Usa el cuadro de mensajes de abajo."
+              : "Live voice is unavailable. Use the message box below."}
+          </p>
+        ) : null}
+        {voice.partialAssistantText ? <p aria-live="polite" className="mt-3 text-sm">{voice.partialAssistantText}</p> : null}
+        {voice.error ? <p role="alert" className="mt-3 text-sm font-medium text-pulse">{voice.error}</p> : null}
+      </section>
       <ConversationPanel
         messages={state.aiMessages}
         onSubmit={handleSubmit}

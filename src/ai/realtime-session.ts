@@ -1,7 +1,7 @@
 import { createRealtimeVoiceMetricsRecorder } from "./realtime-voice-metrics";
+import { createOutputTranscriptGuard } from "./output-guard";
 import type { VoiceGateDecision } from "./voice-gate";
 import type {
-  LiveSessionContext,
   LiveSessionEvent,
   LiveSessionHandle,
   LiveSessionStatus
@@ -116,7 +116,7 @@ export type ConnectArgs = {
   model: string;
   instructions: string;
   language: "en" | "es";
-  getContext: () => LiveSessionContext;
+  buildContextMessage: () => { text: string; imageDataUrl?: string | null } | null;
   onEvent: (event: LiveSessionEvent) => void;
   gateTranscript: (transcript: string) => VoiceGateDecision;
 };
@@ -127,9 +127,9 @@ const REALTIME_CALLS_URL = "https://api.openai.com/v1/realtime/calls";
 export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSessionHandle> {
   let status: LiveSessionStatus = "connecting";
   let closed = false;
-  let lastInjectedFoodId: string | null = null;
   const metrics = createRealtimeVoiceMetricsRecorder();
   let failClosedTimer: ReturnType<typeof setTimeout> | null = null;
+  let outputIntercepted = false;
 
   const clearFailClosedTimer = () => {
     if (failClosedTimer) {
@@ -185,22 +185,23 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
     }
   };
 
+  const outputGuard = createOutputTranscriptGuard({
+    language: args.language,
+    send: (event) => send(event),
+    onEvent: (event) => {
+      outputIntercepted = true;
+      args.onEvent(event);
+    }
+  });
+
   const injectContext = () => {
-    const context = args.getContext();
+    const context = args.buildContextMessage();
+    if (!context) return;
     const content: Array<Record<string, unknown>> = [];
-    if (context.frameDataUrl) {
-      content.push({ type: "input_image", image_url: context.frameDataUrl });
+    if (context.imageDataUrl) {
+      content.push({ type: "input_image", image_url: context.imageDataUrl });
     }
-    const includeFood = context.identifiedFood && context.identifiedFood.id !== lastInjectedFoodId;
-    if (context.identifiedFood) {
-      lastInjectedFoodId = context.identifiedFood.id;
-    }
-    const foodJson = includeFood ? JSON.stringify(context.identifiedFood) : '{"foodData":"unchanged"}';
-    const flags = context.flagTexts.length > 0 ? context.flagTexts.join("; ") : "none";
-    content.push({
-      type: "input_text",
-      text: `[camera context — not spoken by the patient] Food data: ${foodJson}. Precomputed flags: ${flags}.`
-    });
+    content.push({ type: "input_text", text: context.text });
     send({ type: "conversation.item.create", item: { type: "message", role: "user", content } });
   };
 
@@ -213,9 +214,20 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
     } catch {
       return;
     }
+    if (event.type === "response.created") {
+      outputGuard.reset();
+      outputIntercepted = false;
+    }
     const reduction = reduceRealtimeEvent(status, event);
     status = reduction.status;
-    reduction.emits.forEach(args.onEvent);
+    reduction.emits.forEach((emitted) => {
+      if (!(outputIntercepted && emitted.type === "assistantTranscript")) {
+        args.onEvent(emitted);
+      }
+    });
+    if (event.type === "response.output_audio_transcript.delta") {
+      outputGuard.observeDelta(str(event.delta));
+    }
     if (reduction.actions.includes("injectContext")) {
       injectContext();
     }
@@ -238,6 +250,10 @@ export async function connectRealtimeSession(args: ConnectArgs): Promise<LiveSes
       if (transcript.trim().length > 0) {
         applyTranscriptGate(args.gateTranscript(transcript), send, args.onEvent);
       }
+    }
+    if (event.type === "response.done") {
+      outputGuard.reset();
+      outputIntercepted = false;
     }
   };
 
