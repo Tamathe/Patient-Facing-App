@@ -48,4 +48,16 @@ describe("realtime token route", () => {
     const headers = options.headers as Record<string, string>;
     expect(headers["OpenAI-Safety-Identifier"]).toMatch(/^pc_voice_/);
   });
+
+  it("reports cloud availability without minting a client secret", async () => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(makeRequest({ patientId: "patient-1", probe: true }));
+
+    await expect(response.json()).resolves.toEqual({ mode: "live", model: "gpt-realtime-2" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

@@ -9,6 +9,7 @@ type TokenRequestBody = {
   patientId?: string;
   crisisOpen?: boolean;
   passcode?: string;
+  probe?: boolean;
 };
 
 async function readBody(request: Request): Promise<TokenRequestBody> {
@@ -50,6 +51,10 @@ export async function POST(request: Request): Promise<Response> {
   const requiredPasscode = process.env.DEMO_PASSCODE;
   if (requiredPasscode && body.passcode !== requiredPasscode) {
     return Response.json({ mode: "mock", reason: "locked" });
+  }
+
+  if (body.probe === true) {
+    return Response.json({ mode: "live", model });
   }
 
   try {

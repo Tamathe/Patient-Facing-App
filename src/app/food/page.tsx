@@ -275,6 +275,7 @@ export default function FoodPage() {
 
         <FoodAskBar
           mode={voice.mode}
+          dataMode={voice.dataMode}
           status={voice.status}
           onStart={() => void voice.start()}
           onStop={voice.stop}

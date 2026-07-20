@@ -1,8 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { AiDataDisclosure } from "@/components/ai-data-disclosure";
 import { ACCESSIBILITY_PREFERENCE_LABELS, ACCESSIBILITY_PREFERENCES } from "@/domain/accessibility";
+import type { AiDataMode } from "@/domain/privacy-disclosure";
 import { type AccessibilityPreference, type AppState, type AuditEvent } from "@/domain/types";
+import { tPrivacy } from "@/i18n/strings";
 
 function formatLogTime(createdAt: string): string {
   const eventDate = new Date(createdAt);
@@ -28,6 +31,7 @@ const actionLabelMap: Record<AuditEvent["action"], string> = {
 
 type PrivacyPanelProps = {
   state: AppState;
+  aiDataMode?: AiDataMode;
   onReset: () => void;
   onExport: () => void;
   onRestoreDefaultDemo?: () => void;
@@ -38,8 +42,16 @@ function getDisplayLabel(event: AuditEvent): string {
   return event.label === event.action ? actionLabelMap[event.action] : event.label;
 }
 
-export function PrivacyPanel({ state, onReset, onExport, onRestoreDefaultDemo, onUpdateAccessibility }: PrivacyPanelProps) {
+export function PrivacyPanel({
+  state,
+  aiDataMode = "checking",
+  onReset,
+  onExport,
+  onRestoreDefaultDemo,
+  onUpdateAccessibility
+}: PrivacyPanelProps) {
   const activePreferences = state.patient.accessibilityPreferences ?? [];
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   function togglePreference(preference: AccessibilityPreference) {
     const next = activePreferences.includes(preference)
@@ -78,7 +90,8 @@ export function PrivacyPanel({ state, onReset, onExport, onRestoreDefaultDemo, o
         <h2 className="text-xl font-semibold">Your privacy promise</h2>
         <p className="mt-2 text-sm leading-6">No ads. No data monetization.</p>
         <p className="mt-2 text-sm leading-6">You control what you share, and you can download or delete your demo data at any time.</p>
-        <p className="mt-2 text-sm leading-6">This prototype keeps your data in browser storage on this device.</p>
+        <p className="mt-2 text-sm leading-6">{tPrivacy(state.patient.language, "recordStorage")}</p>
+        <AiDataDisclosure mode={aiDataMode} language={state.patient.language} />
       </section>
       <section className="rounded-control border border-ink/10 bg-white p-4">
         <h2 className="text-lg font-semibold">Data controls</h2>
@@ -92,7 +105,7 @@ export function PrivacyPanel({ state, onReset, onExport, onRestoreDefaultDemo, o
           </button>
           <button
             className="rounded-control border border-pulse px-4 py-2 text-sm font-semibold text-pulse"
-            onClick={onReset}
+            onClick={() => setConfirmingDelete(true)}
             type="button"
           >
             Delete demo data
@@ -107,6 +120,35 @@ export function PrivacyPanel({ state, onReset, onExport, onRestoreDefaultDemo, o
             </button>
           ) : null}
         </div>
+        {confirmingDelete ? (
+          <div
+            aria-label={tPrivacy(state.patient.language, "deleteTitle")}
+            className="mt-4 rounded-control border border-pulse/30 bg-pulse/5 p-3"
+            role="dialog"
+          >
+            <h3 className="font-semibold">{tPrivacy(state.patient.language, "deleteTitle")}</h3>
+            <p className="mt-1 text-sm leading-6 text-ink/80">{tPrivacy(state.patient.language, "deleteBody")}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="rounded-control bg-pulse px-4 py-2 text-sm font-semibold text-white"
+                onClick={() => {
+                  setConfirmingDelete(false);
+                  onReset();
+                }}
+                type="button"
+              >
+                {tPrivacy(state.patient.language, "deleteConfirm")}
+              </button>
+              <button
+                className="rounded-control border border-ink/20 px-4 py-2 text-sm font-semibold"
+                onClick={() => setConfirmingDelete(false)}
+                type="button"
+              >
+                {tPrivacy(state.patient.language, "deleteCancel")}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
       {onUpdateAccessibility ? (
         <section className="rounded-control border border-ink/10 bg-white p-4">

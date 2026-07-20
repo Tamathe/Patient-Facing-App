@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OpenAiVisionProvider } from "@/ai/vision-provider";
+import { MockHealthAiProvider } from "@/ai/mock-provider";
 import { openLocalCoachSession } from "@/ai/local-coach-session";
 import { buildFoodLensInstructions } from "@/ai/food-instructions";
 import { connectRealtimeSession } from "@/ai/realtime-session";
 import { evaluateVoiceTranscript } from "@/ai/voice-gate";
 import { activeConditions, selectLenses } from "@/domain/condition-lens";
 import { hasUnacknowledgedCrisis } from "@/state/selectors";
+import { aiDataModeForVoiceTransport, type AiDataMode } from "@/domain/privacy-disclosure";
 import type { AiMessageAction, AppState } from "@/domain/types";
 import type { LiveSessionContext, LiveSessionEvent, LiveSessionHandle, LiveSessionStatus } from "@/ai/types";
 
@@ -35,6 +37,7 @@ export function useFoodVoiceSession(args: {
   onSafetyIntercept: (intercept: VoiceSafetyIntercept) => void;
 }): {
   mode: VoiceMode;
+  dataMode: AiDataMode;
   status: LiveSessionStatus;
   partialAssistantText: string;
   error: string | null;
@@ -46,6 +49,7 @@ export function useFoodVoiceSession(args: {
   const onInterceptRef = useRef(onSafetyIntercept);
   onInterceptRef.current = onSafetyIntercept;
   const [mode, setMode] = useState<VoiceMode>("unknown");
+  const [dataMode, setDataMode] = useState<AiDataMode>("checking");
   const [status, setStatus] = useState<LiveSessionStatus>("idle");
   const [partialAssistantText, setPartialAssistantText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +165,7 @@ export function useFoodVoiceSession(args: {
 
     if (token.mode === "live") {
       setMode("live");
+      setDataMode(aiDataModeForVoiceTransport(token));
       try {
         handleRef.current = await connectRealtimeSession({
           clientSecret: token.clientSecret,
@@ -180,12 +185,16 @@ export function useFoodVoiceSession(args: {
     }
 
     // Non-realtime fallback: typed questions still get a real image answer from the
-    // HTTP vision provider (which degrades to the on-device coach when the model is
-    // not configured or the demo is locked), read aloud via speech synthesis.
+    // HTTP vision provider when transport resolution failed. A resolved mock or
+    // locked configuration stays fully on-device and never submits the frame.
     setMode("mock");
+    const resolvedDataMode = aiDataModeForVoiceTransport(token);
+    setDataMode(resolvedDataMode);
     handleRef.current = await openLocalCoachSession(
       { language, getState, getContext, onEvent: handleEvent },
-      new OpenAiVisionProvider({ passcode })
+      resolvedDataMode === "on_device"
+        ? new MockHealthAiProvider()
+        : new OpenAiVisionProvider({ passcode })
     );
     armIdleTimer();
   }, [armIdleTimer, gateTranscript, getContext, getState, handleEvent, language]);
@@ -202,5 +211,5 @@ export function useFoodVoiceSession(args: {
     };
   }, [clearIdleTimer]);
 
-  return { mode, status, partialAssistantText, error, start, stop, sendUserText };
+  return { mode, dataMode, status, partialAssistantText, error, start, stop, sendUserText };
 }

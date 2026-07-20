@@ -11,11 +11,19 @@ type URLExports = typeof URL & {
 
 describe("PrivacyPanel", () => {
   it("shows patient-facing privacy commitments", () => {
-    render(<PrivacyPanel state={demoState} onReset={() => undefined} onExport={() => undefined} />);
+    render(
+      <PrivacyPanel
+        state={demoState}
+        aiDataMode="on_device"
+        onReset={() => undefined}
+        onExport={() => undefined}
+      />
+    );
 
     expect(screen.getByText("No ads. No data monetization.")).toBeInTheDocument();
     expect(screen.getByText(/You control what you share/i)).toBeInTheDocument();
-    expect(screen.getByText(/browser storage/i)).toBeInTheDocument();
+    expect(screen.getByText(/saved demo record stays in this browser/i)).toBeInTheDocument();
+    expect(screen.getByText(/microphone audio is not sent/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export my data" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete demo data" })).toBeInTheDocument();
   });
@@ -93,13 +101,30 @@ describe("PrivacyPanel", () => {
     anchorClick.mockRestore();
   });
 
-  it("calls the reset handler when delete is clicked", () => {
+  it("asks for confirmation before deleting demo data", () => {
     const onReset = vi.fn();
 
     render(<PrivacyPanel state={demoState} onReset={onReset} onExport={() => undefined} />);
     fireEvent.click(screen.getByRole("button", { name: "Delete demo data" }));
 
+    expect(onReset).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Delete demo data?" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, delete demo data" }));
     expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it("discloses live voice data at the privacy surface", () => {
+    render(
+      <PrivacyPanel
+        state={demoState}
+        aiDataMode="live_voice"
+        onReset={() => undefined}
+        onExport={() => undefined}
+      />
+    );
+
+    expect(screen.getByText(/microphone audio, a current camera frame/i)).toBeInTheDocument();
+    expect(screen.getByText(/sent to OpenAI/i)).toBeInTheDocument();
   });
 
   it("shows a visible retinopathy walkthrough restore control when provided", () => {

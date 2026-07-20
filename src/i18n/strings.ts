@@ -191,6 +191,61 @@ export function t(language: Language, key: FoodLensStringKey, vars?: Record<stri
   });
 }
 
+export type PrivacyStringKey =
+  | "recordStorage"
+  | "checkingTitle"
+  | "checkingBody"
+  | "onDeviceTitle"
+  | "onDeviceBody"
+  | "cloudTitle"
+  | "cloudBody"
+  | "liveTitle"
+  | "liveBody"
+  | "transcriptStored"
+  | "deleteTitle"
+  | "deleteBody"
+  | "deleteConfirm"
+  | "deleteCancel";
+
+export const privacyStrings: Record<Language, Record<PrivacyStringKey, string>> = {
+  en: {
+    recordStorage: "Your saved demo record stays in this browser's storage until you export or delete it.",
+    checkingTitle: "AI data use: not active",
+    checkingBody: "No AI content has been sent. Start a session to see which data path is active.",
+    onDeviceTitle: "AI mode: on-device",
+    onDeviceBody: "Microphone audio is not sent to OpenAI. Questions are answered with the local demo coach.",
+    cloudTitle: "AI mode: cloud service may be used",
+    cloudBody: "When you use an AI feature, your question, current image, and relevant care context may be sent to OpenAI to create an answer.",
+    liveTitle: "AI mode: live voice",
+    liveBody: "Microphone audio, a current camera frame, and relevant food and care-plan context are sent to OpenAI while the session is active.",
+    transcriptStored: "The final transcript and answer are added to your browser-stored demo record.",
+    deleteTitle: "Delete demo data?",
+    deleteBody: "This removes the saved demo record from this browser. Export first if you want to keep a copy.",
+    deleteConfirm: "Yes, delete demo data",
+    deleteCancel: "Cancel"
+  },
+  es: {
+    recordStorage: "Tu registro de demostración guardado permanece en este navegador hasta que lo exportes o elimines.",
+    checkingTitle: "Uso de datos de IA: no activo",
+    checkingBody: "No se ha enviado contenido a la IA. Inicia una sesión para ver qué ruta de datos está activa.",
+    onDeviceTitle: "Modo de IA: en el dispositivo",
+    onDeviceBody: "El audio del micrófono no se envía a OpenAI. Las preguntas se responden con el asistente local de demostración.",
+    cloudTitle: "Modo de IA: puede usar un servicio en la nube",
+    cloudBody: "Cuando usas una función de IA, tu pregunta, la imagen actual y el contexto de salud relevante pueden enviarse a OpenAI para crear una respuesta.",
+    liveTitle: "Modo de IA: voz en vivo",
+    liveBody: "El audio del micrófono, una imagen actual de la cámara y el contexto relevante de comida y del plan de salud se envían a OpenAI mientras la sesión está activa.",
+    transcriptStored: "La transcripción final y la respuesta se agregan a tu registro de demostración guardado en el navegador.",
+    deleteTitle: "¿Eliminar los datos de demostración?",
+    deleteBody: "Esto elimina de este navegador el registro de demostración guardado. Expórtalo primero si quieres conservar una copia.",
+    deleteConfirm: "Sí, eliminar los datos",
+    deleteCancel: "Cancelar"
+  }
+};
+
+export function tPrivacy(language: Language, key: PrivacyStringKey): string {
+  return privacyStrings[language]?.[key] ?? privacyStrings.en[key];
+}
+
 export type SafetyStringKey =
   | "crisisResponse"
   | "abuseResponse"

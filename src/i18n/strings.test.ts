@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { foodLensStrings, safetyStrings, screeningStrings, t, tSafety, tScreening } from "./strings";
+import {
+  foodLensStrings,
+  privacyStrings,
+  safetyStrings,
+  screeningStrings,
+  t,
+  tPrivacy,
+  tSafety,
+  tScreening
+} from "./strings";
 
 describe("t", () => {
   it("interpolates variables", () => {
@@ -18,7 +27,7 @@ describe("t", () => {
 });
 
 describe("locale parity", () => {
-  const catalogs = { foodLensStrings, safetyStrings, screeningStrings };
+  const catalogs = { foodLensStrings, privacyStrings, safetyStrings, screeningStrings };
 
   it.each(Object.entries(catalogs))("defines every %s key in both locales", (_name, catalog) => {
     const enKeys = Object.keys(catalog.en);
@@ -30,6 +39,11 @@ describe("locale parity", () => {
     expect(tSafety("es", "callEmergency")).toBe("Llama al 911");
     expect(tSafety("es", "crisisResponse")).toContain("988");
     expect(tSafety("es", "crisisResponse")).toContain("911");
+  });
+
+  it("discloses live AI data use in Spanish", () => {
+    expect(tPrivacy("es", "liveBody")).toContain("OpenAI");
+    expect(tPrivacy("es", "liveBody")).toMatch(/audio|micr[oó]fono/i);
   });
 });
 

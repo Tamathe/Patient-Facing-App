@@ -2,8 +2,8 @@
 
 Camera + voice dietary feedback. Point the phone at a food, ask by voice, get
 personalized spoken guidance grounded in the patient's care plan, medications,
-and readings. This is a proof-of-concept demo — PHI/privacy and the voice-path
-safety gate are deliberately deferred.
+and readings. This is a proof-of-concept demo. The voice safety gate is active,
+and the Food controls disclose the current AI data path before and during use.
 
 Demo device: **Android Galaxy S25, Chrome.** iOS is out of scope.
 
@@ -21,7 +21,10 @@ Demo device: **Android Galaxy S25, Chrome.** iOS is out of scope.
    ```
 
    Leave `HEALTH_AI_PROVIDER=mock` (or omit the key) to run the typed
-   walkie-talkie fallback with no OpenAI account.
+   on-device fallback with no OpenAI account. In live mode, microphone audio,
+   a current camera frame, and relevant food and care-plan context are sent to
+   OpenAI while the session is active; the final transcript and answer are saved
+   in the browser-stored demo record.
 
 2. Buy the three staged products and confirm each barcode matches
    `src/domain/food-seed.ts` (scan them at world.openfoodfacts.org if unsure).
@@ -41,6 +44,10 @@ Open the printed `https://<name>.trycloudflare.com` URL on the S25 in Chrome.
 `allowedDevOrigins` in `next.config.mjs` already whitelists the tunnel hosts.
 Grant camera + microphone the first time you press **Start**. If venue Wi-Fi
 blocks WebRTC, use the phone's own hotspot.
+
+Before pressing **Start**, verify the AI data-use box is visible. After the
+transport resolves, it must change to either on-device mode or live voice mode.
+Privacy shows the same configured data path without minting a voice secret.
 
 ## Seed the patient
 

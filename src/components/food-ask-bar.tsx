@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
+import { AiDataDisclosure } from "@/components/ai-data-disclosure";
+import type { AiDataMode } from "@/domain/privacy-disclosure";
 import { t, type Language } from "@/i18n/strings";
 import type { LiveSessionStatus } from "@/ai/types";
 import type { VoiceMode } from "@/hooks/use-food-voice-session";
 
 export function FoodAskBar({
   mode,
+  dataMode,
   status,
   onStart,
   onStop,
@@ -14,6 +17,7 @@ export function FoodAskBar({
   language
 }: {
   mode: VoiceMode;
+  dataMode: AiDataMode;
   status: LiveSessionStatus;
   onStart: () => void;
   onStop: () => void;
@@ -24,15 +28,19 @@ export function FoodAskBar({
 
   if (mode === "unknown") {
     return (
-      <button className="min-h-14 w-full rounded-control bg-care px-4 py-2 font-semibold text-white" onClick={onStart} type="button">
-        {t(language, "tapToStart")}
-      </button>
+      <div className="grid gap-2">
+        <AiDataDisclosure compact language={language} mode={dataMode} />
+        <button className="min-h-14 w-full rounded-control bg-care px-4 py-2 font-semibold text-white" onClick={onStart} type="button">
+          {t(language, "tapToStart")}
+        </button>
+      </div>
     );
   }
 
   if (mode === "live") {
     return (
       <div className="grid gap-2">
+        <AiDataDisclosure compact language={language} mode={dataMode} />
         <p className="text-sm text-ink/70">{t(language, "holdToTalkHint")}</p>
         <button className="min-h-14 w-full rounded-control border border-care px-4 py-2 font-semibold text-care" onClick={onStop} type="button">
           {t(language, "endSession")}
@@ -53,6 +61,7 @@ export function FoodAskBar({
 
   return (
     <form className="grid gap-2" onSubmit={submit}>
+      <AiDataDisclosure compact language={language} mode={dataMode} />
       <p className="text-sm text-ink/70">{t(language, "fallbackNotice")}</p>
       <input
         aria-label={t(language, "askPlaceholder")}
