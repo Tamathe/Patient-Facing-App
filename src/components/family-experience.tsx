@@ -21,6 +21,11 @@ import { recordAuditEvent } from "@/domain/audit";
 import type { FamilyDiagnosisBackdateMonths } from "@/domain/family-stages";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
+  extractFamilyBasics,
+  hasFamilyBasicsHints,
+  type FamilyBasicsHints
+} from "@/domain/family-basics-extract";
+import {
   FAMILY_RESOURCE_CATALOG,
   KY_COUNTIES,
   childAgeYears,
@@ -185,19 +190,29 @@ const BASICS_SCHOOL_OPTIONS: ReadonlyArray<{ value: FamilyProfile["schoolStage"]
 
 type FamilyBasicsAnswers = Pick<FamilyProfile, "county" | "birthYear" | "schoolStage">;
 
+const SCHOOL_STAGE_KEYS: Record<FamilyProfile["schoolStage"], FamilyStringKey> = Object.fromEntries(
+  BASICS_SCHOOL_OPTIONS.map(({ value, key }) => [value, key])
+) as Record<FamilyProfile["schoolStage"], FamilyStringKey>;
+
 // Conversational county → birth year → school stage turns, asked in the thread
-// once the first description lands and no profile exists yet.
+// once the first description lands and no profile exists yet. Anything the
+// caregiver already wrote is offered back for a single yes instead of re-asked.
 function FamilyBasicsTurns({
   language,
+  hints,
   onComplete
 }: {
   language: Language;
+  hints: FamilyBasicsHints;
   onComplete: (basics: FamilyBasicsAnswers) => void;
 }) {
-  const [county, setCounty] = useState("");
+  const prefilled = hasFamilyBasicsHints(hints);
+  const [confirmingPrefill, setConfirmingPrefill] = useState(prefilled);
+  const [county, setCounty] = useState(hints.county?.value ?? "");
   const [committedCounty, setCommittedCounty] = useState<string | null>(null);
-  const [year, setYear] = useState("");
+  const [year, setYear] = useState(hints.birthYear ? String(hints.birthYear.value) : "");
   const [committedYear, setCommittedYear] = useState<number | null>(null);
+  const [committedStage, setCommittedStage] = useState<FamilyProfile["schoolStage"] | null>(null);
   const [yearError, setYearError] = useState(false);
 
   const countyQuestion = tFamily(language, "basicsCountyQuestion");
@@ -210,14 +225,109 @@ function FamilyBasicsTurns({
       setYearError(true);
       return;
     }
-    setCommittedYear(parsed);
+    finish(committedCounty, parsed, committedStage);
+  }
+
+  // Saves as soon as all three are known, whichever mix came from the caregiver's
+  // own words and whichever they answered as turns.
+  function finish(
+    nextCounty: string | null,
+    nextYear: number | null,
+    nextStage: FamilyProfile["schoolStage"] | null
+  ): void {
+    setCommittedCounty(nextCounty);
+    setCommittedYear(nextYear);
+    setCommittedStage(nextStage);
+    if (nextCounty !== null && nextYear !== null && nextStage !== null) {
+      onComplete({ county: nextCounty, birthYear: nextYear, schoolStage: nextStage });
+    }
+  }
+
+  function acceptPrefill(): void {
+    setConfirmingPrefill(false);
+    finish(
+      hints.county?.value ?? null,
+      hints.birthYear?.value ?? null,
+      hints.schoolStage?.value ?? null
+    );
+  }
+
+  if (confirmingPrefill) {
+    const rows: Array<{ key: string; label: string; value: string; snippet: string }> = [];
+    if (hints.county) {
+      rows.push({
+        key: "county",
+        label: tFamily(language, "profileCountyLabel"),
+        value: hints.county.value,
+        snippet: hints.county.sourceSnippet
+      });
+    }
+    if (hints.birthYear) {
+      rows.push({
+        key: "birthYear",
+        label: tFamily(language, "profileBirthYearLabel"),
+        value: hints.birthYear.approximate
+          ? tFamily(language, "basicsPrefillApproxYear", { year: hints.birthYear.value })
+          : String(hints.birthYear.value),
+        snippet: hints.birthYear.sourceSnippet
+      });
+    }
+    if (hints.schoolStage) {
+      rows.push({
+        key: "schoolStage",
+        label: tFamily(language, "profileSchoolStageLabel"),
+        value: tFamily(language, SCHOOL_STAGE_KEYS[hints.schoolStage.value]),
+        snippet: hints.schoolStage.sourceSnippet
+      });
+    }
+
+    return (
+      <div className="space-y-3" data-testid="family-basics-turns">
+        <div
+          data-testid="family-basics-prefill"
+          className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3"
+        >
+          <p className="break-words font-semibold">{tFamily(language, "basicsPrefillTitle")}</p>
+          <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "basicsPrefillIntro")}</p>
+          <ul className="mt-3 grid gap-2">
+            {rows.map((row) => (
+              <li key={row.key} className="rounded-control bg-paper p-3">
+                <p className="break-words text-sm text-ink/70">{row.label}</p>
+                <p className="break-words font-semibold">{row.value}</p>
+                {row.snippet ? (
+                  <blockquote className="mt-2 break-words border-l-4 border-care/30 pl-3 text-sm text-ink/70">
+                    {row.snippet}
+                  </blockquote>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={acceptPrefill}
+              className={`min-h-12 min-w-0 break-words rounded-control bg-care px-4 py-2 font-semibold text-white ${CONTROL_FOCUS}`}
+            >
+              {tFamily(language, "basicsPrefillConfirm")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingPrefill(false)}
+              className={`min-h-12 min-w-0 break-words rounded-control border border-care/30 px-4 py-2 font-semibold text-care ${CONTROL_FOCUS}`}
+            >
+              {tFamily(language, "basicsPrefillChange")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-3" data-testid="family-basics-turns">
-      <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
-        <p className="break-words font-semibold">{countyQuestion}</p>
-        {committedCounty === null ? (
+      {committedCounty === null ? (
+        <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+          <p className="break-words font-semibold">{countyQuestion}</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <select
               aria-label={countyQuestion}
@@ -235,79 +345,75 @@ function FamilyBasicsTurns({
             <button
               type="button"
               disabled={county.length === 0}
-              onClick={() => setCommittedCounty(county)}
+              onClick={() => finish(county, committedYear, committedStage)}
               className={`min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${CONTROL_FOCUS}`}
             >
               {tFamily(language, "basicsTurnNext")}
             </button>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
+          <p className="break-words">{committedCounty}</p>
+        </div>
+      )}
 
-      {committedCounty !== null ? (
-        <>
-          <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
-            <p className="break-words">{committedCounty}</p>
-          </div>
-          <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
-            <p className="break-words font-semibold">{yearQuestion}</p>
-            {committedYear === null ? (
-              <div className="mt-3 grid gap-2">
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    aria-label={yearQuestion}
-                    inputMode="numeric"
-                    value={year}
-                    aria-invalid={yearError}
-                    placeholder={tFamily(language, "profileBirthYearPlaceholder")}
-                    onChange={(event) => {
-                      setYearError(false);
-                      setYear(event.target.value);
-                    }}
-                    className={`min-h-12 min-w-0 flex-1 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={commitYear}
-                    className={`min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white ${CONTROL_FOCUS}`}
-                  >
-                    {tFamily(language, "basicsTurnNext")}
-                  </button>
-                </div>
-                {yearError ? (
-                  <p role="alert" className="text-sm font-medium text-rose-700">
-                    {tFamily(language, "profileBirthYearError")}
-                  </p>
-                ) : null}
-              </div>
+      {committedCounty !== null && committedYear === null ? (
+        <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+          <p className="break-words font-semibold">{yearQuestion}</p>
+          <div className="mt-3 grid gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                aria-label={yearQuestion}
+                inputMode="numeric"
+                value={year}
+                aria-invalid={yearError}
+                placeholder={tFamily(language, "profileBirthYearPlaceholder")}
+                onChange={(event) => {
+                  setYearError(false);
+                  setYear(event.target.value);
+                }}
+                className={`min-h-12 min-w-0 flex-1 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+              />
+              <button
+                type="button"
+                onClick={commitYear}
+                className={`min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white ${CONTROL_FOCUS}`}
+              >
+                {tFamily(language, "basicsTurnNext")}
+              </button>
+            </div>
+            {yearError ? (
+              <p role="alert" className="text-sm font-medium text-rose-700">
+                {tFamily(language, "profileBirthYearError")}
+              </p>
             ) : null}
           </div>
-        </>
+        </div>
       ) : null}
 
       {committedCounty !== null && committedYear !== null ? (
-        <>
-          <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
-            <p className="break-words">{committedYear}</p>
+        <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
+          <p className="break-words">{committedYear}</p>
+        </div>
+      ) : null}
+
+      {committedCounty !== null && committedYear !== null && committedStage === null ? (
+        <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+          <p className="break-words font-semibold">{tFamily(language, "basicsStageQuestion")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {BASICS_SCHOOL_OPTIONS.map(({ value, key }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => finish(committedCounty, committedYear, value)}
+                className={`min-h-12 min-w-0 break-words rounded-control border border-care/30 bg-care/5 px-4 py-2 text-left font-semibold text-care ${CONTROL_FOCUS}`}
+              >
+                {tFamily(language, key)}
+              </button>
+            ))}
           </div>
-          <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
-            <p className="break-words font-semibold">{tFamily(language, "basicsStageQuestion")}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {BASICS_SCHOOL_OPTIONS.map(({ value, key }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() =>
-                    onComplete({ county: committedCounty, birthYear: committedYear, schoolStage: value })
-                  }
-                  className={`min-h-12 min-w-0 break-words rounded-control border border-care/30 bg-care/5 px-4 py-2 text-left font-semibold text-care ${CONTROL_FOCUS}`}
-                >
-                  {tFamily(language, key)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
+        </div>
       ) : null}
     </div>
   );
@@ -442,6 +548,13 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     setSafetySuppressed(true);
   }
 
+  // Everything the caregiver has already typed, so the basics turns can skip
+  // whatever they told us instead of asking for it again.
+  const basicsHints: FamilyBasicsHints = useMemo(() => {
+    const described = family?.interviews.map(({ rawText }) => rawText).join("\n") ?? "";
+    return described.length > 0 ? extractFamilyBasics(described, new Date(), language) : {};
+  }, [family?.interviews, language]);
+
   const basicsOpen = basicsToggled ?? false;
   const needsBasics =
     !safetySuppressed &&
@@ -493,6 +606,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
         {needsBasics ? (
           <FamilyBasicsTurns
             language={language}
+            hints={basicsHints}
             onComplete={({ county, birthYear, schoolStage }) =>
               saveProfile({
                 county,

@@ -155,6 +155,11 @@ export type FamilyStringKey =
   | "basicsYearQuestion"
   | "basicsStageQuestion"
   | "basicsTurnNext"
+  | "basicsPrefillTitle"
+  | "basicsPrefillIntro"
+  | "basicsPrefillConfirm"
+  | "basicsPrefillChange"
+  | "basicsPrefillApproxYear"
   | "resourceSourceLanguageNotice"
   | "nearbyTherapeuticRecreationTitle"
   | "nearbyTherapeuticRecreationIntro"
@@ -392,6 +397,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsYearQuestion: "What year was your child born? Just the year.",
     basicsStageQuestion: "Is your child in school yet?",
     basicsTurnNext: "Next",
+    basicsPrefillTitle: "We already picked this up from what you wrote",
+    basicsPrefillIntro: "So you do not have to type it twice. Nothing is saved until you say it is right.",
+    basicsPrefillConfirm: "Yes, that is right",
+    basicsPrefillChange: "Change something",
+    basicsPrefillApproxYear: "about {year}",
     resourceSourceLanguageNotice: "Some details come straight from the organizations and may still be in English while we work on a checked translation.",
     nearbyTherapeuticRecreationTitle: "Something else nearby",
     nearbyTherapeuticRecreationIntro: "This one is in your county and fits your child's age. It offers both fun activities and therapy. We are showing it as an extra — it did not change what we found above.",
@@ -628,6 +638,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsYearQuestion: "¿En qué año nació tu hijo o hija? Solo el año.",
     basicsStageQuestion: "¿Tu hijo o hija ya va a la escuela?",
     basicsTurnNext: "Siguiente",
+    basicsPrefillTitle: "Esto ya lo tomamos de lo que escribiste",
+    basicsPrefillIntro: "Así no lo tienes que escribir dos veces. No se guarda nada hasta que digas que está bien.",
+    basicsPrefillConfirm: "Sí, así es",
+    basicsPrefillChange: "Cambiar algo",
+    basicsPrefillApproxYear: "alrededor de {year}",
     resourceSourceLanguageNotice: "Algunos detalles vienen directo de las organizaciones y pueden seguir en inglés mientras preparamos una traducción revisada.",
     nearbyTherapeuticRecreationTitle: "Algo más cerca de ti",
     nearbyTherapeuticRecreationIntro: "Esta opción está en tu condado y va con la edad de tu hijo o hija. Ofrece actividades divertidas y también terapia. Te la mostramos como algo extra — no cambió lo que encontramos arriba.",

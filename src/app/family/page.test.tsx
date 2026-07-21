@@ -241,6 +241,82 @@ describe("FamilyExperience", () => {
     ).toContain("scott_county_exceptional_child_services");
   });
 
+  it("offers back the county, age, and stage the caregiver already wrote instead of re-asking", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    await user.type(
+      screen.getByLabelText("What would you like help with?"),
+      "I have a seven-year-old with big meltdowns. He has been kicked out of school several times. We live in Breathitt County and we need help."
+    );
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    const prefill = await screen.findByTestId("family-basics-prefill");
+    expect(within(prefill).getByText("Breathitt")).toBeVisible();
+    expect(within(prefill).getByText(/about 2019/)).toBeVisible();
+    expect(within(prefill).getByText("Elementary school")).toBeVisible();
+    expect(screen.queryByLabelText(/which Kentucky county do you live in/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/What year was your child born/i)).not.toBeInTheDocument();
+
+    await user.click(within(prefill).getByRole("button", { name: "Yes, that is right" }));
+
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.profile).toMatchObject({
+      county: "Breathitt",
+      birthYear: new Date().getFullYear() - 7,
+      schoolStage: "elementary"
+    });
+  });
+
+  it("still asks for whatever the description left out", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    await user.type(
+      screen.getByLabelText("What would you like help with?"),
+      "We live in Scott County and reading homework is a nightly battle."
+    );
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    const prefill = await screen.findByTestId("family-basics-prefill");
+    await user.click(within(prefill).getByRole("button", { name: "Yes, that is right" }));
+
+    const turns = screen.getByTestId("family-basics-turns");
+    expect(within(turns).queryByLabelText(/which Kentucky county do you live in/i)).not.toBeInTheDocument();
+    await user.type(within(turns).getByLabelText(/What year was your child born/i), "2017");
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.click(within(turns).getByRole("button", { name: "Elementary school" }));
+
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.profile).toMatchObject({ county: "Scott", birthYear: 2017, schoolStage: "elementary" });
+  });
+
+  it("lets the caregiver correct what we picked up, with their answer prefilled", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    await user.type(
+      screen.getByLabelText("What would you like help with?"),
+      "We live in Breathitt County and reading homework is a nightly battle."
+    );
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    const prefill = await screen.findByTestId("family-basics-prefill");
+    await user.click(within(prefill).getByRole("button", { name: "Change something" }));
+
+    const turns = screen.getByTestId("family-basics-turns");
+    const countySelect = within(turns).getByLabelText(/which Kentucky county do you live in/i);
+    expect(countySelect).toHaveValue("Breathitt");
+    await user.selectOptions(countySelect, "Scott");
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.type(within(turns).getByLabelText(/What year was your child born/i), "2017");
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.click(within(turns).getByRole("button", { name: "Elementary school" }));
+
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.profile).toMatchObject({ county: "Scott", birthYear: 2017, schoolStage: "elementary" });
+  });
+
   it("rejects an out-of-range birth year in the conversational turn", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness />);
