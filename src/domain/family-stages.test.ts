@@ -38,7 +38,7 @@ describe("buildFamilyStages", () => {
       { id: "sibling-respite", timing: "next", domains: ["sibling_support", "respite"] }
     ]);
     const waiver = stages.find(({ id }) => id === "waiver-apply");
-    expect(waiver?.title).toBe("Ask about the Michelle P. Waiver application");
+    expect(waiver?.title).toBe("Ask how to apply for the Michelle P. Waiver");
     expect(waiver?.description).toContain("Kentucky determines eligibility and waitlist placement");
     expect(waiver?.description).not.toMatch(/establish(?:es)? (?:an )?earlier place/i);
   });

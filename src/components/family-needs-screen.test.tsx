@@ -33,7 +33,7 @@ describe("FamilyNeedsScreen", () => {
 
     const firstQuestion = screen.getAllByRole("group")[0];
     await user.click(within(firstQuestion).getByRole("radio", { name: /S[ií]/ }));
-    await user.click(screen.getByRole("button", { name: /Ver.*reas de apoyo/i }));
+    await user.click(screen.getByRole("button", { name: /Ver qué puede ayudar/i }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const [answers, facts] = onSubmit.mock.calls[0] as [FamilyScreenAnswer[], FamilyFact[]];
@@ -53,10 +53,10 @@ describe("FamilyNeedsScreen", () => {
     const onSubmit = vi.fn();
     render(<FamilyNeedsScreen language="en" initialAnswers={[]} onSubmit={onSubmit} />);
 
-    expect(screen.getByRole("button", { name: "See support areas" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "See what can help" })).toBeDisabled();
     for (const group of screen.getAllByRole("group")) {
       await user.click(within(group).getByRole("radio", { name: "Prefer not to answer" }));
     }
-    expect(screen.getByRole("button", { name: "See support areas" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "See what can help" })).toBeEnabled();
   });
 });

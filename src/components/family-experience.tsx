@@ -72,11 +72,6 @@ const NO_PROFILE_INTERVIEW_CONTEXT: FamilyProfile = {
   county: "",
   diagnoses: []
 };
-const EXAMPLE_KEYS: ReadonlyArray<{ example: "morgan" | "casey" | "eighteen_month"; key: FamilyStringKey }> = [
-  { example: "morgan", key: "exampleMorgan" },
-  { example: "casey", key: "exampleCasey" },
-  { example: "eighteen_month", key: "exampleEighteenMonth" }
-];
 const CONTROL_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
 const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
@@ -186,7 +181,6 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const family = state.family;
   const [reviewDetails, setReviewDetails] = useState<ReviewDetails | null>(null);
   const [safetySuppressed, setSafetySuppressed] = useState(false);
-  const [seedVersion, setSeedVersion] = useState(0);
   const [needsScreenOpen, setNeedsScreenOpen] = useState(false);
   const [basicsToggled, setBasicsToggled] = useState<boolean | null>(null);
   const reviewRef = useRef<HTMLElement>(null);
@@ -238,16 +232,6 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       }) ?? [],
     [family?.saved]
   );
-
-  function seedExample(example: "morgan" | "casey" | "eighteen_month", now: string): void {
-    pendingReviewFocusRef.current = false;
-    setReviewDetails(null);
-    setSafetySuppressed(false);
-    setNeedsScreenOpen(false);
-    setBasicsToggled(null);
-    setSeedVersion((current) => current + 1);
-    dispatch({ type: "seedExampleFamily", example, now });
-  }
 
   function saveProfile(profile: FamilyProfile): void {
     setSafetySuppressed(false);
@@ -341,23 +325,8 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
           </p>
         ) : null}
         <div className="mt-4">
-          <h3 className="text-sm font-semibold">{tFamily(language, "examplesTitle")}</h3>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {EXAMPLE_KEYS.map(({ example, key }) => (
-              <button
-                key={example}
-                type="button"
-                className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-                onClick={() => seedExample(example, new Date().toISOString())}
-              >
-                {tFamily(language, key)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mt-4">
           <FamilyOrientationInterview
-            key={`family-orientation-${seedVersion}`}
+            key="family-orientation"
             profile={family?.profile ?? NO_PROFILE_INTERVIEW_CONTEXT}
             draft={family?.interviewDraft ?? ""}
             passcode={passcode}
@@ -386,7 +355,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
           {needsScreenOpen ? (
             <div id="family-needs-screen-panel" className="mt-4">
               <FamilyNeedsScreen
-                key={`family-screen-${seedVersion}`}
+                key="family-screen"
                 language={language}
                 initialAnswers={family?.screenAnswers ?? []}
                 onSubmit={submitScreen}
@@ -544,7 +513,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
         {basicsOpen ? (
           <div id="family-basics-panel" className="mt-4">
             <FamilyProfileForm
-              key={`family-profile-${seedVersion}-${profileDiagnosisVersion}`}
+              key={`family-profile-${profileDiagnosisVersion}`}
               language={language}
               initialProfile={family?.profile ?? null}
               defaultCounty={state.patient.county}

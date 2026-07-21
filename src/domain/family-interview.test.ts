@@ -146,15 +146,15 @@ describe("deterministic family interview extraction", () => {
     expect(result.domains).toEqual([
       {
         domain: "school_iep",
-        rationale: "La persona cuidadora describió necesidades de apoyo escolar, del IEP o de lectura."
+        rationale: "Mencionaste la escuela, un IEP o ayuda con la lectura."
       },
       {
         domain: "waivers_financial",
-        rationale: "La persona cuidadora preguntó por exenciones o apoyo económico."
+        rationale: "Preguntaste por exenciones o ayuda para pagar."
       },
       {
         domain: "parent_support",
-        rationale: "La persona cuidadora describió sentirse abrumada o no saber por dónde empezar."
+        rationale: "Dijiste que te sientes abrumada o que no sabes por dónde empezar."
       }
     ]);
     expect(result.followUps).toEqual([

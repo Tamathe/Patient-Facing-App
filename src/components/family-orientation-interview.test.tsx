@@ -86,7 +86,7 @@ function renderOrientation(overrides: Partial<React.ComponentProps<typeof Family
 }
 
 async function submitOpening(): Promise<void> {
-  fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+  fireEvent.click(screen.getByRole("button", { name: /find help/i }));
   await screen.findByRole("heading", { name: schoolQuestion.question });
 }
 
@@ -149,7 +149,7 @@ describe("FamilyOrientationInterview", () => {
     expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: /find support areas/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /find help/i })).toBeInTheDocument();
   });
 
   it("uses family-only text for the mock fallback and advances to its next safe question", async () => {
@@ -195,7 +195,7 @@ describe("FamilyOrientationInterview", () => {
     await screen.findByRole("heading", { name: waiverQuestion.question });
     fireEvent.click(screen.getByRole("button", { name: "Not yet" }));
 
-    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await screen.findByText("Thanks. That is enough to get you started.");
     expect(screen.queryByRole("heading", { name: helperQuestion.question })).not.toBeInTheDocument();
     expect(onInterviewExtracted).toHaveBeenCalledTimes(3);
   });
@@ -205,9 +205,9 @@ describe("FamilyOrientationInterview", () => {
     requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
     renderOrientation({ draft: nearLimit });
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
-    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await screen.findByText("Thanks. That is enough to get you started.");
     expect(screen.queryByRole("heading", { name: schoolQuestion.question })).not.toBeInTheDocument();
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
   });
@@ -224,7 +224,7 @@ describe("FamilyOrientationInterview", () => {
 
     expect(requestFamilyInterview).toHaveBeenCalledTimes(2);
     await act(async () => pending.resolve(result([])));
-    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await screen.findByText("Thanks. That is enough to get you started.");
   });
 
   it("speaks the sanitized question and options when a round starts, then speaks completion", async () => {
@@ -241,9 +241,9 @@ describe("FamilyOrientationInterview", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Nothing yet" }));
-    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await screen.findByText("Thanks. That is enough to get you started.");
     await waitFor(() =>
-      expect(speak).toHaveBeenCalledWith("Thanks. We have enough to orient your next steps.", { language: "en" })
+      expect(speak).toHaveBeenCalledWith("Thanks. That is enough to get you started.", { language: "en" })
     );
   });
 

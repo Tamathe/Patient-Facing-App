@@ -55,7 +55,7 @@ describe("FamilyProfileForm", () => {
     await user.click(screen.getByRole("checkbox", { name: "Other" }));
     await user.type(screen.getByLabelText("Other diagnosis label"), "Specific learning disability");
     await user.type(screen.getByLabelText("Other diagnosis month (optional)"), "2026-06");
-    await user.click(screen.getByRole("button", { name: "Save family profile" }));
+    await user.click(screen.getByRole("button", { name: "Save these details" }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     const saved = onSave.mock.calls[0][0] as FamilyProfile;
@@ -96,17 +96,17 @@ describe("FamilyProfileForm", () => {
 
     await user.clear(screen.getByLabelText("Birth year"));
     await user.type(screen.getByLabelText("Birth year"), String(new Date().getFullYear() + 1));
-    await user.click(screen.getByRole("button", { name: "Save family profile" }));
+    await user.click(screen.getByRole("button", { name: "Save these details" }));
 
     expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/valid four-digit birth year/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/four-digit birth year/i);
   });
 
   it.each([
-    ["en" as const, "", "Other diagnosis label", /enter the other diagnosis wording/i],
-    ["en" as const, "   ", "Other diagnosis label", /enter the other diagnosis wording/i],
-    ["es" as const, "", "Otro diagnóstico", /ingresa las palabras del otro diagnóstico/i],
-    ["es" as const, "   ", "Otro diagnóstico", /ingresa las palabras del otro diagnóstico/i]
+    ["en" as const, "", "Other diagnosis label", /enter the words you were given/i],
+    ["en" as const, "   ", "Other diagnosis label", /enter the words you were given/i],
+    ["es" as const, "", "Otro diagnóstico", /escribe las palabras que te dieron/i],
+    ["es" as const, "   ", "Otro diagnóstico", /escribe las palabras que te dieron/i]
   ])("rejects an empty or whitespace-only Other diagnosis with a localized linked error in %s", async (language, value, label, error) => {
     const user = userEvent.setup();
     const onSave = vi.fn();
@@ -123,7 +123,7 @@ describe("FamilyProfileForm", () => {
     if (value) {
       await user.type(input, value);
     }
-    await user.click(screen.getByRole("button", { name: language === "es" ? "Guardar perfil familiar" : "Save family profile" }));
+    await user.click(screen.getByRole("button", { name: language === "es" ? "Guardar estos datos" : "Save these details" }));
 
     expect(onSave).not.toHaveBeenCalled();
     const alert = screen.getByRole("alert");

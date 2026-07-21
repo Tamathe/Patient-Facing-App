@@ -74,7 +74,7 @@ describe("FamilyInterview", () => {
   it("uses the deterministic fallback whenever live extraction returns null", async () => {
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(onExtracted.mock.calls[0][0].domains.map(({ domain }: { domain: string }) => domain)).toEqual([
@@ -91,7 +91,7 @@ describe("FamilyInterview", () => {
     requestFamilyInterview.mockRejectedValueOnce(new Error("unexpected"));
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     await waitFor(() =>
       expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
         extraction: "mock",
@@ -105,7 +105,7 @@ describe("FamilyInterview", () => {
       domains: [{ domain: "school_iep", rationale: "Riley has dyslexia." }],
       followUps: []
     });
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
     expect(onExtracted.mock.calls[1]).toEqual([
       { facts: [], domains: [{ domain: "school_iep" }], followUps: [] },
@@ -126,7 +126,7 @@ describe("FamilyInterview", () => {
     const onExtracted = vi.fn();
     renderInterview({ onExtracted });
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(onExtracted.mock.calls[0][0].followUps).toEqual([
@@ -164,7 +164,7 @@ describe("FamilyInterview", () => {
       onExtracted
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(onExtracted.mock.calls[0][0].facts).toEqual([
@@ -196,7 +196,7 @@ describe("FamilyInterview", () => {
     const onExtracted = vi.fn();
     const onSafetyEscalation = vi.fn();
     renderInterview({ draft: text, onExtracted, onSafetyEscalation });
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(text)}`));
     expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
@@ -208,7 +208,7 @@ describe("FamilyInterview", () => {
     renderInterview({ draft: "A usable family interview" });
 
     expect(screen.getByLabelText("What would you like help with?")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Find support areas" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Find help" })).toBeVisible();
     expect(screen.getByText("25 of 5000 characters")).toBeVisible();
   });
 
@@ -262,7 +262,7 @@ describe("FamilyInterview", () => {
     renderInterview({ draft, onExtracted });
     fireEvent.click(await screen.findByRole("button", { name: /start speaking|stop listening/i }));
     act(() => recognition?.onresult?.(speechResult(transcript)));
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     await waitFor(() =>
       expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
         extraction: "mock",
@@ -296,7 +296,7 @@ describe("FamilyInterview", () => {
     fireEvent.change(input, { target: { value: "x".repeat(5001) } });
     expect(input).toHaveValue("x".repeat(5001));
     expect(screen.getByRole("alert")).toHaveTextContent(/5000|too long|maximum/i);
-    expect(screen.getByRole("button", { name: /find support areas/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /find help/i })).toBeDisabled();
   });
 
   it("stops speech recognition on unmount", async () => {
@@ -329,7 +329,7 @@ describe("FamilyInterview", () => {
     const rawText = "Existing fourth grade spoken concern";
     const lateResult = recognition?.onresult;
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /start speaking|stop listening/i })).toBeDisabled();
     expect(recognition?.stop).toHaveBeenCalledTimes(1);
@@ -387,7 +387,7 @@ describe("FamilyInterview", () => {
     };
     const { rerender } = render(<FamilyInterview {...baseProps} draft={draftA} profile={profileA} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     rerender(<FamilyInterview {...baseProps} draft={draftB} profile={profileB} />);
     expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(draftA);
 
@@ -398,7 +398,7 @@ describe("FamilyInterview", () => {
       expect.objectContaining({ text: draftA, profile: profileA })
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(requestFamilyInterview.mock.calls[1][0]).toEqual(
       expect.objectContaining({ text: draftB, profile: profileB })
@@ -438,11 +438,11 @@ describe("FamilyInterview", () => {
     };
     const { rerender } = render(<FamilyInterview {...baseProps} profile={profileA} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /find support areas/i }));
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
     rerender(<FamilyInterview {...baseProps} profile={profileB} />);
     await act(async () => pending.resolve(null));
 
-    await waitFor(() => expect(screen.getByRole("button", { name: /find support areas/i })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: /find help/i })).toBeEnabled());
     expect(onExtracted).not.toHaveBeenCalled();
   });
 });

@@ -29,11 +29,6 @@ const TASK_7_REQUIRED_KEYS = [
   "schoolMiddle",
   "schoolHigh",
   "schoolPostHigh",
-  "exampleMorgan",
-  "exampleCasey",
-  "exampleEighteenMonth",
-  "entryQuestionsTitle",
-  "entryInterviewTitle",
   "screenEarlyIntervention",
   "screenTherapies",
   "screenSchoolIep",
@@ -116,16 +111,27 @@ describe("familyStrings", () => {
     expect(Object.keys(familyStrings.en)).toEqual(expect.arrayContaining(TASK_7_REQUIRED_KEYS));
   });
 
-  it("marks Spanish as demo-grade pending native review", () => {
-    expect(familyStrings.es.spanishReviewNotice).toMatch(/demostraci[oó]n/i);
-    expect(familyStrings.es.spanishReviewNotice).toMatch(/revisi[oó]n.*hablante nativ/i);
+  it("marks Spanish as a draft pending native review", () => {
+    expect(familyStrings.es.spanishReviewNotice).toMatch(/borrador/i);
+    expect(familyStrings.es.spanishReviewNotice).toMatch(/revise.*hablante nativ/i);
   });
 
   it("keeps the demo honest and interpolates family copy", () => {
-    expect(tFamily("en", "demoBadge")).toBe("Demo — fictional data");
-    expect(tFamily("es", "demoBadge")).toBe("Demo — datos ficticios");
+    expect(tFamily("en", "demoBadge")).toBe("Demo — not an official service");
+    expect(tFamily("es", "demoBadge")).toBe("Demo — no es un servicio oficial");
     expect(tFamily("en", "interviewCount", { count: 42, max: 5000 })).toBe("42 of 5000 characters");
-    expect(familyStrings.en.intro).toMatch(/does not diagnose/i);
-    expect(familyStrings.en.timelineDemoControlIntro).toMatch(/does not change the device clock/i);
+    expect(familyStrings.en.intro).toMatch(/cannot say what your child has/i);
+    expect(familyStrings.en.intro).toMatch(/cannot decide what you qualify for/i);
+    expect(familyStrings.es.intro).toMatch(/no podemos decir qu[eé] tiene/i);
+    expect(familyStrings.en.timelineDemoControlIntro).toMatch(/does not change the clock on your device/i);
+  });
+
+  it("addresses the caregiver directly instead of describing them in the third person", () => {
+    const rationales = Object.entries(familyStrings.en).filter(([key]) => key.startsWith("rationale"));
+    expect(rationales).not.toHaveLength(0);
+    for (const [, copy] of rationales) {
+      expect(copy).not.toMatch(/the caregiver/i);
+      expect(copy).toMatch(/^You /);
+    }
   });
 });

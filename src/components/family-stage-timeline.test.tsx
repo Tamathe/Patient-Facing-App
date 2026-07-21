@@ -21,8 +21,8 @@ describe("FamilyStageTimeline", () => {
 
     const current = screen.getByRole("region", { name: "Now" });
     const next = screen.getByRole("region", { name: "Next" });
-    expect(within(current).getByRole("heading", { name: "Connect with another parent" })).toBeVisible();
-    expect(within(next).getByRole("heading", { name: "Explore sibling support and respite" })).toBeVisible();
+    expect(within(current).getByRole("heading", { name: "Talk to another parent" })).toBeVisible();
+    expect(within(next).getByRole("heading", { name: "Look into help for siblings and a break for you" })).toBeVisible();
 
     const disclosure = screen.getByRole("button", { name: "Demo timeline control" });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
@@ -30,7 +30,7 @@ describe("FamilyStageTimeline", () => {
     await user.click(disclosure);
 
     const control = screen.getByRole("group", { name: "Demo timeline control" });
-    expect(within(control).getByText(/does not change the device clock/i)).toBeVisible();
+    expect(within(control).getByText(/does not change the clock on your device/i)).toBeVisible();
     await user.click(within(control).getByRole("button", { name: "Set diagnosis dates to 6 months ago" }));
 
     expect(onBackdateDiagnoses).toHaveBeenCalledWith(6, now);
@@ -62,7 +62,7 @@ describe("FamilyStageTimeline", () => {
       />
     );
 
-    expect(screen.getByText("Add a family profile to see planning moments.")).toBeVisible();
+    expect(screen.getByText("Add your county and your child's birth year to see what comes next.")).toBeVisible();
 
     rerender(
       <FamilyStageTimeline
@@ -80,8 +80,8 @@ describe("FamilyStageTimeline", () => {
       />
     );
 
-    expect(screen.queryByText("Add a family profile to see planning moments.")).not.toBeInTheDocument();
-    expect(screen.getByText("No planning moments match the current profile yet.")).toBeVisible();
+    expect(screen.queryByText("Add your county and your child's birth year to see what comes next.")).not.toBeInTheDocument();
+    expect(screen.getByText("Nothing to plan for right now based on what you have told us.")).toBeVisible();
   });
 
   it("links perinatal stages to the caregiver check-in while existing stages stay non-links", () => {

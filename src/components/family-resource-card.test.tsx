@@ -34,7 +34,7 @@ describe("FamilyResourceCard", () => {
     expect(screen.getByText(michelle.actNow!)).toBeVisible();
     expect(screen.getByText(/all ages/i)).toBeVisible();
     expect(screen.getByText(/start online/i)).toBeVisible();
-    const sourceLink = screen.getByRole("link", { name: /Open source link.*Michelle P/i });
+    const sourceLink = screen.getByRole("link", { name: /See their official page.*Michelle P/i });
     expect(sourceLink).toHaveAttribute("href", michelle.sourceUrl);
     expect(sourceLink).toHaveAttribute("target", "_blank");
     expect(sourceLink).toHaveAttribute("rel", "noreferrer");
@@ -45,9 +45,9 @@ describe("FamilyResourceCard", () => {
     const onToggleEnrollment = vi.fn();
     renderCard({ isEnrolled: true, onToggleEnrollment });
 
-    expect(screen.getByText("Already receiving this")).toBeVisible();
+    expect(screen.getByText("You already have this")).toBeVisible();
     expect(screen.queryByText(michelle.actNow!)).not.toBeInTheDocument();
-    const toggle = screen.getByRole("button", { name: /Remove already-receiving mark.*Michelle P/i });
+    const toggle = screen.getByRole("button", { name: /We do not have this.*Michelle P/i });
     expect(toggle).toHaveAttribute("aria-pressed", "true");
     await user.click(toggle);
     expect(onToggleEnrollment).toHaveBeenCalledWith(michelle.id);
@@ -116,6 +116,6 @@ describe("FamilyResourceCard", () => {
   it("shows the manual-verification warning when the catalog requires it", () => {
     const stable = getFamilyResourceById("stable_kentucky")!;
     renderCard({ resource: stable, domain: "future_planning" });
-    expect(screen.getByText(/confirm current details with a person/i)).toBeVisible();
+    expect(screen.getByText(/Call and check before you count on this/i)).toBeVisible();
   });
 });

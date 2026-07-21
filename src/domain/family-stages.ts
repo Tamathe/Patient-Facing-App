@@ -37,45 +37,45 @@ const STAGE_DEFINITIONS = {
     ageSensitive: true
   },
   "age-three-transition": {
-    title: "Plan the transition before age three",
+    title: "Plan ahead before age three",
     domains: ["early_intervention", "school_iep"],
     templateId: "family_stage_age_three_transition_v1",
     ageSensitive: true
   },
   "school-enrollment": {
-    title: "Prepare for school enrollment",
+    title: "Get ready for school",
     domains: ["school_iep"],
     templateId: "family_stage_school_enrollment_v1",
     ageSensitive: true
   },
   "waiver-apply": {
-    title: "Ask about the Michelle P. Waiver application",
+    title: "Ask how to apply for the Michelle P. Waiver",
     domains: ["waivers_financial"],
     templateId: "family_stage_waiver_apply_v1"
   },
   "school-arc": {
-    title: "Prepare for the school ARC meeting",
+    title: "Get ready for the school ARC meeting",
     domains: ["school_iep"],
     templateId: "family_stage_school_arc_v1"
   },
   "parent-connection": {
-    title: "Connect with another parent",
+    title: "Talk to another parent",
     domains: ["parent_support"],
     templateId: "family_stage_parent_connection_v1"
   },
   "sibling-respite": {
-    title: "Explore sibling support and respite",
+    title: "Look into help for siblings and a break for you",
     domains: ["sibling_support", "respite"],
     templateId: "family_stage_sibling_respite_v1"
   },
   "mission-transition": {
-    title: "Start transition planning",
+    title: "Start planning for adult life",
     domains: ["future_planning"],
     templateId: "family_stage_mission_transition_v1",
     ageSensitive: true
   },
   "before-eighteen": {
-    title: "Prepare for age eighteen",
+    title: "Get ready for age eighteen",
     domains: ["future_planning"],
     templateId: "family_stage_before_eighteen_v1",
     ageSensitive: true

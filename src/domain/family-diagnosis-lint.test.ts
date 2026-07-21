@@ -37,7 +37,7 @@ describe("containsFamilyDiagnosisClaim", () => {
     expect(containsFamilyDiagnosisClaim("Esto parece dislexia")).toBe(true);
     expect(
       containsFamilyDiagnosisClaim(
-        "La persona cuidadora describió necesidades de apoyo escolar, del IEP o de lectura."
+        "Mencionaste la escuela, un IEP o ayuda con la lectura."
       )
     ).toBe(false);
   });

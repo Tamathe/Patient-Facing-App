@@ -1,9 +1,9 @@
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { useReducer } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState } from "@/domain/fixtures";
-import { caseyFamilyState, morganFamilyState } from "@/domain/family-fixtures";
+import { eighteenMonthFamilyState, morganFamilyState } from "@/domain/family-fixtures";
 import type { AppState, FamilyNavigatorState } from "@/domain/types";
 import { healthReducer } from "@/state/store";
 import { FamilyExperience } from "@/components/family-experience";
@@ -22,6 +22,15 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 
 function withFamily(family: FamilyNavigatorState | null, language: "en" | "es" = "en"): AppState {
   return { ...brentState, patient: { ...brentState.patient, language }, family };
+}
+
+async function changeCounty(user: ReturnType<typeof userEvent.setup>, county: string): Promise<void> {
+  const basics = screen.getByRole("button", { name: /Tell us the basics/i });
+  if (basics.getAttribute("aria-expanded") === "false") {
+    await user.click(basics);
+  }
+  await user.selectOptions(screen.getByLabelText("Kentucky county"), county);
+  await user.click(screen.getByRole("button", { name: "Save these details" }));
 }
 
 function ReducerHarness({ initialState = withFamily(null) }: { initialState?: AppState }) {
@@ -84,25 +93,22 @@ describe("FamilyExperience", () => {
 
     render(<FamilyExperience state={withFamily(persistedFamily)} dispatch={vi.fn()} passcode="" />);
 
-    expect(screen.getByRole("heading", { name: "Review what we heard" }).closest("section")).not.toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Here is what we heard" }).closest("section")).not.toHaveFocus();
   });
 
   it("runs the Morgan mock path with atomic family facts, confirmation, deterministic Scott-first resources, saved return state, and timeline", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness />);
+    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
 
-    expect(screen.getByText(/Demo.*fictional data/i)).toBeVisible();
-    await user.click(screen.getByRole("button", { name: /Morgan and Riley.*Scott County/ }));
-    expect(screen.queryByRole("link", { name: /Answer a few questions/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Tell us about your child/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Prefer simple questions/i })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("heading", { name: "What support would help?" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Demo.*not an official service/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /rather answer yes or no/i })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("heading", { name: "What would help?" })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/What would you like help with/i)).toHaveValue(morganFamilyState.interviewDraft);
     const adultFactsBefore = screen.getByTestId("adult-facts").textContent;
 
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
-    await screen.findByRole("heading", { name: "Review what we heard" });
-    expect(screen.getByRole("heading", { name: "Review what we heard" }).closest("section")).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+    await screen.findByRole("heading", { name: "Here is what we heard" });
+    expect(screen.getByRole("heading", { name: "Here is what we heard" }).closest("section")).toHaveFocus();
     expect(screen.getByRole("heading", { name: "What has the school offered so far?" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Nothing yet" })).toBeVisible();
     expect(screen.getByTestId("matched-family-resources")).toBeVisible();
@@ -120,8 +126,8 @@ describe("FamilyExperience", () => {
     ]);
     expect(stateAfterCrunch.activeDomains).toEqual(["school_iep", "waivers_financial", "parent_support"]);
 
-    await user.click(screen.getAllByRole("button", { name: /Confirm this detail/ })[0]);
-    await waitFor(() => expect(screen.getByText("Confirmed by you")).toBeVisible());
+    await user.click(screen.getAllByRole("button", { name: /Yes, that is right/ })[0]);
+    await waitFor(() => expect(screen.getByText("You said this is right")).toBeVisible());
     const stateAfterConfirm = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
     expect(stateAfterConfirm.facts.filter(({ status }) => status === "confirmed")).toHaveLength(1);
 
@@ -131,14 +137,14 @@ describe("FamilyExperience", () => {
     const resourceIds = resourceCards.map((card) => card.getAttribute("data-resource-id"));
     expect(resourceIds).toContain("child_waiver");
     expect(new Set(resourceIds).size).toBe(resourceIds.length);
-    const source = within(resourceCards[0]).getByRole("link", { name: /Open source link.*Scott County Schools/i });
+    const source = within(resourceCards[0]).getByRole("link", { name: /See their official page.*Scott County Schools/i });
     expect(source).toHaveAttribute(
       "href",
       "https://www.scott.kyschools.us/departments/student-learning/exceptional-child-services/special-education"
     );
     expect(source).toHaveAttribute("target", "_blank");
 
-    const nearby = screen.getByRole("region", { name: "Nearby therapeutic recreation" });
+    const nearby = screen.getByRole("region", { name: "Something else nearby" });
     expect(within(nearby).getByTestId("family-resource-card")).toHaveAttribute(
       "data-resource-id",
       "central_kentucky_riding_for_hope"
@@ -156,7 +162,7 @@ describe("FamilyExperience", () => {
     expect(screen.getByTestId("matched-family-resources")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Not yet" }));
-    await screen.findByText("Thanks. We have enough to orient your next steps.");
+    await screen.findByText("Thanks. That is enough to get you started.");
     expect(screen.queryByRole("heading", { name: "Who can take over for a few hours?" })).not.toBeInTheDocument();
     const stateAfterSecondFollowUp = JSON.parse(
       screen.getByTestId("family-state").textContent || "null"
@@ -169,7 +175,7 @@ describe("FamilyExperience", () => {
     const currentMatched = screen.getByTestId("matched-family-resources");
     const currentScottCard = within(currentMatched).getAllByTestId("family-resource-card")[0];
     await user.click(within(currentScottCard).getByRole("button", { name: /Save.*Scott County Schools/i }));
-    const saved = screen.getByRole("region", { name: "Saved resources" });
+    const saved = screen.getByRole("region", { name: "Saved for later" });
     expect(within(saved).getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();
     expect(
       screen
@@ -181,7 +187,7 @@ describe("FamilyExperience", () => {
     expect(screen.getByRole("heading", { name: "Now" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Next" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Later" })).toBeVisible();
-    expect(screen.getByText("Timing is shown early because only the birth year is known.")).toBeVisible();
+    expect(screen.getByText("We only know the birth year, so we show timing early to be safe.")).toBeVisible();
   });
 
   it("runs the interview before any basics, then unlocks matched resources once county and birth year are saved", async () => {
@@ -193,23 +199,23 @@ describe("FamilyExperience", () => {
       screen.getByLabelText("What would you like help with?"),
       "Reading homework is a nightly battle and I keep hearing about waivers."
     );
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
-    await screen.findByRole("heading", { name: "Review what we heard" });
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+    await screen.findByRole("heading", { name: "Here is what we heard" });
 
     const familyBefore = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
     expect(familyBefore.profile).toBeNull();
     expect(familyBefore.interviews).toHaveLength(1);
     expect(familyBefore.activeDomains).toEqual(["school_iep", "waivers_financial"]);
     expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.getByText(/Add the basics below/i)).toBeVisible();
+    expect(screen.getByText(/add your county and your child.s birth year below/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /Tell us the basics/i })).toHaveAttribute("aria-expanded", "true");
 
     await user.selectOptions(screen.getByLabelText("Kentucky county"), "Scott");
     await user.type(screen.getByLabelText("Birth year"), "2017");
     await user.selectOptions(screen.getByLabelText("School stage"), "elementary");
-    await user.click(screen.getByRole("button", { name: "Save family profile" }));
+    await user.click(screen.getByRole("button", { name: "Save these details" }));
 
-    expect(screen.queryByText(/Add the basics below/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/add your county and your child.s birth year below/i)).not.toBeInTheDocument();
     const matched = screen.getByTestId("matched-family-resources");
     expect(
       within(matched)
@@ -218,42 +224,31 @@ describe("FamilyExperience", () => {
     ).toContain("scott_county_exceptional_child_services");
   });
 
-  it("keeps all three example chips bilingual in the interview headline and seeds the selected fixture", async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<FamilyExperience state={withFamily(null)} dispatch={vi.fn()} passcode="" />);
+  it("offers no fictional example shortcuts", () => {
+    render(<FamilyExperience state={withFamily(null)} dispatch={vi.fn()} passcode="" />);
 
-    expect(screen.getByRole("button", { name: /Morgan and Riley.*Scott County/ })).toBeVisible();
-    expect(screen.getByRole("button", { name: /Casey.*Perry County/ })).toBeVisible();
-    expect(screen.getByRole("button", { name: /Avery.*Fayette County.*18 months/i })).toBeVisible();
-
-    rerender(<FamilyExperience state={withFamily(null, "es")} dispatch={vi.fn()} passcode="" />);
-    expect(screen.getByRole("button", { name: /Avery.*condado de Fayette.*18 meses/i })).toBeVisible();
-    cleanup();
-
-    render(<ReducerHarness />);
-    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
-    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
-    expect(family.profile?.county).toBe("Perry");
+    expect(screen.queryByText(/fictional/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Morgan|Riley|Casey|Avery/i })).not.toBeInTheDocument();
   });
 
   it("keeps the simple needs screen collapsed until requested and preserves its eight-question path", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
 
-    const disclosure = screen.getByRole("button", { name: /Prefer simple questions/i });
+    const disclosure = screen.getByRole("button", { name: /rather answer yes or no/i });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("heading", { name: "What support would help?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "What would help?" })).not.toBeInTheDocument();
 
     await user.click(disclosure);
     expect(disclosure).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("heading", { name: "What support would help?" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What would help?" })).toBeVisible();
 
     const yesAnswers = screen.getAllByRole("radio", { name: "Yes" });
     expect(yesAnswers).toHaveLength(8);
     for (const answer of yesAnswers) {
       await user.click(answer);
     }
-    await user.click(screen.getByRole("button", { name: "See support areas" }));
+    await user.click(screen.getByRole("button", { name: "See what can help" }));
 
     const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
     expect(family.screenAnswers).toHaveLength(8);
@@ -269,24 +264,21 @@ describe("FamilyExperience", () => {
     ]);
   });
 
-  it("does not attach a late Morgan extraction after the family is reseeded to Casey", async () => {
+  it("does not attach a late extraction after the profile changes underneath it", async () => {
     const user = userEvent.setup();
     const pending = deferred<null>();
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
     render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
 
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
-    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
-    const stateAfterReseed = JSON.parse(
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+    await changeCounty(user, "Perry");
+    const stateAfterChange = JSON.parse(
       screen.getByTestId("family-state").textContent || "null"
     ) as FamilyNavigatorState;
-    expect(stateAfterReseed.profile?.county).toBe("Perry");
-    expect(stateAfterReseed.interviews).toEqual([]);
+    expect(stateAfterChange.profile?.county).toBe("Perry");
+    expect(stateAfterChange.interviews).toEqual([]);
 
     await act(async () => pending.resolve(null));
-    await waitFor(() =>
-      expect(screen.getByLabelText("What would you like help with?")).toHaveValue(caseyFamilyState.interviewDraft)
-    );
     const stateAfterLateResponse = JSON.parse(
       screen.getByTestId("family-state").textContent || "null"
     ) as FamilyNavigatorState;
@@ -296,15 +288,14 @@ describe("FamilyExperience", () => {
     expect(stateAfterLateResponse.activeDomains).toEqual([]);
   });
 
-  it("resets an active follow-up thread when the family is reseeded", async () => {
+  it("resets an active follow-up thread when the profile changes", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
 
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
+    await user.click(screen.getByRole("button", { name: "Find help" }));
     await screen.findByRole("heading", { name: "What has the school offered so far?" });
-    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
+    await changeCounty(user, "Perry");
 
-    expect(screen.getByLabelText("What would you like help with?")).toHaveValue(caseyFamilyState.interviewDraft);
     expect(screen.queryByRole("heading", { name: "What has the school offered so far?" })).not.toBeInTheDocument();
   });
 
@@ -319,7 +310,7 @@ describe("FamilyExperience", () => {
       <FamilyExperience state={withFamily(zeroMatchFamily)} dispatch={vi.fn()} passcode="" />
     );
 
-    const fallback = screen.getByRole("region", { name: "No exact local match yet" });
+    const fallback = screen.getByRole("region", { name: "Nothing local matched yet" });
     expect(within(fallback).getAllByTestId("family-resource-card").map((card) => card.getAttribute("data-resource-id"))).toEqual([
       "ky_spin",
       "hdi_resource_guide",
@@ -334,7 +325,7 @@ describe("FamilyExperience", () => {
         passcode=""
       />
     );
-    expect(screen.queryByRole("region", { name: "No exact local match yet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Nothing local matched yet" })).not.toBeInTheDocument();
   });
 
   it("shows an honest localized timeline empty state when a profile has no current stage entries", () => {
@@ -349,7 +340,7 @@ describe("FamilyExperience", () => {
     };
     render(<FamilyExperience state={withFamily(family)} dispatch={vi.fn()} passcode="" />);
 
-    expect(screen.getByText("No planning moments match the current profile yet.")).toBeVisible();
+    expect(screen.getByText("Nothing to plan for right now based on what you have told us.")).toBeVisible();
   });
 
   it("requires consent for sharing, writes one shared audit event, and sinks enrolled resources without urgency", async () => {
@@ -373,7 +364,7 @@ describe("FamilyExperience", () => {
       expect(audit.filter(({ action, label }) => action === "shared" && label.includes("Michelle P."))).toHaveLength(1);
     });
 
-    await user.click(within(michelle).getByRole("button", { name: /Mark as already receiving.*Michelle P/i }));
+    await user.click(within(michelle).getByRole("button", { name: /We already have this.*Michelle P/i }));
     await waitFor(() => expect(within(michelle).queryByText(/date ordered/i)).not.toBeInTheDocument());
     const orderedCards = within(screen.getByTestId("matched-family-resources")).getAllByTestId("family-resource-card");
     expect(orderedCards.at(-1)).toHaveAttribute("data-resource-id", "michelle_p_waiver");
@@ -393,8 +384,8 @@ describe("FamilyExperience", () => {
     expect(ids).toContain("child_waiver");
     expect(ids.at(-1)).toBe("child_waiver");
     const child = matched.querySelector('[data-resource-id="child_waiver"]') as HTMLElement;
-    expect(within(child).getByText("Already receiving this")).toBeVisible();
-    expect(within(child).queryByText(/Why to act now/i)).not.toBeInTheDocument();
+    expect(within(child).getByText("You already have this")).toBeVisible();
+    expect(within(child).queryByText(/Why it helps to start now/i)).not.toBeInTheDocument();
   });
 
   it("does not duplicate CKRH when recreation is primary and hides therapeutic recreation outside age or county", () => {
@@ -407,7 +398,7 @@ describe("FamilyExperience", () => {
     );
 
     expect(screen.getAllByText("Central Kentucky Riding for Hope")).toHaveLength(1);
-    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Something else nearby" })).not.toBeInTheDocument();
 
     rerender(
       <FamilyExperience
@@ -420,7 +411,7 @@ describe("FamilyExperience", () => {
         passcode=""
       />
     );
-    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Something else nearby" })).not.toBeInTheDocument();
 
     rerender(
       <FamilyExperience
@@ -433,7 +424,7 @@ describe("FamilyExperience", () => {
         passcode=""
       />
     );
-    expect(screen.queryByRole("region", { name: "Nearby therapeutic recreation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Something else nearby" })).not.toBeInTheDocument();
   });
 
   it("renders substantive localized Spanish mock facts, rationales, resources, and source-language notice", async () => {
@@ -446,9 +437,9 @@ describe("FamilyExperience", () => {
     render(<ReducerHarness initialState={withFamily(spanishFamily, "es")} />);
 
     expect(screen.getByTestId("family-experience")).toHaveAttribute("lang", "es");
-    expect(screen.getByText(/pendiente de revisi.*hablante nativ/i)).toBeVisible();
-    await user.click(screen.getByRole("button", { name: /Buscar.*reas de apoyo/i }));
-    await screen.findByRole("heading", { name: /Revisa lo que entendimos/i });
+    expect(screen.getByText(/borrador.*hablante nativa/i)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /Buscar ayuda/i }));
+    await screen.findByRole("heading", { name: /Esto fue lo que entendimos/i });
     expect(screen.getByRole("heading", { name: "¿Qué ha ofrecido la escuela hasta ahora?" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Nada todavía" })).toBeVisible();
     expect(screen.getByText("Grado")).toBeVisible();
@@ -456,8 +447,8 @@ describe("FamilyExperience", () => {
     expect(screen.getByText("Diagnóstico informado")).toBeVisible();
     expect(screen.getByText("dislexia y TDAH")).toBeVisible();
     expect(screen.getByText("Preocupación escolar")).toBeVisible();
-    expect(screen.getByText(/La persona cuidadora describió necesidades de apoyo escolar/)).toBeVisible();
-    expect(screen.getByText(/detalles proporcionados por las organizaciones.*idioma original/i)).toBeVisible();
+    expect(screen.getByText(/Mencionaste la escuela/)).toBeVisible();
+    expect(screen.getByText(/vienen directo de las organizaciones.*en inglés/i)).toBeVisible();
     expect(screen.getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();
   });
 
@@ -469,18 +460,18 @@ describe("FamilyExperience", () => {
     const interview = screen.getByLabelText("What would you like help with?");
     await user.clear(interview);
     await user.type(interview, "honestly she's been saying she wants to die");
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
+    await user.click(screen.getByRole("button", { name: "Find help" }));
 
     expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent("honestly she's been saying she wants to die")}`);
     expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Review what we heard" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Here is what we heard" })).not.toBeInTheDocument();
   });
 
   it("suppresses review and resources when a follow-up answer triggers safety escalation", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
 
-    await user.click(screen.getByRole("button", { name: "Find support areas" }));
+    await user.click(screen.getByRole("button", { name: "Find help" }));
     await screen.findByRole("heading", { name: "What has the school offered so far?" });
     expect(screen.getByTestId("matched-family-resources")).toBeVisible();
 
@@ -491,16 +482,13 @@ describe("FamilyExperience", () => {
     expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Review what we heard" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Here is what we heard" })).not.toBeInTheDocument();
   });
 });
 
-describe("P4 eighteen-month family example", () => {
-  it("immediately renders the development stage and its hub link when clicked", async () => {
-    const user = userEvent.setup();
-    render(<ReducerHarness />);
-
-    await user.click(screen.getByRole("button", { name: /Avery.*Fayette County.*18 months/i }));
+describe("P4 eighteen-month family", () => {
+  it("renders the development stage and its hub link for an 18-month-old", () => {
+    render(<ReducerHarness initialState={withFamily(eighteenMonthFamilyState(new Date()))} />);
 
     expect(screen.getByRole("heading", { name: "18-month development check" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Open family check-ins" })).toHaveAttribute(
