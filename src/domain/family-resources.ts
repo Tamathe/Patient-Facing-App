@@ -24,6 +24,9 @@ type PoeDistrict = {
 };
 
 const VERIFIED_AT = "2026-07-17";
+// The procedural-guidance entries were added later and carry their own date, so
+// staleness stays honest per entry rather than being flattened to one constant.
+const PROCEDURAL_VERIFIED_AT = "2026-07-21";
 const POE_SOURCE_URL = "https://www.chfs.ky.gov/agencies/dph/dmch/ecdb/fs/POElistingforWebsite.pdf";
 
 const POE_DISTRICTS: PoeDistrict[] = [
@@ -587,6 +590,62 @@ const STATEWIDE_AND_LOCAL_RESOURCES: FamilyResource[] = [
     verifiedAt: VERIFIED_AT,
     humanVerify: true,
     referralMode: "navigator_referral"
+  },
+  // Procedural guidance, following the kde_dispute_resolution / kde_age_three_transition
+  // precedent: the entry IS the process, not an organization with an intake line. Named
+  // with a proper-noun anchor (IDEA / KDE / FBA) so the follow-up lint's catalog-name
+  // alternation cannot swallow ordinary caregiver phrasing. Every one carries
+  // humanVerify until the sources are checked by hand.
+  {
+    id: "idea_school_discipline",
+    name: "IDEA school discipline protections",
+    domains: ["school_iep"],
+    counties: ["statewide"],
+    ages: { min: 3, max: 21 },
+    summary:
+      "Federal special-education rules limit how much a school can remove a child with a disability. Once removals add up past ten school days in a year, the school must hold a manifestation determination review to decide whether the behavior was connected to the disability. These protections can also apply to a child who has not been found eligible yet, if the school already had reason to suspect a disability. See 34 CFR 300.530 through 300.536.",
+    contact:
+      "Ask the district Director of Special Education in writing for a manifestation determination review, and keep a dated copy",
+    actNow:
+      "Removals add up across the school year. Ask for the total number of days your child has been removed so far, in writing.",
+    sourceName: "IDEA regulations, U.S. Department of Education (34 CFR 300.530-300.536)",
+    sourceUrl: "https://sites.ed.gov/idea/regs/b/e/300.530",
+    verifiedAt: PROCEDURAL_VERIFIED_AT,
+    humanVerify: true,
+    referralMode: "self_serve"
+  },
+  {
+    id: "kde_evaluation_request",
+    name: "KDE special education evaluation request",
+    domains: ["school_iep"],
+    counties: ["statewide"],
+    ages: { min: 3, max: 21 },
+    summary:
+      "A parent can ask the school district in writing to evaluate a child for special education at any time. Kentucky districts follow 707 KAR 1:300 for evaluation and eligibility. A written, dated request is what starts the district's formal timelines and creates the record.",
+    contact:
+      "Write to the district Director of Special Education and your child's principal; keep a dated copy of what you sent",
+    actNow:
+      "A written request starts timelines that a phone call does not. Date it, keep a copy, and ask for written confirmation that it was received.",
+    sourceName: "Kentucky Administrative Regulations 707 KAR 1:300",
+    sourceUrl: "https://apps.legislature.ky.gov/law/kar/titles/707/001/300/",
+    verifiedAt: PROCEDURAL_VERIFIED_AT,
+    humanVerify: true,
+    referralMode: "school_contact"
+  },
+  {
+    id: "fba_bip_request",
+    name: "FBA and behavior intervention plan request",
+    domains: ["school_iep", "therapies"],
+    counties: ["statewide"],
+    ages: { min: 3, max: 21 },
+    summary:
+      "A functional behavior assessment looks at what is happening around a behavior — what sets it off and what it accomplishes for the child — instead of treating it only as a discipline matter. The ARC team can decide to do one, and the result can become a behavior intervention plan written into the child's plan so support follows the child through the school day.",
+    contact: "Ask the ARC team in writing for a functional behavior assessment and a behavior intervention plan",
+    sourceName: "Kentucky Department of Education, Office of Special Education and Early Learning",
+    sourceUrl: "https://www.education.ky.gov/specialed/excep/Pages/default.aspx",
+    verifiedAt: PROCEDURAL_VERIFIED_AT,
+    humanVerify: true,
+    referralMode: "school_contact"
   }
 ];
 

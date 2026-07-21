@@ -33,6 +33,25 @@ describe("sanitizeFamilyFollowUps", () => {
     ]);
   });
 
+  it("keeps ordinary school-procedure phrasing that overlaps the new catalog entries", () => {
+    // RESOURCE_NAME_PATTERN is built from catalog names, so a generically named
+    // procedural entry would silently kill legitimate follow-ups. The proper-noun
+    // anchors (IDEA / KDE / FBA) are what keep these alive.
+    const survivors = sanitizeFamilyFollowUps([
+      followUp("Have you sent the school a written evaluation request?", ["Not yet", "Yes"]),
+      followUp("Has the school talked about a behavior intervention plan?", ["No", "Yes"]),
+      followUp("How many days has your child been removed from school?", ["A few", "I am not sure"])
+    ]);
+
+    expect(survivors).toHaveLength(3);
+  });
+
+  it("still drops a follow-up that names a procedural catalog entry outright", () => {
+    expect(
+      sanitizeFamilyFollowUps([followUp("Should we look at IDEA school discipline protections?")])
+    ).toEqual([]);
+  });
+
   it("trims values, deduplicates options, and applies defensive caps", () => {
     const result = sanitizeFamilyFollowUps([
       followUp(" First question? ", [" Yes ", "Yes", "No", "Maybe", "Later"]),

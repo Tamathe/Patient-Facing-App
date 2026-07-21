@@ -27,8 +27,11 @@ describe("family resource catalog integrity", () => {
     for (const resource of FAMILY_RESOURCE_CATALOG) {
       expect(() => new URL(resource.sourceUrl)).not.toThrow();
       expect(new URL(resource.sourceUrl).protocol).toMatch(/^https?:$/);
-      expect(resource.verifiedAt).toBe("2026-07-17");
+      // Per-entry dates, not one flattened constant: entries added later must be
+      // able to say honestly when they were checked.
+      expect(resource.verifiedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(Number.isNaN(Date.parse(resource.verifiedAt))).toBe(false);
+      expect(Date.parse(resource.verifiedAt)).toBeLessThanOrEqual(Date.parse("2026-07-21"));
     }
   });
 
@@ -40,6 +43,7 @@ describe("family resource catalog integrity", () => {
       "child_waiver",
       "down_syndrome_louisville",
       "dsack",
+      "fba_bip_request",
       "feat_louisville",
       "first_steps_barren_river",
       "first_steps_big_sandy",
@@ -59,9 +63,11 @@ describe("family resource catalog integrity", () => {
       "first_steps_statewide",
       "hcb_waiver",
       "hdi_resource_guide",
+      "idea_school_discipline",
       "help_me_grow_ky",
       "kde_age_three_transition",
       "kde_dispute_resolution",
+      "kde_evaluation_request",
       "kde_parent_toolbox",
       "kentucky_211",
       "kentucky_autism_training_center",
@@ -106,6 +112,10 @@ describe("family resource catalog integrity", () => {
     expect(getFamilyResourceById("ssi_children")?.humanVerify).toBe(true);
     expect(getFamilyResourceById("stable_kentucky")?.humanVerify).toBe(true);
     expect(getFamilyResourceById("sibling_support_project")?.humanVerify).toBe(true);
+    // Procedural guidance ships flagged until the citations are checked by hand.
+    expect(getFamilyResourceById("idea_school_discipline")?.humanVerify).toBe(true);
+    expect(getFamilyResourceById("kde_evaluation_request")?.humanVerify).toBe(true);
+    expect(getFamilyResourceById("fba_bip_request")?.humanVerify).toBe(true);
   });
 });
 
