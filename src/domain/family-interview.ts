@@ -372,7 +372,13 @@ export function extractFamilyInterviewMock(
     language === "es"
       ? /\bno\s+s[eé][^.!?]{0,50}\bempezar\b|\bno\s+tengo\s+idea\b[^.!?]{0,50}\bempezar\b/iu.test(text)
       : /\b(?:don't|do not) know\b|\bno idea (?:where|how)\b|\bunsure where to start\b/i.test(text);
-  if (unsureConcern) {
+  // A caregiver at the end of their rope names no "need" the other rules can
+  // see. Without this they got an empty resource list at the worst moment.
+  const collapseConcern =
+    language === "es"
+      ? /\bya\s+no\s+puedo\s+(?:hacer\s+esto|m[aá]s)\b|\bno\s+aguanto\s+m[aá]s\b|\bnada\s+(?:de\s+lo\s+)?que\s+intento\s+funciona\b/iu.test(text)
+      : /\bcan'?t\s+do\s+this\s+anymore\b|\bnothing\s+(?:i\s+try|else)\s+works\b|\bat\s+the\s+end\s+of\s+my\s+rope\b/i.test(text);
+  if (unsureConcern || collapseConcern) {
     matched.add("parent_support");
   }
 

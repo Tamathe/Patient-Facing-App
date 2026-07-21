@@ -19,7 +19,12 @@ import { FamilyProfileForm } from "@/components/family-profile-form";
 import { FamilyResourceCard } from "@/components/family-resource-card";
 import { FamilyStageTimeline } from "@/components/family-stage-timeline";
 import { recordAuditEvent } from "@/domain/audit";
-import { createFamilySafetyEvent, pendingFamilySafetyEvent, type FamilySafetyScreen } from "@/domain/family-safety";
+import {
+  createFamilySafetyEvent,
+  domainsAfterSafety,
+  pendingFamilySafetyEvent,
+  type FamilySafetyScreen
+} from "@/domain/family-safety";
 import type { FamilyDiagnosisBackdateMonths } from "@/domain/family-stages";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
@@ -27,14 +32,11 @@ import {
   hasFamilyBasicsHints,
   type FamilyBasicsHints
 } from "@/domain/family-basics-extract";
+import { KY_COUNTIES, getFamilyResourceById, type FamilyResource } from "@/domain/family-resources";
 import {
-  FAMILY_RESOURCE_CATALOG,
-  KY_COUNTIES,
-  childAgeYears,
-  findFamilyResources,
-  getFamilyResourceById,
-  type FamilyResource
-} from "@/domain/family-resources";
+  buildNearbyTherapeuticRecreation,
+  buildResourceMatches
+} from "@/domain/family-matching";
 import type { Language } from "@/i18n/strings";
 import type {
   AppState,
@@ -50,12 +52,6 @@ export type FamilyExperienceProps = {
   state: AppState;
   dispatch: Dispatch<HealthAction>;
   passcode?: string;
-};
-
-type MatchedResource = {
-  resource: FamilyResource;
-  domain: DevNeedDomain;
-  position: number;
 };
 
 type ReviewDetails = {
@@ -76,110 +72,8 @@ const DOMAIN_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
   recreation: "domainRecreation"
 };
 
-const FALLBACK_IDS = ["ky_spin", "hdi_resource_guide", "kynect_resources", "kentucky_211"] as const;
 const CONTROL_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
-const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
-const normalizeCounty = (county: string): string => county.trim().replace(/\s+County$/i, "");
-
-function prioritizeDomainCandidates(
-  resources: FamilyResource[],
-  county: string
-): FamilyResource[] {
-  const normalizedCounty = normalizeCounty(county);
-  return resources
-    .map((resource, catalogPosition) => ({ resource, catalogPosition }))
-    .sort(
-      (left, right) =>
-        Number(!left.resource.counties.includes(normalizedCounty)) -
-          Number(!right.resource.counties.includes(normalizedCounty)) ||
-        Number(!left.resource.actNow) - Number(!right.resource.actNow) ||
-        left.catalogPosition - right.catalogPosition
-    )
-    .map(({ resource }) => resource);
-}
-
-function buildResourceMatches(
-  profile: FamilyProfile,
-  domains: DevNeedDomain[],
-  alreadyEnrolled: string[]
-): { resources: MatchedResource[]; isFallback: boolean } {
-  if (domains.length === 0) {
-    return { resources: [], isFallback: false };
-  }
-
-  const seen = new Set<string>();
-  const matches: MatchedResource[] = [];
-  const enrolled = new Set(alreadyEnrolled);
-  for (const domain of domains) {
-    const candidates = prioritizeDomainCandidates(
-      findFamilyResources({
-        county: profile.county,
-        domain,
-        childAgeYears: childAgeYears(profile),
-        limit: FAMILY_RESOURCE_CATALOG.length
-      }).filter(({ id }) => !seen.has(id)),
-      profile.county
-    );
-    const selected = [
-      ...candidates.filter(({ id }) => !enrolled.has(id)).slice(0, 4),
-      ...candidates.filter(({ id }) => enrolled.has(id))
-    ];
-    for (const resource of selected) {
-      seen.add(resource.id);
-      matches.push({ resource, domain, position: matches.length });
-    }
-  }
-
-  const hasDomainSpecificMatch = matches.some(({ resource }) => !FALLBACK_ID_SET.has(resource.id));
-  if (!hasDomainSpecificMatch) {
-    const domain = domains[0];
-    return {
-      isFallback: true,
-      resources: FALLBACK_IDS.flatMap((id, position) => {
-        const resource = getFamilyResourceById(id);
-        return resource ? [{ resource, domain, position }] : [];
-      })
-    };
-  }
-
-  return {
-    isFallback: false,
-    resources: [...matches].sort(
-      (left, right) =>
-        Number(enrolled.has(left.resource.id)) - Number(enrolled.has(right.resource.id)) ||
-        left.position - right.position
-    )
-  };
-}
-
-function buildNearbyTherapeuticRecreation(
-  profile: FamilyProfile,
-  primaryResourceIds: Set<string>,
-  alreadyEnrolled: string[]
-): MatchedResource[] {
-  const normalizedCounty = normalizeCounty(profile.county);
-  const enrolled = new Set(alreadyEnrolled);
-  return findFamilyResources({
-    county: profile.county,
-    domain: "recreation",
-    childAgeYears: childAgeYears(profile),
-    limit: FAMILY_RESOURCE_CATALOG.length
-  })
-    .filter(
-      (resource) =>
-        resource.counties.includes(normalizedCounty) &&
-        resource.domains.includes("therapies") &&
-        !primaryResourceIds.has(resource.id)
-    )
-    .map((resource, position) => ({ resource, domain: "recreation" as const, position }))
-    .sort(
-      (left, right) =>
-        Number(enrolled.has(left.resource.id)) - Number(enrolled.has(right.resource.id)) ||
-        left.position - right.position
-    )
-    .slice(0, 2);
-}
 
 const BASICS_SCHOOL_OPTIONS: ReadonlyArray<{ value: FamilyProfile["schoolStage"]; key: FamilyStringKey }> = [
   { value: "not_school_age", key: "schoolNotSchoolAge" },
@@ -514,13 +408,11 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       sourceSnippet: fact.sourceSnippet
     }));
     const extractedDomains = result.domains.map(({ domain }) => domain);
-    // Disclosing a crisis is not a retraction of the family's needs. When a
-    // safety turn extracts nothing, keep what we already matched rather than
-    // letting an empty result clear the list out from under them.
     const wasSafetyTurn = safetyTurnRef.current;
     safetyTurnRef.current = false;
-    const domains =
-      wasSafetyTurn && extractedDomains.length === 0 ? family?.activeDomains ?? [] : extractedDomains;
+    const domains = wasSafetyTurn
+      ? domainsAfterSafety(extractedDomains, family?.activeDomains ?? [])
+      : extractedDomains;
 
     setReviewDetails({ domains: result.domains });
     dispatch({

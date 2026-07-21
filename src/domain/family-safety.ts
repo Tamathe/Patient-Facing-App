@@ -1,7 +1,7 @@
 import { classifyCrisis, classifySafety } from "./safety";
 import { screenSocialEmergency } from "./social-screen";
 import { crisisTierForDomain } from "./crisis-red-flags";
-import type { FamilySafetyEvent } from "./types";
+import type { DevNeedDomain, FamilySafetyEvent } from "./types";
 
 export type FamilySafetyScreen = {
   matched: boolean;
@@ -44,4 +44,18 @@ export function createFamilySafetyEvent(screen: FamilySafetyScreen, now = new Da
 
 export function pendingFamilySafetyEvent(events: FamilySafetyEvent[]): FamilySafetyEvent | undefined {
   return events.find(({ acknowledgedAt }) => acknowledgedAt === undefined);
+}
+
+/**
+ * What the active domains become after a turn that tripped a safety rule.
+ * Disclosing a crisis is not a retraction of the family's needs, and a family
+ * with no identified need still needs a person — never an empty page.
+ */
+export function domainsAfterSafety(
+  extracted: DevNeedDomain[],
+  previous: readonly DevNeedDomain[]
+): DevNeedDomain[] {
+  if (extracted.length > 0) return extracted;
+  if (previous.length > 0) return [...previous];
+  return ["parent_support"];
 }

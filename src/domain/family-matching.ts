@@ -1,0 +1,145 @@
+import {
+  FAMILY_RESOURCE_CATALOG,
+  childAgeYears,
+  findFamilyResources,
+  getFamilyResourceById,
+  type FamilyResource
+} from "./family-resources";
+import type { DevNeedDomain, FamilyProfile } from "./types";
+
+export type MatchedResource = {
+  resource: FamilyResource;
+  domain: DevNeedDomain;
+  position: number;
+};
+
+export type FamilyMatchResult = {
+  resources: MatchedResource[];
+  isFallback: boolean;
+};
+
+export const FALLBACK_IDS = ["ky_spin", "hdi_resource_guide", "kynect_resources", "kentucky_211"] as const;
+const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
+const MAX_PER_DOMAIN = 4;
+// A ranking layer can only reorder what retrieval hands it, so the set it scores
+// is the whole match list capped as a total — never truncated per domain, which
+// would silently drop a low-in-catalog entry before ranking ever saw it.
+export const MAX_RANK_CANDIDATES = 24;
+
+export const normalizeCounty = (county: string): string => county.trim().replace(/\s+County$/i, "");
+
+function prioritizeDomainCandidates(resources: FamilyResource[], county: string): FamilyResource[] {
+  const normalizedCounty = normalizeCounty(county);
+  return resources
+    .map((resource, catalogPosition) => ({ resource, catalogPosition }))
+    .sort(
+      (left, right) =>
+        Number(!left.resource.counties.includes(normalizedCounty)) -
+          Number(!right.resource.counties.includes(normalizedCounty)) ||
+        Number(!left.resource.actNow) - Number(!right.resource.actNow) ||
+        left.catalogPosition - right.catalogPosition
+    )
+    .map(({ resource }) => resource);
+}
+
+/**
+ * Deterministic retrieval: county + age + active domains against the verified
+ * catalog. This is the floor everything else sits on — a ranking layer may
+ * reorder and explain what comes out of here, but it never adds to it.
+ */
+export function buildResourceMatches(
+  profile: FamilyProfile,
+  domains: DevNeedDomain[],
+  alreadyEnrolled: string[],
+  perDomainLimit: number = MAX_PER_DOMAIN
+): FamilyMatchResult {
+  if (domains.length === 0) {
+    return { resources: [], isFallback: false };
+  }
+
+  const seen = new Set<string>();
+  const matches: MatchedResource[] = [];
+  const enrolled = new Set(alreadyEnrolled);
+  for (const domain of domains) {
+    const candidates = prioritizeDomainCandidates(
+      findFamilyResources({
+        county: profile.county,
+        domain,
+        childAgeYears: childAgeYears(profile),
+        limit: FAMILY_RESOURCE_CATALOG.length
+      }).filter(({ id }) => !seen.has(id)),
+      profile.county
+    );
+    const selected = [
+      ...candidates.filter(({ id }) => !enrolled.has(id)).slice(0, perDomainLimit),
+      ...candidates.filter(({ id }) => enrolled.has(id))
+    ];
+    for (const resource of selected) {
+      seen.add(resource.id);
+      matches.push({ resource, domain, position: matches.length });
+    }
+  }
+
+  const hasDomainSpecificMatch = matches.some(({ resource }) => !FALLBACK_ID_SET.has(resource.id));
+  if (!hasDomainSpecificMatch) {
+    const domain = domains[0];
+    return {
+      isFallback: true,
+      resources: FALLBACK_IDS.flatMap((id, position) => {
+        const resource = getFamilyResourceById(id);
+        return resource ? [{ resource, domain, position }] : [];
+      })
+    };
+  }
+
+  return {
+    isFallback: false,
+    resources: [...matches].sort(
+      (left, right) =>
+        Number(enrolled.has(left.resource.id)) - Number(enrolled.has(right.resource.id)) ||
+        left.position - right.position
+    )
+  };
+}
+
+export function buildNearbyTherapeuticRecreation(
+  profile: FamilyProfile,
+  primaryResourceIds: Set<string>,
+  alreadyEnrolled: string[]
+): MatchedResource[] {
+  const normalizedCounty = normalizeCounty(profile.county);
+  const enrolled = new Set(alreadyEnrolled);
+  return findFamilyResources({
+    county: profile.county,
+    domain: "recreation",
+    childAgeYears: childAgeYears(profile),
+    limit: FAMILY_RESOURCE_CATALOG.length
+  })
+    .filter(
+      (resource) =>
+        resource.counties.includes(normalizedCounty) &&
+        resource.domains.includes("therapies") &&
+        !primaryResourceIds.has(resource.id)
+    )
+    .map((resource, position) => ({ resource, domain: "recreation" as const, position }))
+    .sort(
+      (left, right) =>
+        Number(enrolled.has(left.resource.id)) - Number(enrolled.has(right.resource.id)) ||
+        left.position - right.position
+    )
+    .slice(0, 2);
+}
+
+/**
+ * The candidate set handed to a ranking layer: the same deterministic retrieval,
+ * without the per-domain display truncation, capped as a total.
+ */
+export function buildRankCandidates(
+  profile: FamilyProfile,
+  domains: DevNeedDomain[],
+  alreadyEnrolled: string[],
+  max: number = MAX_RANK_CANDIDATES
+): FamilyMatchResult {
+  const matches = buildResourceMatches(profile, domains, alreadyEnrolled, FAMILY_RESOURCE_CATALOG.length);
+  return { ...matches, resources: matches.resources.slice(0, max) };
+}
