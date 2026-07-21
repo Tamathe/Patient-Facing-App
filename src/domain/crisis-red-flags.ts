@@ -4,7 +4,8 @@ export type CrisisDomain =
   | "acute_danger"
   | "logistics"
   | "caregiver_collapse"
-  | "abuse";
+  | "abuse"
+  | "harm_to_others";
 export type CrisisMatchSource = "deterministic" | "model_backstop" | "none";
 
 export interface CrisisScreeningOptions {
@@ -60,7 +61,7 @@ function isIntentionalOverdose(input: string): boolean {
 const REPORTED_IDEATION = /\b(?:says?|said|saying|tells?|telling|told me)\b[^.?!]{0,48}\bwant(?:s|ed)? to die\b/i;
 const REFLEXIVE_HARM = /\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
 const REFLEXIVE_INTENT =
-  /\b(?:want(?:s|ed)? to|threatens? to|plans? to|trying to|says? (?:he|she|they) (?:will|might)|told me (?:he|she|they) (?:will|might|want(?:s|ed)? to))\b[^.?!]{0,32}\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
+  /\b(?:want(?:s|ed)? to|threaten(?:s|ed|ing)? to|plans? to|planned to|trying to|says? (?:he|she|they) (?:will|might)|told me (?:he|she|they) (?:will|might|want(?:s|ed)? to))\b[^.?!]{0,32}\b(?:kill|hurt|cut(?:ting)?)\s+(?:himself|herself|themself|themselves)\b/i;
 const ONGOING_SELF_INJURY =
   /\b(?:has been|keeps?|continues? to)\b[^.?!]{0,24}\b(?:hurting|cutting)\s+(?:himself|herself|themself|themselves)\b/i;
 const THIRD_PERSON_END_LIFE = /\bwant(?:s|ed)? to end (?:his|her|their) life\b(?!\s+(?:insurance|support)\b)/i;
@@ -295,6 +296,83 @@ function isSpanishCaregiverCollapse(input: string): boolean {
   return hasCollapse && hasPositiveGivingUpClause;
 }
 
+// Caregiver-reported harm toward animals or other people. Every signal needs a
+// harm verb acting ON its object, so a missing pet ("my dog ran away"), ordinary
+// roughness, and the generic word "violence" in a school-discipline account stay
+// out of the crisis tier — the last one matters because describing a suspension
+// is the navigator's core content, not a red flag on its own.
+const ANIMAL =
+  "(?:animals?|pets?|cats?|kitten|dogs?|puppy|puppies|rabbits?|hamsters?|birds?|guinea\\s+pigs?)";
+const OTHER_PERSON =
+  "(?:another|other|the\\s+other|his|her|their)\\s+(?:kids?|child|children|students?|classmates?|siblings?|brother|sister|teacher|friends?|peers?)";
+const HARM_VERB =
+  "(?:hurt|hurts|hurting|harm|harms|harming|kill|kills|killed|killing|chok\\w+|strangl\\w+|stab\\w+|burn|burns|burned|burning|tortur\\w+|drown\\w+|attack|attacks|attacked|attacking|punch\\w+|beat\\s+up|beats\\s+up|beating\\s+up)";
+
+const HARM_TO_OTHERS_SIGNALS: readonly RegExp[] = [
+  new RegExp(
+    `\\b(?:harmful|violent|cruel|aggressive)\\s+(?:to|towards?)\\s+(?:the\\s+|our\\s+|his\\s+|her\\s+|their\\s+|my\\s+)?${ANIMAL}\\b`,
+    "i"
+  ),
+  new RegExp(`\\b${HARM_VERB}\\s+(?:(?:the|our|my|his|her|their|a|an)\\s+)?${ANIMAL}\\b`, "i"),
+  new RegExp(`\\b${HARM_VERB}\\s+${OTHER_PERSON}\\b`, "i"),
+  /\bthreaten(?:s|ed|ing)?\s+to\s+(?:kill|hurt|harm|stab|shoot|attack)\s+(?!himself|herself|themselves|themself|myself)/i,
+  /\b(?:brought|took|taking|bringing|carried|carrying|snuck|sneaked)\s+(?:a|his|her|their|the)\s+(?:knife|gun|weapon|blade|box\s?cutter)\s+(?:to|into)\s+(?:school|class|daycare|the\s+bus)\b/i
+];
+
+const HARM_TO_OTHERS_DENIALS: readonly RegExp[] = [
+  /\b(?:never|not|doesn'?t|does\s+not|didn'?t|did\s+not|wouldn'?t|would\s+not|hasn'?t|has\s+not|won'?t|will\s+not|no\s+longer)\b/i
+];
+
+function englishClauses(input: string): string[] {
+  return input
+    .split(/[.!?;,:]+|\b(?:but|however|although|though)\b/i)
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+}
+
+// A denial only counts when it sits immediately before the harm phrase itself.
+// Scanning the whole clause would let unrelated wording ("...and I do not know
+// what to do") cancel a real disclosure.
+const DENIAL_WINDOW = 28;
+
+function signalSurvivesDenial(clause: string, signals: readonly RegExp[], denials: readonly RegExp[]): boolean {
+  return signals.some((pattern) => {
+    const match = pattern.exec(clause);
+    if (!match) return false;
+    const preceding = clause.slice(Math.max(0, match.index - DENIAL_WINDOW), match.index);
+    return !matchesAny(preceding, denials);
+  });
+}
+
+function isHarmToOthers(input: string): boolean {
+  return englishClauses(input).some((clause) =>
+    signalSurvivesDenial(clause, HARM_TO_OTHERS_SIGNALS, HARM_TO_OTHERS_DENIALS)
+  );
+}
+
+const SPANISH_ANIMAL =
+  "(?:animal(?:es)?|mascotas?|gatos?|gatitos?|perros?|perritos?|conejos?|hamsters?|pajaros?)";
+const SPANISH_HARM_TO_OTHERS_SIGNALS: readonly RegExp[] = [
+  new RegExp(
+    `\\b(?:lastim\\w+|hiere|hirio|mata|mato|matando|ahorc\\w+|quema|quemo|quemando|tortur\\w+|maltrat\\w+|golpe\\w+)\\s+(?:a\\s+)?(?:los|las|el|la|un|una|su|mi|nuestr[oa])?\\s*${SPANISH_ANIMAL}\\b`,
+    "u"
+  ),
+  new RegExp(`\\b(?:cruel|violent[oa]|agresiv[oa])\\s+con\\s+(?:los|las|el|la|su|mi)?\\s*${SPANISH_ANIMAL}\\b`, "u"),
+  new RegExp(`\\bhace\\s+dano\\s+a\\s+(?:los|las|el|la|su|mi)?\\s*${SPANISH_ANIMAL}\\b`, "u"),
+  /\b(?:lastim\w+|golpe\w+|atac\w+|muerde|mordio)\s+a\s+(?:otr[oa]s?\s+)?(?:nin[oa]s?|companer[oa]s?|estudiantes?|su\s+herman[oa]|su\s+maestr[oa])\b/u,
+  /\bamenaz\w+\s+con\s+(?:matar|lastimar|herir|golpear)\s+a\s+(?!si\s+mism)/u
+];
+const SPANISH_HARM_TO_OTHERS_DENIALS: readonly RegExp[] = [
+  /\b(?:no|nunca|jamas|tampoco)\b/u,
+  /\bes\s+cierto\s+que\b/u
+];
+
+function isSpanishHarmToOthers(input: string): boolean {
+  return spanishClauses(input).some((clause) =>
+    signalSurvivesDenial(clause, SPANISH_HARM_TO_OTHERS_SIGNALS, SPANISH_HARM_TO_OTHERS_DENIALS)
+  );
+}
+
 const CRISIS_RULES: CrisisRule[] = [
   {
     id: "vision_sudden_loss",
@@ -461,6 +539,18 @@ const CRISIS_RULES: CrisisRule[] = [
     id: "acute_worst_headache",
     domain: "acute_danger",
     pattern: /worst\s+headache\s+of\s+my\s+life|thunderclap/i
+  },
+  // Listed last so a disclosure that is both self-directed and outward-directed
+  // still reports self_harm — matchedRules[0] decides the domain.
+  {
+    id: "harm_to_others_reported",
+    domain: "harm_to_others",
+    match: isHarmToOthers
+  },
+  {
+    id: "harm_to_others_spanish_reported",
+    domain: "harm_to_others",
+    match: isSpanishHarmToOthers
   }
 ];
 
@@ -544,11 +634,17 @@ export function measureCrisisRecall(cases: CrisisCorpusCase[]): CrisisRecallRepo
   };
 }
 
-// Self-harm, caregiver-collapse, and abuse disclosures route to the crisis tier;
-// sudden vision loss (a hypertensive-emergency presentation) and acute danger
-// route to the emergency tier. Logistics never reaches crisis handling.
+// Self-harm, caregiver-collapse, abuse, and harm-to-others disclosures route to
+// the crisis tier; sudden vision loss (a hypertensive-emergency presentation)
+// and acute danger route to the emergency tier. Logistics never reaches crisis
+// handling.
 export function crisisTierForDomain(domain: CrisisDomain | null): "crisis" | "emergency" | null {
-  if (domain === "self_harm" || domain === "caregiver_collapse" || domain === "abuse") {
+  if (
+    domain === "self_harm" ||
+    domain === "caregiver_collapse" ||
+    domain === "abuse" ||
+    domain === "harm_to_others"
+  ) {
     return "crisis";
   }
   if (domain === "vision" || domain === "acute_danger") {

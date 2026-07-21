@@ -1184,5 +1184,89 @@ export const crisisGateCorpus: CrisisCorpusCase[] = [
     text: "no aguanto más este nivel y me quiero rendir",
     expectedMatched: false,
     domain: "logistics"
+  },
+  {
+    id: "self_harm_past_tense_reflexive_threat",
+    text: "he threatened to hurt himself again last night",
+    expectedMatched: true,
+    domain: "self_harm"
+  },
+  {
+    id: "harm_to_others_animals_reported",
+    text: "He has been harmful towards animals",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_hurt_the_cat",
+    text: "my son hurt the cat again and I do not know what to do",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_classmate",
+    text: "he has been hurting other kids at school",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_threat",
+    text: "he threatened to hurt his teacher during the meltdown",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_weapon_at_school",
+    text: "the school called because he brought a knife to school",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_es_animals",
+    text: "mi hijo lastima a los animales cuando se enoja",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "harm_to_others_es_classmate",
+    text: "mi hijo golpea a otros niños en la escuela",
+    expectedMatched: true,
+    domain: "harm_to_others"
+  },
+  {
+    id: "trap_rough_with_the_dog",
+    text: "he is rough with the dog sometimes and we are working on it",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_chased_the_cat",
+    text: "she chased the cat around the yard all afternoon",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_school_violence_discipline_record",
+    text: "he has been kicked out of school several times for violence and acting out",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_never_hurt_the_dog",
+    text: "he would never hurt the dog, he adores her",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_siblings_fight_over_toys",
+    text: "they fight over toys every single afternoon",
+    expectedMatched: false,
+    domain: "logistics"
+  },
+  {
+    id: "trap_es_does_not_hit_classmates",
+    text: "mi hijo no golpea a otros niños en la escuela",
+    expectedMatched: false,
+    domain: "logistics"
   }
 ];

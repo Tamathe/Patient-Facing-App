@@ -249,6 +249,7 @@ export function tPrivacy(language: Language, key: PrivacyStringKey): string {
 export type SafetyStringKey =
   | "crisisResponse"
   | "abuseResponse"
+  | "harmToOthersResponse"
   | "crisisCall988"
   | "crisisText988"
   | "callEmergency"
@@ -268,6 +269,8 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
       "It sounds like you may be going through something very painful right now, and you deserve real support from a person. This is more than I can help with safely on my own. Please reach out right now: call or text 988 to reach the Suicide & Crisis Lifeline — it is free, confidential, and open every hour of every day. If you are in immediate danger, call 911. You are not alone, and help is available.",
     abuseResponse:
       "A person trained to help with child safety should be involved right now. If anyone is in immediate danger, call 911. You can also call or text 988 and contact your care team for human help.",
+    harmToOthersResponse:
+      "Keeping everyone safe comes first. If anyone is in immediate danger, call 911 now. For urgent concerns about your child's behavior, you can go to the nearest emergency department, and you can call or text 988 — they also help people who are worried about someone else. Please tell your child's pediatrician what is happening. When you're ready, we can keep looking for support programs together.",
     crisisCall988: "Call 988 — Crisis Lifeline",
     crisisText988: "Text 988",
     callEmergency: "Call 911",
@@ -290,6 +293,8 @@ export const safetyStrings: Record<Language, Record<SafetyStringKey, string>> = 
       "Parece que estás pasando por algo muy doloroso ahora mismo, y mereces apoyo real de una persona. Esto es más de lo que puedo ayudar de forma segura por mi cuenta. Por favor, busca ayuda ahora mismo: llama o envía un mensaje de texto al 988 para comunicarte con la Línea de Crisis y Suicidio — es gratis, confidencial y está disponible a toda hora, todos los días. Si estás en peligro inmediato, llama al 911. No estás solo, y hay ayuda disponible.",
     abuseResponse:
       "Una persona capacitada para ayudar con la seguridad de menores debe participar ahora mismo. Si alguien est\u00e1 en peligro inmediato, llama al 911. Tambi\u00e9n puedes llamar o enviar un mensaje de texto al 988 y comunicarte con tu equipo de salud para obtener ayuda humana.",
+    harmToOthersResponse:
+      "La seguridad de todos es lo primero. Si alguien est\u00e1 en peligro inmediato, llama al 911 ahora. Si te preocupa mucho el comportamiento de tu hijo o hija, puedes ir a la sala de emergencias m\u00e1s cercana, y tambi\u00e9n puedes llamar o enviar un mensaje de texto al 988 \u2014 tambi\u00e9n ayudan a quienes est\u00e1n preocupados por otra persona. Por favor, cu\u00e9ntale al pediatra de tu hijo o hija lo que est\u00e1 pasando. Cuando est\u00e9s listo, podemos seguir buscando programas de apoyo juntos.",
     crisisCall988: "Llama al 988 — Línea de Crisis",
     crisisText988: "Envía un texto al 988",
     callEmergency: "Llama al 911",

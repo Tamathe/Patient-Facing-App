@@ -198,6 +198,15 @@ export async function createSafeAiResponse(
       };
     }
 
+    if (decision.domain === "harm_to_others") {
+      return {
+        content: tSafety(language, "harmToOthersResponse"),
+        safety: "crisis",
+        sources: [],
+        actions: ABUSE_ACTIONS
+      };
+    }
+
     return {
       content: tSafety(language, "crisisResponse"),
       safety: "crisis",

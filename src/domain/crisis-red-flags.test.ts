@@ -283,11 +283,56 @@ describe("screenCrisisRedFlags", () => {
   });
 });
 
+describe("harm-to-others disclosures", () => {
+  it("detects caregiver-reported harm toward animals and other people", () => {
+    for (const text of [
+      "He has been harmful towards animals",
+      "my son hurt the cat again and I do not know what to do",
+      "he has been hurting other kids at school",
+      "he threatened to hurt his teacher during the meltdown",
+      "the school called because he brought a knife to school",
+      "mi hijo lastima a los animales cuando se enoja"
+    ]) {
+      const result = screenCrisisRedFlags(text);
+      expect(result.matched, text).toBe(true);
+      expect(result.domain, text).toBe("harm_to_others");
+    }
+  });
+
+  it("leaves roughness, denials, and a plain discipline record unmatched", () => {
+    for (const text of [
+      "he is rough with the dog sometimes and we are working on it",
+      "she chased the cat around the yard all afternoon",
+      "he has been kicked out of school several times for violence and acting out",
+      "he would never hurt the dog, he adores her",
+      "they fight over toys every single afternoon",
+      "mi hijo no golpea a otros niños en la escuela"
+    ]) {
+      expect(screenCrisisRedFlags(text).matched, text).toBe(false);
+    }
+  });
+
+  it("keeps self-harm precedence when a disclosure points both ways", () => {
+    const result = screenCrisisRedFlags("he says he wants to die and he hurt the cat");
+    expect(result.matched).toBe(true);
+    expect(result.domain).toBe("self_harm");
+    expect(result.ruleIds).toContain("harm_to_others_reported");
+  });
+
+  it("does not treat a reflexive threat as harm to others", () => {
+    const result = screenCrisisRedFlags("he threatened to hurt himself again last night");
+    expect(result.matched).toBe(true);
+    expect(result.domain).toBe("self_harm");
+    expect(result.ruleIds).not.toContain("harm_to_others_reported");
+  });
+});
+
 describe("crisisTierForDomain", () => {
   it("routes self-harm to crisis and vision/acute to emergency", () => {
     expect(crisisTierForDomain("self_harm")).toBe("crisis");
     expect(crisisTierForDomain("caregiver_collapse")).toBe("crisis");
     expect(crisisTierForDomain("abuse")).toBe("crisis");
+    expect(crisisTierForDomain("harm_to_others")).toBe("crisis");
     expect(crisisTierForDomain("vision")).toBe("emergency");
     expect(crisisTierForDomain("acute_danger")).toBe("emergency");
     expect(crisisTierForDomain("logistics")).toBeNull();

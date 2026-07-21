@@ -706,6 +706,42 @@ describe("createSafeAiResponse", () => {
     expect(provider.respond).not.toHaveBeenCalled();
   });
 
+  it("routes a harm-to-others disclosure to the emergency-department copy without calling the provider", async () => {
+    const provider: HealthAiProvider = {
+      respond: vi.fn().mockResolvedValue({ content: "unused", safety: "allowed" as const, sources: [] })
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "He has been harmful towards animals", state: demoState },
+      provider
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toBe(safetyStrings.en.harmToOthersResponse);
+    expect(response.content).toContain("911");
+    expect(response.content).toContain("emergency department");
+    expect(response.content).toContain("988");
+    expect(response.actions).toEqual(
+      expect.arrayContaining(["crisis_call_988", "call_emergency", "call_clinic", "draft_message"])
+    );
+    expect(provider.respond).not.toHaveBeenCalled();
+  });
+
+  it("renders the harm-to-others copy in Spanish for a Spanish speaker", async () => {
+    const state: AppState = {
+      ...demoState,
+      patient: { ...demoState.patient, language: "es" }
+    };
+
+    const response = await createSafeAiResponse(
+      { mode: "trouble", patientInput: "mi hijo lastima a los animales cuando se enoja", state },
+      new MockHealthAiProvider()
+    );
+
+    expect(response.safety).toBe("crisis");
+    expect(response.content).toBe(safetyStrings.es.harmToOthersResponse);
+  });
+
   it("renders the abuse human-routing copy correctly for a Spanish speaker", async () => {
     const state: AppState = {
       ...demoState,
