@@ -207,6 +207,31 @@ describe("FamilyInterview", () => {
     expect(onExtracted.mock.calls[0][1]).toMatchObject({ extraction: "mock", rawText: text });
   });
 
+  it("does not let a late empty draft wipe words the caregiver already typed", async () => {
+    // Stored state hydrates a tick after mount and can deliver an empty draft
+    // after the first keystroke. Losing the caregiver's sentence there also
+    // leaves the submit button disabled with no explanation.
+    const onExtracted = vi.fn();
+    const { rerender } = renderInterview({ draft: "" });
+
+    const textarea = screen.getByLabelText("What would you like help with?");
+    fireEvent.change(textarea, { target: { value: "He keeps getting sent home from school." } });
+    expect(screen.getByRole("button", { name: /find help/i })).toBeEnabled();
+
+    rerender(
+      <FamilyInterview
+        profile={schoolAgeFamilyState.profile!}
+        draft=""
+        language="en"
+        onDraftChange={vi.fn()}
+        onExtracted={onExtracted}
+      />
+    );
+
+    expect(textarea).toHaveValue("He keeps getting sent home from school.");
+    expect(screen.getByRole("button", { name: /find help/i })).toBeEnabled();
+  });
+
   it("uses compile-enforced family strings for its static chrome", () => {
     renderInterview({ draft: "A usable family interview" });
 

@@ -32,7 +32,8 @@ test("patient logs BP, captures a barrier, asks coach, and views Health Brief", 
 
   await page.getByRole("link", { name: "All my health" }).click();
   await page.getByRole("link", { name: /^Coach/ }).click();
-  await expect(page.getByRole("heading", { name: "Coach" })).toBeVisible();
+  // Exact: the page also carries a "Talk with the coach" heading.
+  await expect(page.getByRole("heading", { name: "Coach", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Why does this matter?" }).click();
   await page.getByLabel("Message").fill("Why am I taking lisinopril?");
   await page.getByRole("button", { name: "Send" }).click();

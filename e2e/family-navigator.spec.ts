@@ -290,9 +290,10 @@ test(`golden path works on ordinary caregiver wording: ${PARENT_DESCRIPTION}`, a
   );
   expect(resourceIds.at(-1)).toBe("michelle_p_waiver");
 
-  await expect(page.getByRole("heading", { name: "Now", level: 3 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Next", level: 3 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Later", level: 3 })).toBeVisible();
+  // Exact match: the ranked "What matters most right now" heading is also an h3.
+  await expect(page.getByRole("heading", { name: "Now", level: 3, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Next", level: 3, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Later", level: 3, exact: true })).toBeVisible();
 });
 
 test("a two-year-old in Perry County gets the local First Steps POE before statewide options", async ({ page }) => {
@@ -513,6 +514,49 @@ test(`Spanish safety raises the banner without any family API request: ${SPANISH
   await expect(banner.locator('a[href="tel:911"]')).toBeVisible();
   await expect(banner.getByRole("button", { name: /Ya lo vi.*continuar/i })).toBeVisible();
   await expect(page).toHaveURL(/\/family$/);
+  expect(familyApiRequests).toBe(0);
+});
+
+test("the Breathitt case leads with school procedure and keeps the banner in-thread", async ({ page }) => {
+  let familyApiRequests = 0;
+  await stubUnconfiguredFamilyInterview(page, () => {
+    familyApiRequests += 1;
+  });
+  await page.goto("/family");
+
+  await page
+    .getByLabel("What would you like help with?")
+    .fill(
+      "I have a seven-year-old who has behavioral issues. He has seemingly explosive anger. " +
+        "He has been kicked out of school several times for violence and acting out. " +
+        "He has been harmful towards animals. We live in Breathitt County and we need help."
+    );
+  await page.getByRole("button", { name: "Find help" }).click();
+
+  // Safety first, and the conversation survives it.
+  const banner = page.getByTestId("family-crisis-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner).toHaveAttribute("data-safety-domain", "harm_to_others");
+  await expect(banner.getByText(/emergency department/i)).toBeVisible();
+  await banner.getByRole("button", { name: /I've seen this/i }).click();
+
+  // Basics came out of the caregiver's own words — one tap, no re-asking.
+  const prefill = page.getByTestId("family-basics-prefill");
+  await expect(prefill).toBeVisible();
+  await expect(prefill.getByText("Breathitt", { exact: true })).toBeVisible();
+  await prefill.getByRole("button", { name: "Yes, that is right" }).click();
+
+  // The lead is school procedure, not help-with-reading.
+  const cards = page.locator("[data-family-resource-card]");
+  await expect(cards.first()).toBeVisible();
+  const resourceIds = await cards.evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("data-resource-id"))
+  );
+  expect(resourceIds).toContain("idea_school_discipline");
+  expect(resourceIds).toContain("kde_evaluation_request");
+  expect(resourceIds.slice(0, 3)).not.toContain("kde_parent_toolbox");
+
+  // Zero-key demo: the whole beat ran without one live call.
   expect(familyApiRequests).toBe(0);
 });
 

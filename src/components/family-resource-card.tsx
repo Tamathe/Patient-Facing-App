@@ -11,6 +11,11 @@ export type FamilyResourceCardProps = {
   resource: FamilyResource;
   domain: DevNeedDomain;
   language: Language;
+  /** Grounded "why this, for you" line. Absent falls back to the catalog summary alone. */
+  why?: string;
+  /** Verbatim caregiver words, already checked against the transcript. */
+  becauseYouSaid?: string;
+  urgency?: "act_now" | "soon" | "when_ready";
   isSaved: boolean;
   isEnrolled: boolean;
   onSave: (resource: FamilyResource, domain: DevNeedDomain) => void;
@@ -24,6 +29,12 @@ const REFERRAL_KEYS: Record<FamilyResource["referralMode"], FamilyStringKey> = {
   provider_referral: "referralProvider",
   school_contact: "referralSchool",
   navigator_referral: "referralNavigator"
+};
+
+const URGENCY_KEYS: Record<"act_now" | "soon" | "when_ready", FamilyStringKey> = {
+  act_now: "rankUrgencyActNow",
+  soon: "rankUrgencySoon",
+  when_ready: "rankUrgencyWhenReady"
 };
 
 const CONTROL_FOCUS =
@@ -54,6 +65,9 @@ export function FamilyResourceCard({
   resource,
   domain,
   language,
+  why,
+  becauseYouSaid,
+  urgency,
   isSaved,
   isEnrolled,
   onSave,
@@ -100,12 +114,37 @@ export function FamilyResourceCard({
         <h3 id={titleId} className="min-w-0 break-words text-lg font-semibold">
           {resource.name}
         </h3>
-        {isEnrolled ? (
-          <span className="rounded-full bg-calm px-2 py-1 text-xs font-semibold text-care">
-            {tFamily(language, "resourceAlreadyEnrolled")}
-          </span>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {urgency && !isEnrolled ? (
+            <span
+              data-testid="family-resource-urgency"
+              className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                urgency === "act_now" ? "bg-note text-ink" : "bg-calm text-care"
+              }`}
+            >
+              {tFamily(language, URGENCY_KEYS[urgency])}
+            </span>
+          ) : null}
+          {isEnrolled ? (
+            <span className="rounded-full bg-calm px-2 py-1 text-xs font-semibold text-care">
+              {tFamily(language, "resourceAlreadyEnrolled")}
+            </span>
+          ) : null}
+        </div>
       </div>
+      {why ? (
+        <p data-testid="family-resource-why" className="mt-2 break-words font-medium leading-6">
+          {why}
+        </p>
+      ) : null}
+      {becauseYouSaid ? (
+        <blockquote
+          data-testid="family-resource-quote"
+          className="mt-2 break-words border-l-4 border-care/30 pl-3 text-sm text-ink/70"
+        >
+          {tFamily(language, "rankQuotePrefix")}: {becauseYouSaid}
+        </blockquote>
+      ) : null}
       <p className="mt-2 break-words text-sm leading-6 text-ink/80">{resource.summary}</p>
 
       <dl className="mt-3 grid gap-2 text-sm">

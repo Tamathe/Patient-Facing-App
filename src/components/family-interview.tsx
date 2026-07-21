@@ -141,6 +141,11 @@ export function FamilyInterview({
 
   useEffect(() => {
     if (submitting) return;
+    // An empty incoming draft must never wipe words already in the box. Stored
+    // state hydrates a tick after mount, so a caregiver who starts typing
+    // immediately would otherwise watch their first sentence disappear — and on
+    // a slow phone that window is wide enough to hit in normal use.
+    if (draft.length === 0 && lastLocalDraftRef.current.length > 0) return;
     setText(draft);
     setError(draft.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : null);
     if (draft !== lastLocalDraftRef.current) {

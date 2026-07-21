@@ -8,9 +8,14 @@ import type { AppState, FamilyNavigatorState } from "@/domain/types";
 import { healthReducer } from "@/state/store";
 import { FamilyExperience } from "@/components/family-experience";
 
-const { push, requestFamilyInterview } = vi.hoisted(() => ({ push: vi.fn(), requestFamilyInterview: vi.fn() }));
+const { push, requestFamilyInterview, requestFamilyRecommendations } = vi.hoisted(() => ({
+  push: vi.fn(),
+  requestFamilyInterview: vi.fn(),
+  requestFamilyRecommendations: vi.fn()
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("@/ai/family-interview-provider", () => ({ requestFamilyInterview }));
+vi.mock("@/ai/family-recommend-provider", () => ({ requestFamilyRecommendations }));
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
@@ -52,6 +57,8 @@ beforeEach(() => {
   push.mockReset();
   requestFamilyInterview.mockReset();
   requestFamilyInterview.mockResolvedValue(null);
+  requestFamilyRecommendations.mockReset();
+  requestFamilyRecommendations.mockResolvedValue(null);
 });
 
 describe("FamilyExperience", () => {
@@ -338,6 +345,99 @@ describe("FamilyExperience", () => {
     expect(within(turns).getByRole("alert")).toHaveTextContent(/four-digit birth year/i);
     const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
     expect(family.profile).toBeNull();
+  });
+
+  it("ranks and justifies the resources when the model returns a grounded ranking", async () => {
+    const user = userEvent.setup();
+    requestFamilyRecommendations.mockResolvedValue({
+      heard: "You told us school keeps sending him home, and that is the thread to pull first.",
+      lead: "school_iep",
+      recommendations: [
+        {
+          id: "idea_school_discipline",
+          why: "Once removals pass ten days the school has to look at whether the behavior is tied to a disability.",
+          becauseYouSaid: "kicked out of school",
+          urgency: "act_now"
+        },
+        { id: "ky_spin", why: "A free helpline that walks you through the meeting.", urgency: "soon" }
+      ]
+    });
+    render(<ReducerHarness initialState={withFamily({ ...schoolAgeFamilyState, activeDomains: ["school_iep"] })} />);
+
+    const interview = screen.getByLabelText("What would you like help with?");
+    await user.clear(interview);
+    await user.type(interview, "He keeps getting kicked out of school and I do not know what to ask for.");
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    const heard = await screen.findByTestId("family-heard");
+    expect(within(heard).getByText(/school keeps sending him home/)).toBeVisible();
+
+    const cards = within(screen.getByTestId("matched-family-resources")).getAllByTestId("family-resource-card");
+    expect(cards[0]).toHaveAttribute("data-resource-id", "idea_school_discipline");
+    expect(within(cards[0]).getByTestId("family-resource-why")).toHaveTextContent(/ten days/);
+    expect(within(cards[0]).getByTestId("family-resource-quote")).toHaveTextContent("kicked out of school");
+    expect(within(cards[0]).getByTestId("family-resource-urgency")).toHaveTextContent("Worth doing now");
+    // The card's own facts still come from the catalog, never from the model.
+    expect(within(cards[0]).getByRole("heading", { name: "IDEA school discipline protections" })).toBeVisible();
+  });
+
+  it("falls back to the deterministic order when the ranking call fails", async () => {
+    const user = userEvent.setup();
+    requestFamilyRecommendations.mockResolvedValue(null);
+    render(<ReducerHarness initialState={withFamily({ ...schoolAgeFamilyState, activeDomains: ["school_iep"] })} />);
+
+    const interview = screen.getByLabelText("What would you like help with?");
+    await user.clear(interview);
+    await user.type(interview, "He keeps getting kicked out of school and I do not know what to ask for.");
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    await waitFor(() => expect(requestFamilyRecommendations).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId("matched-family-resources")).getAllByTestId("family-resource-card").length
+      ).toBeGreaterThan(0)
+    );
+    expect(screen.queryByTestId("family-resource-why")).not.toBeInTheDocument();
+    expect(screen.getByTestId("family-heard")).toBeVisible();
+  });
+
+  it("drops a hallucinated id and an ungrounded quote before anything renders", async () => {
+    const user = userEvent.setup();
+    requestFamilyRecommendations.mockResolvedValue({
+      heard: "You told us school is the problem.",
+      lead: "school_iep",
+      recommendations: [
+        { id: "totally_invented_program", why: "trust me", urgency: "act_now" },
+        {
+          id: "idea_school_discipline",
+          why: "This is the review the school owes you.",
+          becauseYouSaid: "words the caregiver never wrote",
+          urgency: "act_now"
+        }
+      ]
+    });
+    render(<ReducerHarness initialState={withFamily({ ...schoolAgeFamilyState, activeDomains: ["school_iep"] })} />);
+
+    const interview = screen.getByLabelText("What would you like help with?");
+    await user.clear(interview);
+    await user.type(interview, "He keeps getting kicked out of school and I do not know what to ask for.");
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+
+    // The deterministic cards render first, so wait for the ranking to land.
+    await waitFor(() =>
+      expect(
+        within(screen.getByTestId("matched-family-resources"))
+          .getAllByTestId("family-resource-card")[0]
+      ).toHaveAttribute("data-resource-id", "idea_school_discipline")
+    );
+    const cards = within(screen.getByTestId("matched-family-resources")).getAllByTestId(
+      "family-resource-card"
+    );
+    expect(cards.map((card) => card.getAttribute("data-resource-id"))).not.toContain(
+      "totally_invented_program"
+    );
+    expect(within(cards[0]).queryByTestId("family-resource-quote")).not.toBeInTheDocument();
+    expect(within(cards[0]).getByTestId("family-resource-why")).toBeVisible();
   });
 
   it("starts a first visit completely blank, with no example shortcuts or pre-filled text", () => {

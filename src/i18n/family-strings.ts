@@ -408,7 +408,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsPrefillConfirm: "Yes, that is right",
     basicsPrefillChange: "Change something",
     basicsPrefillApproxYear: "about {year}",
-    rankHeardTitle: "Here is what we heard",
+    rankHeardTitle: "What matters most right now",
     rankHeardFallback:
       "These are based on what you told us, your county, and your child's age. Check each program's own page — their rules are the ones that count.",
     rankQuotePrefix: "You said",
@@ -656,7 +656,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsPrefillConfirm: "Sí, así es",
     basicsPrefillChange: "Cambiar algo",
     basicsPrefillApproxYear: "alrededor de {year}",
-    rankHeardTitle: "Esto fue lo que entendimos",
+    rankHeardTitle: "Lo más importante ahora",
     rankHeardFallback:
       "Esto se basa en lo que nos contaste, tu condado y la edad de tu hijo o hija. Revisa la página de cada programa — sus reglas son las que valen.",
     rankQuotePrefix: "Dijiste",

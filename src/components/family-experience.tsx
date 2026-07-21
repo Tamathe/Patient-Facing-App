@@ -439,6 +439,33 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     rankedSet
   ]);
 
+  // What actually renders. A valid ranking reorders and annotates the matched set;
+  // with no ranking (screen-only, stale, or every item dropped by the lint) the
+  // deterministic order stands unchanged.
+  const displayResources = useMemo(() => {
+    const matched = matchResult.resources;
+    if (!rankedSet || matchResult.isFallback) {
+      return matched.map((match) => ({ match, why: undefined, quote: undefined, urgency: undefined }));
+    }
+    const byId = new Map(rankCandidates.map((candidate) => [candidate.resource.id, candidate]));
+    const ranked = rankedSet.items.flatMap((item) => {
+      const match = byId.get(item.resourceId);
+      return match
+        ? [{ match, why: item.why, quote: item.becauseYouSaid, urgency: item.urgency }]
+        : [];
+    });
+    if (ranked.length === 0) {
+      return matched.map((match) => ({ match, why: undefined, quote: undefined, urgency: undefined }));
+    }
+    const rankedIds = new Set(ranked.map(({ match }) => match.resource.id));
+    return [
+      ...ranked,
+      ...matched
+        .filter(({ resource }) => !rankedIds.has(resource.id))
+        .map((match) => ({ match, why: undefined, quote: undefined, urgency: undefined }))
+    ];
+  }, [matchResult.isFallback, matchResult.resources, rankCandidates, rankedSet]);
+
   const nearbyTherapeuticRecreation = useMemo(() => {
     if (!family?.profile || family.activeDomains.length === 0) {
       return [];
@@ -695,7 +722,14 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
               <h2 id="family-resources-title" className="text-xl font-semibold">
                 {tFamily(language, "resourcesTitle")}
               </h2>
-              <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "resourcesIntro")}</p>
+              {rankedSet ? (
+                <div data-testid="family-heard" className="mt-2 rounded-control bg-white p-3">
+                  <h3 className="break-words font-semibold">{tFamily(language, "rankHeardTitle")}</h3>
+                  <p className="mt-1 break-words text-sm leading-6 text-ink/80">{rankedSet.heard}</p>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "resourcesIntro")}</p>
+              )}
               {language === "es" ? (
                 <p className="mt-2 rounded-control bg-note/30 p-3 text-sm leading-6 text-ink/75">
                   {tFamily(language, "resourceSourceLanguageNotice")}
@@ -729,12 +763,15 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                 </section>
               ) : (
                 <div data-testid="matched-family-resources" className="mt-4 grid gap-3">
-                  {matchResult.resources.map(({ resource, domain }) => (
+                  {displayResources.map(({ match: { resource, domain }, why, quote, urgency }) => (
                     <FamilyResourceCard
                       key={`matched-${resource.id}`}
                       resource={resource}
                       domain={domain}
                       language={language}
+                      why={why}
+                      becauseYouSaid={quote}
+                      urgency={urgency}
                       isSaved={family.saved.some(({ resourceId }) => resourceId === resource.id)}
                       isEnrolled={family.alreadyEnrolled.includes(resource.id)}
                       onSave={saveResource}
