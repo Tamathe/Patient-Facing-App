@@ -22,6 +22,8 @@ export type FamilyFollowUpTurnProps = {
   language: Language;
   submitting: boolean;
   voiceEntryContext?: VoiceEntryContext;
+  /** Dictation stays closed while an unacknowledged safety banner is on screen. */
+  voiceLocked?: boolean;
   onAnswer: (text: string, via: "chip" | "typed" | "voice") => void;
 };
 
@@ -66,6 +68,7 @@ export function FamilyFollowUpTurn({
   language,
   submitting,
   voiceEntryContext,
+  voiceLocked = false,
   onAnswer
 }: FamilyFollowUpTurnProps) {
   const [answer, setAnswer] = useState("");
@@ -120,6 +123,9 @@ export function FamilyFollowUpTurn({
   function toggleVoice(): void {
     if (dictation.listening) {
       dictation.stop();
+      return;
+    }
+    if (voiceLocked) {
       return;
     }
     if (consentRequired) {

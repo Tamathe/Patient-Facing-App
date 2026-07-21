@@ -7,6 +7,7 @@ import React, {
   useState,
   type Dispatch
 } from "react";
+import { FamilyCrisisBanner } from "@/components/family-crisis-banner";
 import { FamilyFactCard } from "@/components/family-fact-card";
 import type { FamilyInterviewSubmissionMeta, SanitizedFamilyInterviewResult } from "@/components/family-interview";
 import { FamilyNeedsScreen } from "@/components/family-needs-screen";
@@ -18,6 +19,7 @@ import { FamilyProfileForm } from "@/components/family-profile-form";
 import { FamilyResourceCard } from "@/components/family-resource-card";
 import { FamilyStageTimeline } from "@/components/family-stage-timeline";
 import { recordAuditEvent } from "@/domain/audit";
+import { createFamilySafetyEvent, pendingFamilySafetyEvent, type FamilySafetyScreen } from "@/domain/family-safety";
 import type { FamilyDiagnosisBackdateMonths } from "@/domain/family-stages";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
@@ -423,11 +425,14 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const language = state.patient.language;
   const family = state.family;
   const [reviewDetails, setReviewDetails] = useState<ReviewDetails | null>(null);
-  const [safetySuppressed, setSafetySuppressed] = useState(false);
+  const safetyEvents = family?.safetyEvents ?? [];
+  const pendingSafetyEvent = pendingFamilySafetyEvent(safetyEvents);
+  const latestSafetyEvent = safetyEvents[safetyEvents.length - 1];
   const [needsScreenOpen, setNeedsScreenOpen] = useState(false);
   const [basicsToggled, setBasicsToggled] = useState<boolean | null>(null);
   const reviewRef = useRef<HTMLElement>(null);
   const pendingReviewFocusRef = useRef(false);
+  const safetyTurnRef = useRef(false);
   const latestInterview = family?.interviews.at(-1);
   const latestInterviewId = latestInterview?.id;
   const reviewFacts = family?.facts.filter(({ interviewId }) => interviewId === latestInterviewId) ?? [];
@@ -443,21 +448,21 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   }, [language]);
 
   useEffect(() => {
-    if (pendingReviewFocusRef.current && latestInterviewId && !safetySuppressed) {
+    if (pendingReviewFocusRef.current && latestInterviewId) {
       reviewRef.current?.focus();
       pendingReviewFocusRef.current = false;
     }
-  }, [latestInterviewId, safetySuppressed]);
+  }, [latestInterviewId]);
 
   const matchResult = useMemo(() => {
-    if (!family?.profile || safetySuppressed) {
+    if (!family?.profile) {
       return { resources: [], isFallback: false };
     }
     return buildResourceMatches(family.profile, family.activeDomains, family.alreadyEnrolled);
-  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile, safetySuppressed]);
+  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile]);
 
   const nearbyTherapeuticRecreation = useMemo(() => {
-    if (!family?.profile || safetySuppressed || family.activeDomains.length === 0) {
+    if (!family?.profile || family.activeDomains.length === 0) {
       return [];
     }
     return buildNearbyTherapeuticRecreation(
@@ -465,7 +470,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       new Set(matchResult.resources.map(({ resource }) => resource.id)),
       family.alreadyEnrolled
     );
-  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile, matchResult.resources, safetySuppressed]);
+  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile, matchResult.resources]);
 
   const savedResources = useMemo(
     () =>
@@ -477,7 +482,6 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   );
 
   function saveProfile(profile: FamilyProfile): void {
-    setSafetySuppressed(false);
     dispatch({ type: "saveFamilyProfile", profile });
   }
 
@@ -490,7 +494,6 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   }
 
   function submitScreen(answers: FamilyScreenAnswer[], facts: FamilyFact[]): void {
-    setSafetySuppressed(false);
     dispatch({ type: "submitFamilyScreen", answers, facts });
   }
 
@@ -510,9 +513,15 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       status: familyFactStatus(fact.sourceSnippet, meta.rawText),
       sourceSnippet: fact.sourceSnippet
     }));
-    const domains = result.domains.map(({ domain }) => domain);
+    const extractedDomains = result.domains.map(({ domain }) => domain);
+    // Disclosing a crisis is not a retraction of the family's needs. When a
+    // safety turn extracts nothing, keep what we already matched rather than
+    // letting an empty result clear the list out from under them.
+    const wasSafetyTurn = safetyTurnRef.current;
+    safetyTurnRef.current = false;
+    const domains =
+      wasSafetyTurn && extractedDomains.length === 0 ? family?.activeDomains ?? [] : extractedDomains;
 
-    setSafetySuppressed(false);
     setReviewDetails({ domains: result.domains });
     dispatch({
       type: "addFamilyInterview",
@@ -542,10 +551,15 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     });
   }
 
-  function suppressForSafety(): void {
-    pendingReviewFocusRef.current = false;
-    setReviewDetails(null);
-    setSafetySuppressed(true);
+  // The navigator shows the standard crisis resources and keeps working. The
+  // thread, the review card, and any matched resources all survive.
+  function recordSafety(screen: FamilySafetyScreen): void {
+    safetyTurnRef.current = true;
+    dispatch({ type: "recordFamilySafetyEvent", event: createFamilySafetyEvent(screen) });
+  }
+
+  function acknowledgeSafety(eventId: string): void {
+    dispatch({ type: "acknowledgeFamilySafetyEvent", eventId, at: new Date().toISOString() });
   }
 
   // Everything the caregiver has already typed, so the basics turns can skip
@@ -557,13 +571,12 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
 
   const basicsOpen = basicsToggled ?? false;
   const needsBasics =
-    !safetySuppressed &&
     !!family &&
     !family.profile &&
     (family.interviews.length > 0 || family.activeDomains.length > 0);
 
   const reviewTurn =
-    !safetySuppressed && (reviewFacts.length > 0 || reviewDetails) ? (
+    reviewFacts.length > 0 || reviewDetails ? (
       <section
         ref={reviewRef}
         tabIndex={-1}
@@ -599,9 +612,21 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
       </section>
     ) : null;
 
+  // The banner leads the interlude and stays until acknowledged, but nothing
+  // below it is withheld — safety words first, help still on the page.
+  const safetyTurn = latestSafetyEvent ? (
+    <FamilyCrisisBanner
+      key={latestSafetyEvent.id}
+      event={latestSafetyEvent}
+      language={language}
+      onAcknowledge={acknowledgeSafety}
+    />
+  ) : null;
+
   const interlude =
-    reviewTurn || needsBasics || matchResult.resources.length > 0 ? (
+    safetyTurn || reviewTurn || needsBasics || matchResult.resources.length > 0 ? (
       <>
+        {safetyTurn}
         {reviewTurn}
         {needsBasics ? (
           <FamilyBasicsTurns
@@ -651,9 +676,10 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             voiceEntryContext={{ patientId: state.patient.id, dispatch }}
             interlude={interlude}
             holdTurn={needsBasics}
+            voiceLocked={pendingSafetyEvent !== undefined}
             onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
             onInterviewExtracted={addInterview}
-            onSafetyEscalation={suppressForSafety}
+            onSafetyEscalation={recordSafety}
           />
         </div>
         <div className="mt-4 border-t border-care/10 pt-4">
@@ -684,7 +710,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
         </div>
       </section>
 
-      {!safetySuppressed && family && family.profile && family.activeDomains.length > 0 ? (
+      {family && family.profile && family.activeDomains.length > 0 ? (
             <section
               id="family-resources"
               className="rounded-control border border-care/20 bg-paper p-4"

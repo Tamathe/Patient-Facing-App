@@ -102,6 +102,7 @@ describe("dynamic instrument route", () => {
           county: "Fayette",
           diagnoses: []
         },
+        safetyEvents: [],
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -140,6 +141,7 @@ describe("dynamic instrument route", () => {
           county: "Fayette",
           diagnoses: []
         },
+        safetyEvents: [],
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -180,6 +182,7 @@ describe("dynamic instrument route", () => {
           county: "Fayette",
           diagnoses: []
         },
+        safetyEvents: [],
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],

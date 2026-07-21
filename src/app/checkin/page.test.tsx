@@ -50,6 +50,7 @@ describe("screening hub", () => {
       patient: { ...demoState.patient, language: "es" },
       family: {
         profile: null,
+        safetyEvents: [],
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -320,6 +321,7 @@ describe("screening hub", () => {
           county: "Fayette",
           diagnoses: []
         },
+        safetyEvents: [],
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -363,6 +365,7 @@ describe("screening hub", () => {
         county: "Fayette",
         diagnoses: []
       },
+      safetyEvents: [],
       interviewDraft: "",
       screenAnswers: [],
       interviews: [],

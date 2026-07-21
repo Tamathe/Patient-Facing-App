@@ -377,8 +377,20 @@ export type SavedFamilyResource = {
   domain: DevNeedDomain;
 };
 
+// A safety disclosure inside the family thread. The navigator shows the standard
+// crisis resources and keeps helping — this record is what holds the banner open
+// (and every voice mic closed) until the caregiver acknowledges it.
+export type FamilySafetyEvent = {
+  id: string;
+  tier: "crisis" | "emergency";
+  domain: string;
+  createdAt: string;
+  acknowledgedAt?: string;
+};
+
 export type FamilyNavigatorState = {
   profile: FamilyProfile | null;
+  safetyEvents: FamilySafetyEvent[];
   interviewDraft: string;
   screenAnswers: FamilyScreenAnswer[];
   interviews: FamilyInterview[];

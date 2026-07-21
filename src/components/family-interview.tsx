@@ -1,14 +1,12 @@
 "use client";
 
 import { Mic } from "lucide-react";
-import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { requestFamilyInterview } from "@/ai/family-interview-provider";
 import { extractFamilyInterviewMock, familyInterviewInputSchema, type FamilyInterviewResult } from "@/domain/family-interview";
 import { filterUnsupportedDiagnosisFacts, stripUnsafeFamilyRationales } from "@/domain/family-diagnosis-lint";
 import { sanitizeFamilyFollowUps } from "@/domain/family-follow-up-lint";
-import { classifyCrisis, classifySafety } from "@/domain/safety";
-import { screenSocialEmergency } from "@/domain/social-screen";
+import { screenFamilySafety, type FamilySafetyScreen } from "@/domain/family-safety";
 import type { FamilyProfile } from "@/domain/types";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
@@ -49,7 +47,7 @@ export type FamilyInterviewProps = {
   language: Language;
   onDraftChange: (draft: string) => void;
   onExtracted: (result: SanitizedFamilyInterviewResult, meta: FamilyInterviewSubmissionMeta) => void;
-  onSafetyEscalation?: () => void;
+  onSafetyEscalation?: (screen: FamilySafetyScreen) => void;
 };
 
 function speechRecognitionConstructor(): (new () => SpeechRecognitionLike) | null {
@@ -87,7 +85,6 @@ export function FamilyInterview({
   onExtracted,
   onSafetyEscalation
 }: FamilyInterviewProps) {
-  const router = useRouter();
   const copy = {
     label: tFamily(language, "interviewLabel"),
     placeholder: tFamily(language, "interviewPlaceholder"),
@@ -255,28 +252,28 @@ export function FamilyInterview({
         setError(snapshot.rawText.length > FAMILY_INTERVIEW_MAX_CHARS ? copy.tooLong : copy.tooShort);
         return;
       }
-      if (
-        classifyCrisis(snapshot.rawText).matched ||
-        classifySafety(snapshot.rawText).level !== "allowed" ||
-        screenSocialEmergency(snapshot.rawText)
-      ) {
-        onSafetyEscalation?.();
-        router.push(`/chat?ask=${encodeURIComponent(snapshot.rawText)}`);
-        return;
+      // A safety disclosure raises the banner and keeps the thread alive. The
+      // tripping text is never sent anywhere: extraction falls to the on-device
+      // path for this turn, and later clean turns resume the live route.
+      const safety = screenFamilySafety(snapshot.rawText);
+      if (safety) {
+        onSafetyEscalation?.(safety);
       }
 
       pending = true;
       setSubmitting(true);
       let live: FamilyInterviewResult | null = null;
-      try {
-        live = await requestFamilyInterview({
-          text: snapshot.rawText,
-          profile: snapshot.profile,
-          passcode: snapshot.passcode,
-          language: snapshot.language
-        });
-      } catch {
-        live = null;
+      if (!safety) {
+        try {
+          live = await requestFamilyInterview({
+            text: snapshot.rawText,
+            profile: snapshot.profile,
+            passcode: snapshot.passcode,
+            language: snapshot.language
+          });
+        } catch {
+          live = null;
+        }
       }
       if (!mountedRef.current || latestContextKeyRef.current !== snapshot.contextKey) return;
       const extraction = live ? "live" : "mock";

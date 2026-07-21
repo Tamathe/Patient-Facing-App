@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { requestFamilyInterview } from "@/ai/family-interview-provider";
 import { extractFamilyInterviewMock, type FamilyFollowUp, type FamilyInterviewResult } from "@/domain/family-interview";
-import { classifyCrisis, classifySafety } from "@/domain/safety";
-import { screenSocialEmergency } from "@/domain/social-screen";
+import { screenFamilySafety, type FamilySafetyScreen } from "@/domain/family-safety";
 import type { FamilyProfile } from "@/domain/types";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
@@ -61,13 +59,15 @@ export type FamilyOrientationInterviewProps = {
   interlude?: React.ReactNode;
   /** Hide the next follow-up question while something else (like the basics turns) is being asked. */
   holdTurn?: boolean;
+  /** Dictation stays closed while an unacknowledged safety banner is on screen. */
+  voiceLocked?: boolean;
   onDraftChange: (draft: string) => void;
   onInterviewExtracted: (
     result: SanitizedFamilyInterviewResult,
     meta: FamilyInterviewSubmissionMeta,
     context: { round: number }
   ) => void;
-  onSafetyEscalation: () => void;
+  onSafetyEscalation: (screen: FamilySafetyScreen) => void;
 };
 
 const FOLLOW_UP_TRANSCRIPT_RESERVE = 200 + FAMILY_FOLLOW_UP_ANSWER_MAX + 8;
@@ -122,11 +122,11 @@ export function FamilyOrientationInterview({
   voiceEntryContext,
   interlude,
   holdTurn = false,
+  voiceLocked = false,
   onDraftChange,
   onInterviewExtracted,
   onSafetyEscalation
 }: FamilyOrientationInterviewProps) {
-  const router = useRouter();
   const [thread, setThread] = useState<OrientationState>(initialOrientationState);
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -182,15 +182,11 @@ export function FamilyOrientationInterview({
     if (!answer) return;
 
     submittingRef.current = true;
-    if (
-      classifyCrisis(answer).matched ||
-      classifySafety(answer).level !== "allowed" ||
-      screenSocialEmergency(answer)
-    ) {
-      onSafetyEscalation();
-      router.push(`/chat?ask=${encodeURIComponent(answer)}`);
-      resetThread();
-      return;
+    // A safety disclosure raises the banner and stays on-device: this answer is
+    // extracted locally and the thread continues rather than dead-ending.
+    const safety = screenFamilySafety(answer);
+    if (safety) {
+      onSafetyEscalation(safety);
     }
 
     const answeredRounds = [
@@ -218,15 +214,17 @@ export function FamilyOrientationInterview({
 
     try {
       let live: FamilyInterviewResult | null = null;
-      try {
-        live = await requestFamilyInterview({
-          text: liveTranscript,
-          profile: snapshot.profile,
-          passcode: snapshot.passcode,
-          language: snapshot.language
-        });
-      } catch {
-        live = null;
+      if (!safety) {
+        try {
+          live = await requestFamilyInterview({
+            text: liveTranscript,
+            profile: snapshot.profile,
+            passcode: snapshot.passcode,
+            language: snapshot.language
+          });
+        } catch {
+          live = null;
+        }
       }
       if (!mountedRef.current || latestContextKeyRef.current !== snapshot.contextKey) return;
 
@@ -318,6 +316,7 @@ export function FamilyOrientationInterview({
           language={language}
           submitting={false}
           voiceEntryContext={voiceEntryContext}
+          voiceLocked={voiceLocked}
           onAnswer={(answer, via) => void answerFollowUp(answer, via)}
         />
       ) : null}

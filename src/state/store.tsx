@@ -40,6 +40,7 @@ import type {
   FamilyInterview,
   FamilyNavigatorState,
   FamilyProfile,
+  FamilySafetyEvent,
   FamilyScreenAnswer,
   GlucoseReading,
   HomeReading,
@@ -94,6 +95,8 @@ export type HealthAction =
   | { type: "submitFamilyScreen"; answers: FamilyScreenAnswer[]; facts: FamilyFact[] }
   | { type: "addFamilyInterview"; interview: FamilyInterview; facts: FamilyFact[]; domains: FamilyNavigatorState["activeDomains"] }
   | { type: "confirmFamilyFact"; factId: string }
+  | { type: "recordFamilySafetyEvent"; event: FamilySafetyEvent }
+  | { type: "acknowledgeFamilySafetyEvent"; eventId: string; at: string }
   | { type: "saveFamilyResource"; resource: SavedFamilyResource }
   | { type: "toggleFamilyEnrollment"; resourceId: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
@@ -102,6 +105,7 @@ export type HealthAction =
 function emptyFamilyState(profile: FamilyProfile | null): FamilyNavigatorState {
   return {
     profile,
+    safetyEvents: [],
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],
@@ -631,6 +635,39 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
           )
         }
       };
+    case "recordFamilySafetyEvent": {
+      const family = state.family ?? emptyFamilyState(null);
+      return {
+        ...state,
+        family: { ...family, safetyEvents: [...family.safetyEvents, action.event] },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "crisis_escalated", "Family safety resources shown")
+        ]
+      };
+    }
+    case "acknowledgeFamilySafetyEvent": {
+      if (!state.family) {
+        return state;
+      }
+      const target = state.family.safetyEvents.find(({ id }) => id === action.eventId);
+      if (!target || target.acknowledgedAt !== undefined) {
+        return state;
+      }
+      return {
+        ...state,
+        family: {
+          ...state.family,
+          safetyEvents: state.family.safetyEvents.map((event) =>
+            event.id === action.eventId ? { ...event, acknowledgedAt: action.at } : event
+          )
+        },
+        auditEvents: [
+          ...state.auditEvents,
+          recordAuditEvent(state.patient.id, "updated", "Family safety resources acknowledged")
+        ]
+      };
+    }
     case "saveFamilyResource":
       if (!state.family || state.family.saved.some(({ resourceId }) => resourceId === action.resource.resourceId)) {
         return state;

@@ -21,6 +21,7 @@ import type {
   FamilyInterview,
   FamilyNavigatorState,
   FamilyProfile,
+  FamilySafetyEvent,
   FamilyScreenAnswer,
   FoodSource,
   GlucoseReading,
@@ -762,6 +763,17 @@ function sanitizeFamilyProfile(value: unknown): FamilyProfile | null | undefined
   };
 }
 
+function isFamilySafetyEvent(value: unknown): value is FamilySafetyEvent {
+  return (
+    isObject(value) &&
+    hasString(value, "id") &&
+    (value.tier === "crisis" || value.tier === "emergency") &&
+    hasString(value, "domain") &&
+    hasString(value, "createdAt") &&
+    (value.acknowledgedAt === undefined || typeof value.acknowledgedAt === "string")
+  );
+}
+
 function isFamilyScreenAnswer(value: unknown): value is FamilyScreenAnswer {
   return (
     isObject(value) &&
@@ -823,9 +835,13 @@ function uniqueSavedFamilyResources(resources: SavedFamilyResource[]): SavedFami
 }
 
 function isFamilyNavigatorState(value: unknown): value is FamilyNavigatorState {
+  // safetyEvents is optional here on purpose: a save written before it existed
+  // must still validate, or an existing family slice would reset to the demo.
+  // The sanitizer backfills it.
   return (
     isObject(value) &&
     (value.profile === null || sanitizeFamilyProfile(value.profile) !== undefined) &&
+    (value.safetyEvents === undefined || isArrayOfObjects(value.safetyEvents, isFamilySafetyEvent)) &&
     typeof value.interviewDraft === "string" &&
     isArrayOfObjects(value.screenAnswers, isFamilyScreenAnswer) &&
     isArrayOfObjects(value.interviews, isFamilyInterview) &&
@@ -862,6 +878,7 @@ function sanitizeFamilyNavigatorState(value: unknown): FamilyNavigatorState | nu
 
   return {
     profile,
+    safetyEvents: Array.isArray(value.safetyEvents) ? value.safetyEvents.filter(isFamilySafetyEvent) : [],
     interviewDraft: typeof value.interviewDraft === "string" ? value.interviewDraft : "",
     screenAnswers: value.screenAnswers.filter(isFamilyScreenAnswer),
     interviews: value.interviews.filter(isFamilyInterview),

@@ -136,10 +136,11 @@ describe("FamilyOrientationInterview", () => {
     expect(requestFamilyInterview.mock.calls[1][0].text).toMatch(/\nA: No$/);
   });
 
-  it("safety-gates every follow-up answer before a network request", async () => {
+  it("raises the safety banner for a follow-up answer and keeps it off the network", async () => {
     requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
     const onSafetyEscalation = vi.fn();
-    renderOrientation({ onSafetyEscalation });
+    const onInterviewExtracted = vi.fn();
+    renderOrientation({ onSafetyEscalation, onInterviewExtracted });
     await submitOpening();
 
     const crisisText = "I am going to kill myself tonight";
@@ -147,9 +148,12 @@ describe("FamilyOrientationInterview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add answer" }));
 
     expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
+    expect(onSafetyEscalation.mock.calls[0][0]).toMatchObject({ matched: true, tier: "crisis" });
+    expect(push).not.toHaveBeenCalled();
+    // Only the opening call — this answer was extracted locally, never sent.
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: /find help/i })).toBeInTheDocument();
+    await waitFor(() => expect(onInterviewExtracted).toHaveBeenCalledTimes(2));
+    expect(onInterviewExtracted.mock.calls[1][1]).toMatchObject({ extraction: "mock" });
   });
 
   it("uses family-only text for the mock fallback and advances to its next safe question", async () => {
@@ -273,18 +277,21 @@ describe("FamilyOrientationInterview", () => {
     expect(screen.getByRole("button", { name: /find help/i })).toBeInTheDocument();
   });
 
-  it("safety-gates a spoken crisis answer before network and preserves voice provenance", async () => {
+  it("raises the safety banner for a spoken crisis answer and preserves voice provenance", async () => {
     requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
     const onSafetyEscalation = vi.fn();
-    renderOrientation({ onSafetyEscalation });
+    const onInterviewExtracted = vi.fn();
+    renderOrientation({ onSafetyEscalation, onInterviewExtracted });
     await submitOpening();
 
     const crisisText = "I am going to kill myself tonight";
     act(() => voice.finalTranscript?.(crisisText));
 
     expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
-    expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
+    expect(push).not.toHaveBeenCalled();
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onInterviewExtracted).toHaveBeenCalledTimes(2));
+    expect(onInterviewExtracted.mock.calls[1][1]).toMatchObject({ extraction: "mock", source: "mixed" });
   });
 
   it("records a voice follow-up as mixed with the typed opening transcript", async () => {

@@ -414,7 +414,9 @@ test("Your child's development is reachable from both Menu and the home composer
   await expect(page.getByRole("heading", { name: "Your child's development", level: 1 })).toBeVisible();
 });
 
-test(`Safety phrase routes before extraction and locks crisis UI: ${SAFETY_PHRASE}`, async ({ page }) => {
+test(`Safety phrase raises the banner in-thread and never reaches the network: ${SAFETY_PHRASE}`, async ({
+  page
+}) => {
   let familyApiRequests = 0;
   await stubUnconfiguredFamilyInterview(page, () => {
     familyApiRequests += 1;
@@ -424,13 +426,19 @@ test(`Safety phrase routes before extraction and locks crisis UI: ${SAFETY_PHRAS
   await page.getByLabel("What would you like help with?").fill(SAFETY_PHRASE);
   await page.getByRole("button", { name: "Find help" }).click();
 
-  await expect(page).toHaveURL(/\/chat$/);
-  await expect(page.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
-  await expect(page.getByRole("link", { name: /Text 988/ })).toHaveAttribute("href", "sms:988");
-  await expect(page.getByRole("link", { name: /Call 911/ })).toHaveAttribute("href", "tel:911");
-  await expect(page.getByLabel("Message")).toBeDisabled();
-  await expect(page.locator("[data-family-resource-card]")).toHaveCount(0);
+  const banner = page.getByTestId("family-crisis-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner.getByRole("link", { name: /Call 988/ })).toHaveAttribute("href", "tel:988");
+  await expect(banner.getByRole("link", { name: /Text 988/ })).toHaveAttribute("href", "sms:988");
+  await expect(banner.getByRole("link", { name: /Call 911/ })).toHaveAttribute("href", "tel:911");
+  // The navigator stays put and keeps helping instead of redirecting away.
+  await expect(page).toHaveURL(/\/family$/);
+  await expect(page.getByRole("heading", { name: "Here is what we heard" })).toBeVisible();
   expect(familyApiRequests).toBe(0);
+
+  await banner.getByRole("button", { name: /I've seen this/i }).click();
+  await expect(banner.getByRole("button", { name: /I've seen this/i })).toHaveCount(0);
+  await expect(banner).toBeVisible();
 });
 
 test("Spanish mobile mock path is substantive, language-correct, and horizontally contained", async ({
@@ -484,7 +492,9 @@ test("Spanish mobile mock path is substantive, language-correct, and horizontall
   ).toBe(true);
 });
 
-test(`Spanish safety routes before any family API request: ${SPANISH_SAFETY_PHRASE}`, async ({ page }) => {
+test(`Spanish safety raises the banner without any family API request: ${SPANISH_SAFETY_PHRASE}`, async ({
+  page
+}) => {
   let familyApiRequests = 0;
   await stubUnconfiguredFamilyInterview(page, () => {
     familyApiRequests += 1;
@@ -495,15 +505,14 @@ test(`Spanish safety routes before any family API request: ${SPANISH_SAFETY_PHRA
   await page.getByLabel("¿Con qué te gustaría recibir ayuda?").fill(SPANISH_SAFETY_PHRASE);
   await page.getByRole("button", { name: "Buscar ayuda" }).click();
 
-  await expect(page).toHaveURL(/\/chat(?:\?.*)?$/);
-  await expect(page.getByText(/mereces apoyo real de una persona/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: /Llama al 988/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Ya lo vi.*continuar/i })).toBeVisible();
-  await expect(page.locator('a[href="tel:988"]')).toBeVisible();
-  await expect(page.locator('a[href="sms:988"]')).toBeVisible();
-  await expect(page.locator('a[href="tel:911"]')).toBeVisible();
-  await expect(page.getByLabel("Message")).toBeDisabled();
-  await expect(page.locator("[data-family-resource-card]")).toHaveCount(0);
+  const banner = page.getByTestId("family-crisis-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner.getByText(/mereces apoyo real de una persona/i)).toBeVisible();
+  await expect(banner.locator('a[href="tel:988"]')).toBeVisible();
+  await expect(banner.locator('a[href="sms:988"]')).toBeVisible();
+  await expect(banner.locator('a[href="tel:911"]')).toBeVisible();
+  await expect(banner.getByRole("button", { name: /Ya lo vi.*continuar/i })).toBeVisible();
+  await expect(page).toHaveURL(/\/family$/);
   expect(familyApiRequests).toBe(0);
 });
 

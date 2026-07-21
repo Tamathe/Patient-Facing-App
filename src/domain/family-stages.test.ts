@@ -5,6 +5,7 @@ import { backdatedDiagnosisMonth, buildFamilyStages } from "./family-stages";
 function familyWith(profile: FamilyProfile): FamilyNavigatorState {
   return {
     profile,
+    safetyEvents: [],
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],

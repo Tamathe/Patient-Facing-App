@@ -191,16 +191,20 @@ describe("FamilyInterview", () => {
     "mi hija se está cortando",
     "I have chest pain and cannot breathe",
     "There is no food today"
-  ])("routes safety text before networking or extraction: %s", async (text) => {
+  ])("raises the safety banner and keeps the turn on-device: %s", async (text) => {
     const onExtracted = vi.fn();
     const onSafetyEscalation = vi.fn();
     renderInterview({ draft: text, onExtracted, onSafetyEscalation });
     fireEvent.click(screen.getByRole("button", { name: /find help/i }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(text)}`));
-    expect(onSafetyEscalation).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onSafetyEscalation).toHaveBeenCalledTimes(1));
+    expect(onSafetyEscalation.mock.calls[0][0]).toMatchObject({ matched: true });
+    // The disclosure never leaves the device, and the conversation continues:
+    // extraction still runs, on the deterministic local path.
     expect(requestFamilyInterview).not.toHaveBeenCalled();
-    expect(onExtracted).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
+    expect(onExtracted.mock.calls[0][1]).toMatchObject({ extraction: "mock", rawText: text });
   });
 
   it("uses compile-enforced family strings for its static chrome", () => {

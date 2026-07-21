@@ -569,7 +569,7 @@ describe("FamilyExperience", () => {
     expect(screen.getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();
   });
 
-  it("clears review and resource presentation before a safety redirect", async () => {
+  it("shows the safety banner without taking the resources away", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness initialState={withFamily({ ...schoolAgeFamilyState, activeDomains: ["school_iep"] })} />);
 
@@ -579,12 +579,29 @@ describe("FamilyExperience", () => {
     await user.type(interview, "honestly she's been saying she wants to die");
     await user.click(screen.getByRole("button", { name: "Find help" }));
 
-    expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent("honestly she's been saying she wants to die")}`);
-    expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Here is what we heard" })).not.toBeInTheDocument();
+    const banner = await screen.findByTestId("family-crisis-banner");
+    expect(within(banner).getByRole("link", { name: /Call 988/i })).toHaveAttribute("href", "tel:988");
+    expect(within(banner).getByRole("link", { name: /Call 911/i })).toHaveAttribute("href", "tel:911");
+    // The navigator keeps helping — this is the whole point of the change.
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByTestId("matched-family-resources")).toBeVisible();
+
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.safetyEvents).toHaveLength(1);
+    expect(family.safetyEvents[0].acknowledgedAt).toBeUndefined();
+
+    await user.click(within(banner).getByRole("button", { name: "I've seen this — continue" }));
+    const acknowledged = JSON.parse(
+      screen.getByTestId("family-state").textContent || "null"
+    ) as FamilyNavigatorState;
+    expect(acknowledged.safetyEvents[0].acknowledgedAt).toEqual(expect.any(String));
+    const audit = JSON.parse(screen.getByTestId("audit-events").textContent || "[]") as Array<{ label: string }>;
+    expect(audit.map(({ label }) => label)).toEqual(
+      expect.arrayContaining(["Family safety resources shown", "Family safety resources acknowledged"])
+    );
   });
 
-  it("suppresses review and resources when a follow-up answer triggers safety escalation", async () => {
+  it("keeps the thread and resources alive when a follow-up answer discloses a crisis", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
@@ -596,10 +613,12 @@ describe("FamilyExperience", () => {
     await user.type(screen.getByRole("textbox", { name: "Or type a short answer" }), crisisText);
     await user.click(screen.getByRole("button", { name: "Add answer" }));
 
-    expect(push).toHaveBeenCalledWith(`/chat?ask=${encodeURIComponent(crisisText)}`);
+    expect(await screen.findByTestId("family-crisis-banner")).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+    // The opening call only — the crisis answer was extracted on-device.
     expect(requestFamilyInterview).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Here is what we heard" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("matched-family-resources")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Here is what we heard" })).toBeVisible();
   });
 });
 

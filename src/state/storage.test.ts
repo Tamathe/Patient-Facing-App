@@ -24,6 +24,7 @@ describe("storage", () => {
         { id: "diagnosis-adhd", label: "adhd" }
       ]
     },
+    safetyEvents: [],
     interviewDraft: "Riley is in fourth grade.",
     screenAnswers: [{ questionId: "school", domain: "school_iep", response: "yes" }],
     interviews: [
@@ -71,6 +72,7 @@ describe("storage", () => {
 
     expect(loaded.family).toMatchObject({
       profile: validFamily.profile,
+      safetyEvents: [],
       interviewDraft: validFamily.interviewDraft,
       interviews: validFamily.interviews,
       facts: validFamily.facts
@@ -139,6 +141,42 @@ describe("storage", () => {
 
     expect(loaded.family?.interviewDraft).toBe("");
     expect(loaded.family?.latestInterviewDomains).toEqual([]);
+  });
+
+  it("loads a pre-safety-events family payload intact and backfills the array", () => {
+    const preSprintFamily: Record<string, unknown> = { ...validFamily };
+    delete preSprintFamily.safetyEvents;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...demoState, family: preSprintFamily }));
+
+    const loaded = loadStoredState();
+
+    expect(loaded.family?.safetyEvents).toEqual([]);
+    expect(loaded.family?.profile?.county).toBe(validFamily.profile?.county);
+    expect(loaded.family?.activeDomains).toEqual(["school_iep"]);
+    expect(loaded.patient.id).toBe(demoState.patient.id);
+  });
+
+  it("keeps a stored safety event and drops a malformed one without resetting the slice", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...demoState,
+        family: {
+          ...validFamily,
+          safetyEvents: [
+            { id: "event-1", tier: "crisis", domain: "harm_to_others", createdAt: "2026-07-21T00:00:00.000Z" },
+            { id: "event-2", tier: "not-a-tier", domain: "self_harm", createdAt: "2026-07-21T00:00:00.000Z" },
+            { tier: "crisis", domain: "self_harm" }
+          ]
+        }
+      })
+    );
+
+    const loaded = loadStoredState();
+
+    expect(loaded.family?.safetyEvents).toHaveLength(1);
+    expect(loaded.family?.safetyEvents[0]).toMatchObject({ id: "event-1", domain: "harm_to_others" });
+    expect(loaded.family?.activeDomains).toEqual(["school_iep"]);
   });
 
   it("starts a fresh browser on the retinopathy-due demo state", () => {
@@ -1240,6 +1278,7 @@ describe("P4 assessment storage", () => {
       county: "Fayette",
       diagnoses: []
     },
+    safetyEvents: [],
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],
