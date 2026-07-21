@@ -103,6 +103,7 @@ describe("dynamic instrument route", () => {
           diagnoses: []
         },
         safetyEvents: [],
+        recommendations: null,
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -142,6 +143,7 @@ describe("dynamic instrument route", () => {
           diagnoses: []
         },
         safetyEvents: [],
+        recommendations: null,
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -183,6 +185,7 @@ describe("dynamic instrument route", () => {
           diagnoses: []
         },
         safetyEvents: [],
+        recommendations: null,
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],

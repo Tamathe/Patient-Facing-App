@@ -160,6 +160,12 @@ export type FamilyStringKey =
   | "basicsPrefillConfirm"
   | "basicsPrefillChange"
   | "basicsPrefillApproxYear"
+  | "rankHeardTitle"
+  | "rankHeardFallback"
+  | "rankQuotePrefix"
+  | "rankUrgencyActNow"
+  | "rankUrgencySoon"
+  | "rankUrgencyWhenReady"
   | "resourceSourceLanguageNotice"
   | "nearbyTherapeuticRecreationTitle"
   | "nearbyTherapeuticRecreationIntro"
@@ -402,6 +408,13 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsPrefillConfirm: "Yes, that is right",
     basicsPrefillChange: "Change something",
     basicsPrefillApproxYear: "about {year}",
+    rankHeardTitle: "Here is what we heard",
+    rankHeardFallback:
+      "These are based on what you told us, your county, and your child's age. Check each program's own page — their rules are the ones that count.",
+    rankQuotePrefix: "You said",
+    rankUrgencyActNow: "Worth doing now",
+    rankUrgencySoon: "Soon",
+    rankUrgencyWhenReady: "When you are ready",
     resourceSourceLanguageNotice: "Some details come straight from the organizations and may still be in English while we work on a checked translation.",
     nearbyTherapeuticRecreationTitle: "Something else nearby",
     nearbyTherapeuticRecreationIntro: "This one is in your county and fits your child's age. It offers both fun activities and therapy. We are showing it as an extra — it did not change what we found above.",
@@ -643,6 +656,13 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     basicsPrefillConfirm: "Sí, así es",
     basicsPrefillChange: "Cambiar algo",
     basicsPrefillApproxYear: "alrededor de {year}",
+    rankHeardTitle: "Esto fue lo que entendimos",
+    rankHeardFallback:
+      "Esto se basa en lo que nos contaste, tu condado y la edad de tu hijo o hija. Revisa la página de cada programa — sus reglas son las que valen.",
+    rankQuotePrefix: "Dijiste",
+    rankUrgencyActNow: "Vale la pena hacerlo ahora",
+    rankUrgencySoon: "Pronto",
+    rankUrgencyWhenReady: "Cuando estés listo",
     resourceSourceLanguageNotice: "Algunos detalles vienen directo de las organizaciones y pueden seguir en inglés mientras preparamos una traducción revisada.",
     nearbyTherapeuticRecreationTitle: "Algo más cerca de ti",
     nearbyTherapeuticRecreationIntro: "Esta opción está en tu condado y va con la edad de tu hijo o hija. Ofrece actividades divertidas y también terapia. Te la mostramos como algo extra — no cambió lo que encontramos arriba.",

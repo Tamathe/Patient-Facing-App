@@ -35,8 +35,12 @@ import {
 import { KY_COUNTIES, getFamilyResourceById, type FamilyResource } from "@/domain/family-resources";
 import {
   buildNearbyTherapeuticRecreation,
-  buildResourceMatches
+  buildRankCandidates,
+  buildResourceMatches,
+  type MatchedResource
 } from "@/domain/family-matching";
+import { rankFamilyResourcesMock, validateHeard, validateRankedItems } from "@/domain/family-rank";
+import { requestFamilyRecommendations } from "@/ai/family-recommend-provider";
 import type { Language } from "@/i18n/strings";
 import type {
   AppState,
@@ -354,6 +358,86 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     }
     return buildResourceMatches(family.profile, family.activeDomains, family.alreadyEnrolled);
   }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile]);
+
+  // The candidate set the ranker scores — the same deterministic retrieval, minus
+  // the display truncation. Ranking may reorder and explain it; never add to it.
+  const rankCandidates = useMemo<MatchedResource[]>(() => {
+    if (!family?.profile || family.activeDomains.length === 0) return [];
+    return buildRankCandidates(family.profile, family.activeDomains, family.alreadyEnrolled).resources;
+  }, [family?.activeDomains, family?.alreadyEnrolled, family?.profile]);
+
+  const storedRecommendations = family?.recommendations ?? null;
+  const rankedSet =
+    storedRecommendations && storedRecommendations.interviewId === latestInterviewId
+      ? storedRecommendations
+      : null;
+
+  useEffect(() => {
+    // Screen-only users have no caregiver text to rank from, so the deterministic
+    // order stands. A pending safety banner also holds ranking: that turn's text
+    // never leaves the device.
+    if (!family?.profile || !latestInterview || rankedSet || rankCandidates.length === 0) return;
+    if (pendingSafetyEvent !== undefined) return;
+
+    let cancelled = false;
+    const profile = family.profile;
+    const rawText = latestInterview.rawText;
+    const candidateIds = rankCandidates.map(({ resource }) => resource.id);
+    const domains = family.activeDomains;
+    const interviewId = latestInterview.id;
+
+    void (async () => {
+      const live = await requestFamilyRecommendations({
+        text: rawText,
+        profile,
+        passcode,
+        language,
+        candidateIds
+      }).catch(() => null);
+      if (cancelled) return;
+
+      const fallback = rankFamilyResourcesMock(rankCandidates, domains, rawText, language, interviewId);
+      if (!live) {
+        dispatch({ type: "setFamilyRecommendations", recommendations: fallback });
+        return;
+      }
+
+      const items = validateRankedItems(live.recommendations, {
+        candidateIds,
+        rawText,
+        language,
+        childFirstName: profile.childFirstName
+      });
+      dispatch({
+        type: "setFamilyRecommendations",
+        recommendations:
+          items.length === 0
+            ? fallback
+            : {
+                interviewId,
+                createdAt: new Date().toISOString(),
+                extraction: "live",
+                heard: validateHeard(live.heard, language, profile.childFirstName),
+                lead: live.lead,
+                items
+              }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dispatch,
+    family?.activeDomains,
+    family?.profile,
+    language,
+    latestInterview,
+    passcode,
+    pendingSafetyEvent,
+    rankCandidates,
+    rankedSet
+  ]);
 
   const nearbyTherapeuticRecreation = useMemo(() => {
     if (!family?.profile || family.activeDomains.length === 0) {

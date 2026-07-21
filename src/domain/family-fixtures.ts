@@ -22,6 +22,7 @@ export const schoolAgeFamilyState: FamilyNavigatorState = {
     ]
   },
   safetyEvents: [],
+  recommendations: null,
   interviewDraft: "",
   screenAnswers: [],
   interviews: [],
@@ -47,6 +48,7 @@ export function eighteenMonthFamilyState(now: Date): FamilyNavigatorState {
       diagnoses: []
     },
     safetyEvents: [],
+    recommendations: null,
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],

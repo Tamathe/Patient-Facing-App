@@ -388,9 +388,29 @@ export type FamilySafetyEvent = {
   acknowledgedAt?: string;
 };
 
+export type FamilyRecommendationItem = {
+  resourceId: string;
+  /** Grounded "why this, for you" line. Absent when the model's failed the lint. */
+  why?: string;
+  /** Verbatim caregiver words, re-checked against the transcript at render. */
+  becauseYouSaid?: string;
+  urgency: "act_now" | "soon" | "when_ready";
+};
+
+export type FamilyRecommendationSet = {
+  /** Stale once a newer interview lands; the deterministic order renders instead. */
+  interviewId: string;
+  createdAt: string;
+  extraction: "live" | "mock";
+  heard: string;
+  lead: DevNeedDomain;
+  items: FamilyRecommendationItem[];
+};
+
 export type FamilyNavigatorState = {
   profile: FamilyProfile | null;
   safetyEvents: FamilySafetyEvent[];
+  recommendations: FamilyRecommendationSet | null;
   interviewDraft: string;
   screenAnswers: FamilyScreenAnswer[];
   interviews: FamilyInterview[];

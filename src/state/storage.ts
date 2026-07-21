@@ -21,6 +21,8 @@ import type {
   FamilyInterview,
   FamilyNavigatorState,
   FamilyProfile,
+  FamilyRecommendationItem,
+  FamilyRecommendationSet,
   FamilySafetyEvent,
   FamilyScreenAnswer,
   FoodSource,
@@ -763,6 +765,40 @@ function sanitizeFamilyProfile(value: unknown): FamilyProfile | null | undefined
   };
 }
 
+function isFamilyRecommendationItem(value: unknown): value is FamilyRecommendationItem {
+  return (
+    isObject(value) &&
+    hasString(value, "resourceId") &&
+    (value.why === undefined || typeof value.why === "string") &&
+    (value.becauseYouSaid === undefined || typeof value.becauseYouSaid === "string") &&
+    (value.urgency === "act_now" || value.urgency === "soon" || value.urgency === "when_ready")
+  );
+}
+
+function sanitizeFamilyRecommendations(value: unknown): FamilyRecommendationSet | null {
+  if (!isObject(value)) {
+    return null;
+  }
+  if (
+    !hasString(value, "interviewId") ||
+    !hasString(value, "createdAt") ||
+    !hasString(value, "heard") ||
+    !isDevNeedDomain(value.lead) ||
+    (value.extraction !== "live" && value.extraction !== "mock") ||
+    !Array.isArray(value.items)
+  ) {
+    return null;
+  }
+  return {
+    interviewId: value.interviewId,
+    createdAt: value.createdAt,
+    extraction: value.extraction,
+    heard: value.heard,
+    lead: value.lead,
+    items: value.items.filter(isFamilyRecommendationItem)
+  };
+}
+
 function isFamilySafetyEvent(value: unknown): value is FamilySafetyEvent {
   return (
     isObject(value) &&
@@ -842,6 +878,9 @@ function isFamilyNavigatorState(value: unknown): value is FamilyNavigatorState {
     isObject(value) &&
     (value.profile === null || sanitizeFamilyProfile(value.profile) !== undefined) &&
     (value.safetyEvents === undefined || isArrayOfObjects(value.safetyEvents, isFamilySafetyEvent)) &&
+    (value.recommendations === undefined ||
+      value.recommendations === null ||
+      isObject(value.recommendations)) &&
     typeof value.interviewDraft === "string" &&
     isArrayOfObjects(value.screenAnswers, isFamilyScreenAnswer) &&
     isArrayOfObjects(value.interviews, isFamilyInterview) &&
@@ -879,6 +918,7 @@ function sanitizeFamilyNavigatorState(value: unknown): FamilyNavigatorState | nu
   return {
     profile,
     safetyEvents: Array.isArray(value.safetyEvents) ? value.safetyEvents.filter(isFamilySafetyEvent) : [],
+    recommendations: sanitizeFamilyRecommendations(value.recommendations),
     interviewDraft: typeof value.interviewDraft === "string" ? value.interviewDraft : "",
     screenAnswers: value.screenAnswers.filter(isFamilyScreenAnswer),
     interviews: value.interviews.filter(isFamilyInterview),

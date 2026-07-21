@@ -51,6 +51,7 @@ describe("screening hub", () => {
       family: {
         profile: null,
         safetyEvents: [],
+        recommendations: null,
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -322,6 +323,7 @@ describe("screening hub", () => {
           diagnoses: []
         },
         safetyEvents: [],
+        recommendations: null,
         interviewDraft: "",
         screenAnswers: [],
         interviews: [],
@@ -366,6 +368,7 @@ describe("screening hub", () => {
         diagnoses: []
       },
       safetyEvents: [],
+      recommendations: null,
       interviewDraft: "",
       screenAnswers: [],
       interviews: [],

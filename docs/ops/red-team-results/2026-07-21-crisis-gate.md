@@ -19,17 +19,17 @@ PASS
 ```
 RUN  v2.1.9 C:/Patient centered
 
- ✓ src/domain/safety.test.ts (16 tests) 6ms
+ ✓ src/domain/safety.test.ts (16 tests) 5ms
  ✓ src/domain/crisis-red-flags.test.ts (187 tests) 49ms
- ✓ src/ai/voice-gate-corpus.test.ts (2 tests) 40ms
- ✓ src/ai/output-guard.test.ts (12 tests) 37ms
- ✓ src/ai/safety-gate.test.ts (48 tests) 50ms
- ✓ src/domain/front-door.test.ts (45 tests) 40ms
+ ✓ src/domain/front-door.test.ts (45 tests) 39ms
+ ✓ src/ai/voice-gate-corpus.test.ts (2 tests) 31ms
+ ✓ src/ai/output-guard.test.ts (12 tests) 36ms
+ ✓ src/ai/safety-gate.test.ts (48 tests) 49ms
 
  Test Files  6 passed (6)
       Tests  310 passed (310)
-   Start at  14:06:29
-   Duration  1.58s (transform 396ms, setup 655ms, collect 948ms, tests 222ms, environment 3.52s, prepare 729ms)
+   Start at  14:12:28
+   Duration  1.42s (transform 347ms, setup 633ms, collect 847ms, tests 209ms, environment 3.50s, prepare 641ms)
 ```
 
 ## Interpretation

@@ -40,6 +40,7 @@ import type {
   FamilyInterview,
   FamilyNavigatorState,
   FamilyProfile,
+  FamilyRecommendationSet,
   FamilySafetyEvent,
   FamilyScreenAnswer,
   GlucoseReading,
@@ -97,6 +98,7 @@ export type HealthAction =
   | { type: "confirmFamilyFact"; factId: string }
   | { type: "recordFamilySafetyEvent"; event: FamilySafetyEvent }
   | { type: "acknowledgeFamilySafetyEvent"; eventId: string; at: string }
+  | { type: "setFamilyRecommendations"; recommendations: FamilyRecommendationSet | null }
   | { type: "saveFamilyResource"; resource: SavedFamilyResource }
   | { type: "toggleFamilyEnrollment"; resourceId: string }
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
@@ -106,6 +108,7 @@ function emptyFamilyState(profile: FamilyProfile | null): FamilyNavigatorState {
   return {
     profile,
     safetyEvents: [],
+    recommendations: null,
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],
@@ -617,6 +620,8 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
             ...family.facts,
             ...action.facts.map((fact) => ({ ...fact, interviewId: action.interview.id }))
           ],
+          // A new interview invalidates any ranking built from the old one.
+          recommendations: null,
           latestInterviewDomains,
           activeDomains: mergeFamilyDomains(family.screenAnswers, latestInterviewDomains)
         }
@@ -635,6 +640,12 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
           )
         }
       };
+    case "setFamilyRecommendations": {
+      if (!state.family) {
+        return state;
+      }
+      return { ...state, family: { ...state.family, recommendations: action.recommendations } };
+    }
     case "recordFamilySafetyEvent": {
       const family = state.family ?? emptyFamilyState(null);
       return {

@@ -6,6 +6,7 @@ function familyWith(profile: FamilyProfile): FamilyNavigatorState {
   return {
     profile,
     safetyEvents: [],
+    recommendations: null,
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],

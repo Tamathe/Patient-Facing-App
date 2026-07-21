@@ -25,6 +25,7 @@ describe("storage", () => {
       ]
     },
     safetyEvents: [],
+    recommendations: null,
     interviewDraft: "Riley is in fourth grade.",
     screenAnswers: [{ questionId: "school", domain: "school_iep", response: "yes" }],
     interviews: [
@@ -73,6 +74,7 @@ describe("storage", () => {
     expect(loaded.family).toMatchObject({
       profile: validFamily.profile,
       safetyEvents: [],
+      recommendations: null,
       interviewDraft: validFamily.interviewDraft,
       interviews: validFamily.interviews,
       facts: validFamily.facts
@@ -1279,6 +1281,7 @@ describe("P4 assessment storage", () => {
       diagnoses: []
     },
     safetyEvents: [],
+    recommendations: null,
     interviewDraft: "",
     screenAnswers: [],
     interviews: [],
