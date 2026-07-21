@@ -49,12 +49,12 @@ Vignettes: 26 (26 unreviewed engineering drafts)
   ok   es_waivers_money [es] resources=14
   ok   es_respite_exhausted [es] resources=12
 
- ✓ src/domain/family-vignettes.live.test.ts (1 test) 71ms
+ ✓ src/domain/family-vignettes.live.test.ts (1 test) 39ms
 
  Test Files  1 passed (1)
       Tests  1 passed (1)
-   Start at  14:06:35
-   Duration  1.86s (transform 167ms, setup 130ms, collect 240ms, tests 71ms, environment 895ms, prepare 137ms)
+   Start at  14:36:46
+   Duration  1.32s (transform 107ms, setup 95ms, collect 153ms, tests 39ms, environment 572ms, prepare 117ms)
 ```
 
 ## Interpretation
