@@ -157,6 +157,68 @@ const DIAGNOSIS_LIST = `${DIAGNOSIS_TERM}(?:(?:\\s*,\\s*|\\s+and\\s+|\\s*,?\\s+a
 const SPANISH_DIAGNOSIS_TERM =
   "(?:autismo|autista|TDAH|trastorno\\s+por\\s+d[eé]ficit\\s+de\\s+atenci[oó]n(?:\\s+e\\s+hiperactividad)?|dislexia|disl[eé]xic[oa]|trastorno\\s+(?:del|de)\\s+(?:habla|lenguaje)|retraso\\s+del\\s+desarrollo|discapacidad\\s+intelectual|s[ií]ndrome\\s+de\\s+Down)";
 const SPANISH_DIAGNOSIS_LIST = `${SPANISH_DIAGNOSIS_TERM}(?:(?:\\s*,\\s*|\\s+y\\s+|\\s*,?\\s+y\\s+)${SPANISH_DIAGNOSIS_TERM})*`;
+// Developmental-concern categories, matched against whatever the caregiver
+// actually wrote. Each fact quotes their own sentence — never a canned phrase.
+type ConcernCategory = {
+  labelKey: FamilyStringKey;
+  valueKey: FamilyStringKey;
+  patterns: Record<Language, RegExp>;
+};
+
+const CONCERN_CATEGORIES: readonly ConcernCategory[] = [
+  {
+    labelKey: "factConcernSchoolLabel",
+    valueKey: "factConcernSchoolValue",
+    patterns: {
+      en: /(?<!\p{L})(?:read|homework|school|class|teacher|writ|spell|math|iep|grade|letter|learn)\p{L}*/iu,
+      es: /(?<!\p{L})(?:lee|leer|lectura|tarea|escuela|maestr|clase|escrib|deletre|matem|iep|grado|nota|aprend)\p{L}*/iu
+    }
+  },
+  {
+    labelKey: "factConcernSpeechLabel",
+    valueKey: "factConcernSpeechValue",
+    patterns: {
+      en: /(?<!\p{L})(?:talk|speak|speech|word|languag|stutter|nonverbal|babbl|verbal)\p{L}*/iu,
+      es: /(?<!\p{L})(?:habla|hablar|palabra|lenguaje|tartamud|balbuce|verbal)\p{L}*/iu
+    }
+  },
+  {
+    labelKey: "factConcernBehaviorLabel",
+    valueKey: "factConcernBehaviorValue",
+    patterns: {
+      en: /(?<!\p{L})(?:behav|melt|tantrum|focus|attention|hyper|sleep|eating|routine|aggress|anxious|anxiety|scream|cry|bite|biting|hitting)\p{L}*/iu,
+      es: /(?<!\p{L})(?:comport|conduct|berrinche|rabieta|atenci|concentr|hiperactiv|duerme|dormir|comer|rutina|ansi|llora|grita|pega|muerde)\p{L}*/iu
+    }
+  },
+  {
+    labelKey: "factConcernMotorLabel",
+    valueKey: "factConcernMotorValue",
+    patterns: {
+      en: /(?<!\p{L})(?:walk|crawl|balance|coordinat|motor|clums|stairs|grip)\p{L}*/iu,
+      es: /(?<!\p{L})(?:camina|caminar|gatea|equilibrio|coordinaci|motor|torpe|escalera|agarr)\p{L}*/iu
+    }
+  }
+];
+
+const CONCERN_FACT_LIMIT = 2;
+const CONCERN_SNIPPET_MAX = 160;
+
+/** Splits into sentences whose text stays a literal substring of the original. */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/u)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+}
+
+/** Shortens at a word boundary so the snippet remains verbatim caregiver text. */
+function clampSnippet(sentence: string): string {
+  if (sentence.length <= CONCERN_SNIPPET_MAX) return sentence;
+  const cut = sentence.slice(0, CONCERN_SNIPPET_MAX);
+  const lastSpace = cut.lastIndexOf(" ");
+  return lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+}
+
 const GRADE = /\b(?:kindergarten|(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\d{1,2}(?:st|nd|rd|th))\s+grade|grade\s+(?:[1-9]|1[0-2]))\b/i;
 const SPANISH_GRADE = /\b(?:(?:primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|s[eé]ptimo|octavo|noveno|d[eé]cimo|und[eé]cimo|duod[eé]cimo|\d{1,2}(?:\.?º|\.?ª)?)\s+grado|grado\s+(?:[1-9]|1[0-2]))\b/iu;
 
@@ -235,19 +297,18 @@ function extractExplicitFacts(text: string, profile: FamilyProfile, language: La
     });
   }
 
-  const hasSchoolConcern =
-    language === "es"
-      ? /la\s+tarea\s+de\s+lectura[\s\S]{0,40}una\s+batalla\s+cada\s+noche/iu.test(text)
-      : /reading\s+homework[\s\S]{0,30}nightly\s+battle/i.test(text);
-  if (hasSchoolConcern) {
+  const sentences = splitSentences(text);
+  let concernsAdded = 0;
+  for (const { labelKey, valueKey, patterns } of CONCERN_CATEGORIES) {
+    if (concernsAdded === CONCERN_FACT_LIMIT) break;
+    const sentence = sentences.find((candidate) => patterns[language].test(candidate));
+    if (!sentence) continue;
     facts.push({
-      label: tFamily(language, "factSchoolConcernLabel"),
-      value: tFamily(language, "factSchoolConcernValue"),
-      sourceSnippet:
-        language === "es"
-          ? "La tarea de lectura … una batalla cada noche"
-          : "Reading homework … nightly battle"
+      label: tFamily(language, labelKey),
+      value: tFamily(language, valueKey),
+      sourceSnippet: clampSnippet(sentence)
     });
+    concernsAdded += 1;
   }
   return facts;
 }
@@ -259,21 +320,21 @@ export function extractFamilyInterviewMock(
   language: Language = "en"
 ): FamilyInterviewResult {
   const matched = new Set<DevNeedDomain>();
-  const speechConcern =
-    language === "es" ? /\b(?:habla|hablar|lenguaje)\b/iu.test(text) : /\b(?:speech|talking)\b/i.test(text);
+  const categoryMatches = (labelKey: FamilyStringKey): boolean => {
+    const category = CONCERN_CATEGORIES.find((candidate) => candidate.labelKey === labelKey);
+    return category ? category.patterns[language].test(text) : false;
+  };
+  const speechConcern = categoryMatches("factConcernSpeechLabel");
+  const motorConcern = categoryMatches("factConcernMotorLabel");
   const therapyConcern =
     language === "es" ? /\bterapias?\b/iu.test(text) : /\btherap(?:y|ies)\b/i.test(text);
-  if (speechConcern || therapyConcern) {
+  if (speechConcern || therapyConcern || motorConcern) {
     matched.add("therapies");
-    if (speechConcern && isConservativelyUnderThree(profile, now)) {
+    if ((speechConcern || motorConcern) && isConservativelyUnderThree(profile, now)) {
       matched.add("early_intervention");
     }
   }
-  const schoolConcern =
-    language === "es"
-      ? /\b(?:escuela|IEP|lectura|tarea)\b/iu.test(text)
-      : /\b(?:school|IEP|reading)\b/i.test(text);
-  if (schoolConcern) matched.add("school_iep");
+  if (categoryMatches("factConcernSchoolLabel")) matched.add("school_iep");
   const waiverConcern =
     language === "es"
       ? /\b(?:exenciones?|dinero|econ[oó]mic[oa]s?|pagar)\b/iu.test(text)

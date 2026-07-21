@@ -405,16 +405,19 @@ describe("FamilyInterview", () => {
     );
     expect(onExtracted.mock.calls[0]).toEqual([
       {
-        facts: [{ label: "Grade", value: "grade 4", sourceSnippet: "grade 4" }],
-        domains: [],
+        facts: [
+          { label: "Grade", value: "grade 4", sourceSnippet: "grade 4" },
+          {
+            label: "About school and learning",
+            value: "School and learning may need support",
+            sourceSnippet: draftB
+          }
+        ],
+        domains: [{ domain: "school_iep", rationale: "You mentioned school, an IEP, or help with reading." }],
         followUps: [
           {
-            question: "What part of a typical day is hardest?",
-            options: ["Mornings", "Afternoons", "Bedtime"]
-          },
-          {
-            question: "Who helps your family right now?",
-            options: ["No one", "Family or friends", "A professional"]
+            question: "What has the school offered so far?",
+            options: ["Nothing yet", "A meeting is planned", "An evaluation was done"]
           }
         ]
       },

@@ -2,10 +2,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 const STORAGE_KEY = "home-health-ai-ownership-state";
 const FROZEN_NOW = new Date("2026-07-17T12:00:00.000Z");
-const MORGAN_PARAGRAPH =
-  "My daughter is in fourth grade in Georgetown. She was just diagnosed with dyslexia and ADHD a couple months ago. Reading homework is a nightly battle and I don't know what to ask the school for. Money's tight and I keep hearing about waivers but have no idea where to start.";
-const SPANISH_MORGAN_PARAGRAPH =
-  "Mi hija está en cuarto grado en Georgetown. A mi hija le diagnosticaron dislexia y TDAH hace un par de meses. La tarea de lectura es una batalla cada noche y no sé qué pedirle a la escuela. El dinero está escaso y sigo escuchando sobre exenciones, pero no tengo idea de por dónde empezar.";
+// Ordinary caregiver wording — not a scripted demo persona. The navigator has to
+// work on whatever a parent actually types.
+const PARENT_DESCRIPTION =
+  "My son is in second grade and reading is really hard for him. He was just diagnosed with dyslexia. I don't know what to ask the school for, and money is tight so I keep hearing about waivers but have no idea where to start.";
+const SPANISH_PARENT_DESCRIPTION =
+  "Mi hijo está en segundo grado y le cuesta mucho leer. A mi hijo le diagnosticaron dislexia. No sé qué pedirle a la escuela y el dinero está escaso, sigo escuchando sobre exenciones pero no tengo idea de por dónde empezar.";
 const SAFETY_PHRASE = "honestly she's been saying she wants to die";
 const SPANISH_SAFETY_PHRASE = "mi hija dice que quiere morir";
 const SCOTT_SOURCE_URL =
@@ -155,7 +157,7 @@ test.beforeEach(async ({ page }) => {
   await useFreshStorage(page);
 });
 
-test(`Morgan golden path uses the exact paragraph: ${MORGAN_PARAGRAPH}`, async ({ page }) => {
+test(`golden path works on ordinary caregiver wording: ${PARENT_DESCRIPTION}`, async ({ page }) => {
   const capturedRequests: CapturedFamilyRequest[] = [];
   await stubUnconfiguredFamilyInterview(page, (request) => {
     capturedRequests.push(request);
@@ -176,14 +178,14 @@ test(`Morgan golden path uses the exact paragraph: ${MORGAN_PARAGRAPH}`, async (
     ]
   });
   const interview = page.getByLabel("What would you like help with?");
-  await interview.fill(MORGAN_PARAGRAPH);
+  await interview.fill(PARENT_DESCRIPTION);
   await page.getByRole("button", { name: "Find help" }).click();
 
   expect(capturedRequests).toHaveLength(1);
   expect(capturedRequests[0].method).toBe("POST");
   expect(new URL(capturedRequests[0].url).search).toBe("");
   expect(capturedRequests[0].body).toMatchObject({
-    text: MORGAN_PARAGRAPH,
+    text: PARENT_DESCRIPTION,
     passcode: "demo-passcode",
     language: "en"
   });
@@ -193,13 +195,15 @@ test(`Morgan golden path uses the exact paragraph: ${MORGAN_PARAGRAPH}`, async (
   await expect(review).toBeFocused();
   const gradeFact = review.getByRole("article", { name: "Grade" });
   await expect(gradeFact).toBeVisible();
-  await expect(gradeFact.getByRole("paragraph").filter({ hasText: /^fourth grade$/ })).toBeVisible();
+  await expect(gradeFact.getByRole("paragraph").filter({ hasText: /^second grade$/ })).toBeVisible();
   const diagnosisFact = review.getByRole("article", { name: "Reported diagnosis" });
   await expect(diagnosisFact).toBeVisible();
-  await expect(diagnosisFact.getByRole("paragraph").filter({ hasText: /dyslexia and ADHD/i })).toBeVisible();
-  const schoolConcern = review.getByRole("article", { name: "School concern" });
-  await expect(schoolConcern).toContainText("Reading and homework may need support");
-  await expect(schoolConcern).toContainText("Our guess — please check");
+  await expect(diagnosisFact.getByRole("paragraph").filter({ hasText: /^dyslexia$/i })).toBeVisible();
+  const schoolConcern = review.getByRole("article", { name: "About school and learning" });
+  await expect(schoolConcern).toContainText("School and learning may need support");
+  // The quote must be the caregiver's own sentence, which is what earns "From your words".
+  await expect(schoolConcern).toContainText("My son is in second grade and reading is really hard for him.");
+  await expect(schoolConcern).toContainText("From your words");
   await expect(review.getByText("School and IEP", { exact: true })).toBeVisible();
   await expect(review.getByText("Waivers and financial support", { exact: true })).toBeVisible();
   await expect(review.getByText("Parent support", { exact: true })).toBeVisible();
@@ -448,21 +452,19 @@ test("Spanish mobile mock path is substantive, language-correct, and horizontall
     language: "es"
   });
   const interview = page.getByLabel("¿Con qué te gustaría recibir ayuda?");
-  await interview.fill(SPANISH_MORGAN_PARAGRAPH);
+  await interview.fill(SPANISH_PARENT_DESCRIPTION);
   await page.getByRole("button", { name: "Buscar ayuda" }).click();
 
   expect(capturedRequests).toHaveLength(1);
   expect(capturedRequests[0].method).toBe("POST");
   expect(capturedRequests[0].body).toMatchObject({
-    text: SPANISH_MORGAN_PARAGRAPH,
+    text: SPANISH_PARENT_DESCRIPTION,
     language: "es"
   });
   const review = page.getByRole("region", { name: "Esto fue lo que entendimos" });
-  await expect(review.getByRole("article", { name: "Grado" })).toContainText("cuarto grado");
-  await expect(review.getByRole("article", { name: "Diagnóstico informado" })).toContainText(
-    "dislexia y TDAH"
-  );
-  await expect(review.getByRole("article", { name: "Preocupación escolar" })).toBeVisible();
+  await expect(review.getByRole("article", { name: "Grado" })).toContainText("segundo grado");
+  await expect(review.getByRole("article", { name: "Diagnóstico informado" })).toContainText("dislexia");
+  await expect(review.getByRole("article", { name: "Sobre la escuela y el aprendizaje" })).toBeVisible();
   await expect(
     review.getByText(/Mencionaste la escuela/)
   ).toBeVisible();

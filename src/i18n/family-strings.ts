@@ -129,8 +129,14 @@ export type FamilyStringKey =
   | "domainRationaleTitle"
   | "factGradeLabel"
   | "factReportedDiagnosisLabel"
-  | "factSchoolConcernLabel"
-  | "factSchoolConcernValue"
+  | "factConcernSchoolLabel"
+  | "factConcernSchoolValue"
+  | "factConcernSpeechLabel"
+  | "factConcernSpeechValue"
+  | "factConcernBehaviorLabel"
+  | "factConcernBehaviorValue"
+  | "factConcernMotorLabel"
+  | "factConcernMotorValue"
   | "rationaleEarlyIntervention"
   | "rationaleTherapies"
   | "rationaleSchoolIep"
@@ -360,8 +366,14 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     domainRationaleTitle: "Why we are showing this",
     factGradeLabel: "Grade",
     factReportedDiagnosisLabel: "Reported diagnosis",
-    factSchoolConcernLabel: "School concern",
-    factSchoolConcernValue: "Reading and homework may need support",
+    factConcernSchoolLabel: "About school and learning",
+    factConcernSchoolValue: "School and learning may need support",
+    factConcernSpeechLabel: "About talking",
+    factConcernSpeechValue: "Talking and language may need support",
+    factConcernBehaviorLabel: "About behavior and routines",
+    factConcernBehaviorValue: "Behavior and daily routines may need support",
+    factConcernMotorLabel: "About moving",
+    factConcernMotorValue: "Moving and coordination may need support",
     rationaleEarlyIntervention: "You mentioned speech or talking, and your child is under three.",
     rationaleTherapies: "You mentioned speech, talking, or therapy.",
     rationaleSchoolIep: "You mentioned school, an IEP, or help with reading.",
@@ -590,8 +602,14 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     domainRationaleTitle: "Por qué te mostramos esto",
     factGradeLabel: "Grado",
     factReportedDiagnosisLabel: "Diagnóstico informado",
-    factSchoolConcernLabel: "Preocupación escolar",
-    factSchoolConcernValue: "La lectura y la tarea podrían necesitar apoyo",
+    factConcernSchoolLabel: "Sobre la escuela y el aprendizaje",
+    factConcernSchoolValue: "La escuela y el aprendizaje podrían necesitar apoyo",
+    factConcernSpeechLabel: "Sobre el habla",
+    factConcernSpeechValue: "El habla y el lenguaje podrían necesitar apoyo",
+    factConcernBehaviorLabel: "Sobre el comportamiento y las rutinas",
+    factConcernBehaviorValue: "El comportamiento y las rutinas diarias podrían necesitar apoyo",
+    factConcernMotorLabel: "Sobre el movimiento",
+    factConcernMotorValue: "El movimiento y la coordinación podrían necesitar apoyo",
     rationaleEarlyIntervention: "Mencionaste el habla y tu hijo o hija tiene menos de tres años.",
     rationaleTherapies: "Mencionaste el habla, el lenguaje o la terapia.",
     rationaleSchoolIep: "Mencionaste la escuela, un IEP o ayuda con la lectura.",

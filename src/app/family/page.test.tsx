@@ -122,7 +122,7 @@ describe("FamilyExperience", () => {
     expect(stateAfterCrunch.facts.map(({ label, status }) => ({ label, status }))).toEqual([
       { label: "Grade", status: "patient_reported" },
       { label: "Reported diagnosis", status: "patient_reported" },
-      { label: "School concern", status: "inferred" }
+      { label: "About school and learning", status: "patient_reported" }
     ]);
     expect(stateAfterCrunch.activeDomains).toEqual(["school_iep", "waivers_financial", "parent_support"]);
 
@@ -483,7 +483,7 @@ describe("FamilyExperience", () => {
     expect(screen.getAllByText("cuarto grado")[0]).toBeVisible();
     expect(screen.getByText("Diagnóstico informado")).toBeVisible();
     expect(screen.getByText("dislexia y TDAH")).toBeVisible();
-    expect(screen.getByText("Preocupación escolar")).toBeVisible();
+    expect(screen.getByText("Sobre la escuela y el aprendizaje")).toBeVisible();
     expect(screen.getByText(/Mencionaste la escuela/)).toBeVisible();
     expect(screen.getByText(/vienen directo de las organizaciones.*en inglés/i)).toBeVisible();
     expect(screen.getByRole("heading", { name: "Scott County Schools Exceptional Child Services" })).toBeVisible();

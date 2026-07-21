@@ -102,9 +102,9 @@ describe("deterministic family interview extraction", () => {
         sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
       },
       {
-        label: "School concern",
-        value: "Reading and homework may need support",
-        sourceSnippet: "Reading homework … nightly battle"
+        label: "About school and learning",
+        value: "School and learning may need support",
+        sourceSnippet: "My daughter is in fourth grade in Georgetown."
       }
     ]);
     expect(result.domains.map(({ domain }) => domain)).toEqual(["school_iep", "waivers_financial", "parent_support"]);
@@ -138,9 +138,9 @@ describe("deterministic family interview extraction", () => {
         sourceSnippet: "A mi hija le diagnosticaron dislexia y TDAH"
       },
       {
-        label: "Preocupación escolar",
-        value: "La lectura y la tarea podrían necesitar apoyo",
-        sourceSnippet: "La tarea de lectura … una batalla cada noche"
+        label: "Sobre la escuela y el aprendizaje",
+        value: "La escuela y el aprendizaje podrían necesitar apoyo",
+        sourceSnippet: "Mi hija está en cuarto grado en Georgetown."
       }
     ]);
     expect(result.domains).toEqual([
@@ -290,6 +290,11 @@ describe("deterministic family interview extraction", () => {
         label: "Reported diagnosis",
         value: "dyslexia, ADHD, and autism",
         sourceSnippet: "She was diagnosed with dyslexia, ADHD, and autism"
+      },
+      {
+        label: "About school and learning",
+        value: "School and learning may need support",
+        sourceSnippet: "My daughter is in 4th grade."
       }
     ]);
   });
@@ -302,9 +307,52 @@ describe("deterministic family interview extraction", () => {
         label: "Reported diagnosis",
         value: "dyslexia",
         sourceSnippet: "Riley was diagnosed with dyslexia"
+      },
+      {
+        label: "About school and learning",
+        value: "School and learning may need support",
+        sourceSnippet: "Riley is in grade 4."
       }
     ]);
     expect(extractFamilyInterviewMock("NotRiley was diagnosed with dyslexia.", profile).facts).toEqual([]);
+  });
+
+  it.each([
+    [
+      "he is almost 3 and still not saying real words. we have tried everything.",
+      "About talking",
+      "he is almost 3 and still not saying real words."
+    ],
+    [
+      "My kid melts down every single morning before we leave the house.",
+      "About behavior and routines",
+      "My kid melts down every single morning before we leave the house."
+    ],
+    [
+      "She is 2 and still not walking on her own.",
+      "About moving",
+      "She is 2 and still not walking on her own."
+    ]
+  ])("quotes the caregiver's own words for arbitrary concerns: %s", (text, label, snippet) => {
+    const facts = extractFamilyInterviewMock(text, morganFamilyState.profile!).facts;
+    const concern = facts.find((fact) => fact.label === label);
+
+    expect(concern).toBeDefined();
+    expect(concern!.sourceSnippet).toBe(snippet);
+    // A verbatim quote is what earns the "From your words" badge rather than "Our guess".
+    expect(familyFactStatus(concern!.sourceSnippet, text)).toBe("patient_reported");
+  });
+
+  it("caps concern facts at two and never invents a snippet the caregiver did not write", () => {
+    const text =
+      "Reading is hard for him at school. He barely talks. He melts down at bedtime. He still cannot walk up stairs.";
+    const facts = extractFamilyInterviewMock(text, morganFamilyState.profile!).facts;
+    const concerns = facts.filter((fact) => fact.label.startsWith("About "));
+
+    expect(concerns).toHaveLength(2);
+    for (const concern of concerns) {
+      expect(text).toContain(concern.sourceSnippet);
+    }
   });
 
   it("escapes punctuation in a profile child name before diagnosis matching", () => {
