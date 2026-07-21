@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, schoolAgeFamilyState } from "@/domain/family-fixtures";
 import type { FamilyFollowUp, FamilyInterviewResult } from "@/domain/family-interview";
 import { FamilyOrientationInterview } from "./family-orientation-interview";
 
@@ -73,8 +73,8 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 
 function renderOrientation(overrides: Partial<React.ComponentProps<typeof FamilyOrientationInterview>> = {}) {
   const props: React.ComponentProps<typeof FamilyOrientationInterview> = {
-    profile: morganFamilyState.profile!,
-    draft: morganFamilyState.interviewDraft,
+    profile: schoolAgeFamilyState.profile!,
+    draft: SAMPLE_CAREGIVER_TEXT,
     passcode: "secret",
     language: "en",
     onDraftChange: vi.fn(),
@@ -108,11 +108,11 @@ describe("FamilyOrientationInterview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Nothing yet" }));
 
-    const fullTranscript = `${morganFamilyState.interviewDraft}\nQ: ${schoolQuestion.question}\nA: Nothing yet`;
-    const familyOnlyTranscript = `${morganFamilyState.interviewDraft}\nNothing yet`;
+    const fullTranscript = `${SAMPLE_CAREGIVER_TEXT}\nQ: ${schoolQuestion.question}\nA: Nothing yet`;
+    const familyOnlyTranscript = `${SAMPLE_CAREGIVER_TEXT}\nNothing yet`;
     await waitFor(() => expect(requestFamilyInterview).toHaveBeenCalledTimes(2));
     expect(requestFamilyInterview.mock.calls[1][0]).toEqual(
-      expect.objectContaining({ text: fullTranscript, profile: morganFamilyState.profile, language: "en" })
+      expect.objectContaining({ text: fullTranscript, profile: schoolAgeFamilyState.profile, language: "en" })
     );
     await waitFor(() => expect(onInterviewExtracted).toHaveBeenCalledTimes(2));
     expect(onInterviewExtracted.mock.calls[1][1]).toEqual({
@@ -159,11 +159,11 @@ describe("FamilyOrientationInterview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Nothing yet" }));
 
-    const familyOnlyTranscript = `${morganFamilyState.interviewDraft}\nNothing yet`;
+    const familyOnlyTranscript = `${SAMPLE_CAREGIVER_TEXT}\nNothing yet`;
     await screen.findByRole("heading", { name: waiverQuestion.question });
     expect(extractFamilyInterviewMock).toHaveBeenCalledWith(
       familyOnlyTranscript,
-      morganFamilyState.profile,
+      schoolAgeFamilyState.profile,
       expect.any(Date),
       "en"
     );
@@ -261,11 +261,11 @@ describe("FamilyOrientationInterview", () => {
     const { rerender, props } = renderOrientation({ profile: emptyProfile });
     await submitOpening();
 
-    rerender(<FamilyOrientationInterview {...props} profile={morganFamilyState.profile!} />);
+    rerender(<FamilyOrientationInterview {...props} profile={schoolAgeFamilyState.profile!} />);
     expect(screen.getByRole("heading", { name: schoolQuestion.question })).toBeVisible();
 
     rerender(
-      <FamilyOrientationInterview {...props} profile={{ ...morganFamilyState.profile!, county: "Perry" }} />
+      <FamilyOrientationInterview {...props} profile={{ ...schoolAgeFamilyState.profile!, county: "Perry" }} />
     );
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: schoolQuestion.question })).not.toBeInTheDocument()
@@ -297,7 +297,7 @@ describe("FamilyOrientationInterview", () => {
 
     await waitFor(() => expect(onInterviewExtracted).toHaveBeenCalledTimes(2));
     expect(onInterviewExtracted.mock.calls[1][1]).toEqual(
-      expect.objectContaining({ source: "mixed", rawText: `${morganFamilyState.interviewDraft}\nNothing yet` })
+      expect.objectContaining({ source: "mixed", rawText: `${SAMPLE_CAREGIVER_TEXT}\nNothing yet` })
     );
   });
 });

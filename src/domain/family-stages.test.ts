@@ -17,7 +17,7 @@ function familyWith(profile: FamilyProfile): FamilyNavigatorState {
 }
 
 describe("buildFamilyStages", () => {
-  it("builds the Morgan now, next, and later beats", () => {
+  it("builds the now, next, and later beats", () => {
     const family = familyWith({
       childFirstName: "Riley",
       birthYear: 2017,

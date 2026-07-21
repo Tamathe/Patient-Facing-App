@@ -320,7 +320,7 @@ test("conversational path: describe first, then county, year, and school stage a
   await expect(page.getByRole("heading", { name: "Tell us about your child and their needs" })).toBeVisible();
   await page
     .getByLabel("What would you like help with?")
-    .fill("Reading homework is a nightly battle and I keep hearing about waivers.");
+    .fill("Reading is really hard for him at school and I keep hearing about waivers.");
   await page.getByRole("button", { name: "Find help" }).click();
 
   await expect(page.getByRole("region", { name: "Here is what we heard" })).toBeVisible();
@@ -358,7 +358,7 @@ test("demo timeline control backdates diagnosis data and advances staged nudges 
   });
   await page
     .getByLabel("What would you like help with?")
-    .fill("Reading homework is a nightly battle and my other kids need attention too. I am exhausted.");
+    .fill("Reading is really hard for him at school and my other kids need attention too. I am exhausted.");
   await page.getByRole("button", { name: "Find help" }).click();
 
   const timeline = page.getByRole("region", { name: "What to do, and when" });

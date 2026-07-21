@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { schoolAgeFamilyState } from "@/domain/family-fixtures";
 import { FamilyStageTimeline } from "./family-stage-timeline";
 
 describe("FamilyStageTimeline", () => {
@@ -12,7 +12,7 @@ describe("FamilyStageTimeline", () => {
     const now = new Date("2026-07-17T12:00:00.000Z");
     render(
       <FamilyStageTimeline
-        family={morganFamilyState}
+        family={schoolAgeFamilyState}
         language="en"
         now={now}
         onBackdateDiagnoses={onBackdateDiagnoses}
@@ -40,8 +40,8 @@ describe("FamilyStageTimeline", () => {
     render(
       <FamilyStageTimeline
         family={{
-          ...morganFamilyState,
-          profile: { ...morganFamilyState.profile!, diagnoses: [] }
+          ...schoolAgeFamilyState,
+          profile: { ...schoolAgeFamilyState.profile!, diagnoses: [] }
         }}
         language="en"
         now={new Date("2026-07-17T12:00:00.000Z")}
@@ -56,7 +56,7 @@ describe("FamilyStageTimeline", () => {
   it("distinguishes a missing profile from a valid profile with no matching stages", () => {
     const { rerender } = render(
       <FamilyStageTimeline
-        family={{ ...morganFamilyState, profile: null }}
+        family={{ ...schoolAgeFamilyState, profile: null }}
         language="en"
         now={new Date("2026-07-17T12:00:00Z")}
       />
@@ -67,9 +67,9 @@ describe("FamilyStageTimeline", () => {
     rerender(
       <FamilyStageTimeline
         family={{
-          ...morganFamilyState,
+          ...schoolAgeFamilyState,
           profile: {
-            ...morganFamilyState.profile!,
+            ...schoolAgeFamilyState.profile!,
             birthMonth: 1,
             diagnoses: [],
             schoolStage: "elementary"
@@ -88,7 +88,7 @@ describe("FamilyStageTimeline", () => {
     render(
       <FamilyStageTimeline
         family={{
-          ...morganFamilyState,
+          ...schoolAgeFamilyState,
           profile: {
             childFirstName: "Baby",
             birthYear: 2026,
@@ -115,7 +115,7 @@ describe("FamilyStageTimeline", () => {
     render(
       <FamilyStageTimeline
         family={{
-          ...morganFamilyState,
+          ...schoolAgeFamilyState,
           profile: {
             birthYear: 2026,
             schoolStage: "not_school_age",

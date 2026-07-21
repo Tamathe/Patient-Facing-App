@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, schoolAgeFamilyState } from "@/domain/family-fixtures";
 import { FamilyInterview } from "./family-interview";
 
 const { push, requestFamilyInterview } = vi.hoisted(() => ({ push: vi.fn(), requestFamilyInterview: vi.fn() }));
@@ -48,8 +48,8 @@ function installSpeech(): void {
 
 function renderInterview(overrides: Partial<React.ComponentProps<typeof FamilyInterview>> = {}) {
   const props: React.ComponentProps<typeof FamilyInterview> = {
-    profile: morganFamilyState.profile!,
-    draft: morganFamilyState.interviewDraft,
+    profile: schoolAgeFamilyState.profile!,
+    draft: SAMPLE_CAREGIVER_TEXT,
     passcode: "secret",
     language: "en",
     onDraftChange: vi.fn(),
@@ -83,7 +83,7 @@ describe("FamilyInterview", () => {
       "parent_support"
     ]);
     expect(onExtracted.mock.calls[0].slice(1)).toEqual([
-      { extraction: "mock", source: "typed", rawText: morganFamilyState.interviewDraft }
+      { extraction: "mock", source: "typed", rawText: SAMPLE_CAREGIVER_TEXT }
     ]);
   });
 
@@ -96,7 +96,7 @@ describe("FamilyInterview", () => {
       expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
         extraction: "mock",
         source: "typed",
-        rawText: morganFamilyState.interviewDraft
+        rawText: SAMPLE_CAREGIVER_TEXT
       })
     );
 
@@ -109,7 +109,7 @@ describe("FamilyInterview", () => {
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(2));
     expect(onExtracted.mock.calls[1]).toEqual([
       { facts: [], domains: [{ domain: "school_iep" }], followUps: [] },
-      { extraction: "live", source: "typed", rawText: morganFamilyState.interviewDraft }
+      { extraction: "live", source: "typed", rawText: SAMPLE_CAREGIVER_TEXT }
     ]);
   });
 
@@ -137,19 +137,18 @@ describe("FamilyInterview", () => {
   it("drops an unsupported live diagnosis fact even when its source snippet is verbatim", async () => {
     requestFamilyInterview.mockResolvedValueOnce({
       facts: [
-        { label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" },
-        { label: "Reported diagnosis", value: "autism", sourceSnippet: "fourth grade" },
-        { label: "Observation", value: "autism", sourceSnippet: "fourth grade" },
-        { label: "Reported diagnosis", value: "dyslexia", sourceSnippet: "fourth grade" },
+        { label: "Grade", value: "second grade", sourceSnippet: "second grade" },
+        { label: "Reported diagnosis", value: "autism", sourceSnippet: "second grade" },
+        { label: "Observation", value: "autism", sourceSnippet: "second grade" },
         {
           label: "Reported diagnosis",
-          value: "dyslexia and ADHD",
-          sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+          value: "dyslexia",
+          sourceSnippet: "He was just diagnosed with dyslexia"
         },
         {
-          label: "School concern",
-          value: "Reading and homework may need support",
-          sourceSnippet: "Reading homework … nightly battle"
+          label: "About school and learning",
+          value: "School and learning may need support",
+          sourceSnippet: "reading is really hard for him"
         }
       ],
       domains: [{ domain: "school_iep", rationale: "The caregiver described school concerns." }],
@@ -158,8 +157,8 @@ describe("FamilyInterview", () => {
     const onExtracted = vi.fn();
     renderInterview({
       profile: {
-        ...morganFamilyState.profile!,
-        diagnoses: [...morganFamilyState.profile!.diagnoses, { id: "profile-autism", label: "autism" }]
+        ...schoolAgeFamilyState.profile!,
+        diagnoses: [...schoolAgeFamilyState.profile!.diagnoses, { id: "profile-autism", label: "autism" }]
       },
       onExtracted
     });
@@ -168,16 +167,16 @@ describe("FamilyInterview", () => {
 
     await waitFor(() => expect(onExtracted).toHaveBeenCalledTimes(1));
     expect(onExtracted.mock.calls[0][0].facts).toEqual([
-      { label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" },
+      { label: "Grade", value: "second grade", sourceSnippet: "second grade" },
       {
         label: "Reported diagnosis",
-        value: "dyslexia and ADHD",
-        sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+        value: "dyslexia",
+        sourceSnippet: "He was just diagnosed with dyslexia"
       },
       {
-        label: "School concern",
-        value: "Reading and homework may need support",
-        sourceSnippet: "Reading homework … nightly battle"
+        label: "About school and learning",
+        value: "School and learning may need support",
+        sourceSnippet: "reading is really hard for him"
       }
     ]);
   });
@@ -366,14 +365,14 @@ describe("FamilyInterview", () => {
     expect(onExtracted).toHaveBeenCalledWith(expect.any(Object), {
       extraction: "mock",
       source: "typed",
-      rawText: morganFamilyState.interviewDraft
+      rawText: SAMPLE_CAREGIVER_TEXT
     });
   });
 
   it("invalidates a pending submission when its external draft is replaced and reconciles the latest draft", async () => {
     const draftA = "Riley was diagnosed with dyslexia.";
     const draftB = "Casey is in grade 4.";
-    const profileA = { ...morganFamilyState.profile!, childFirstName: "Riley" };
+    const profileA = { ...schoolAgeFamilyState.profile!, childFirstName: "Riley" };
     const profileB = profileA;
     const pending = deferred<null>();
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
@@ -427,8 +426,8 @@ describe("FamilyInterview", () => {
 
   it("invalidates a pending submission when the profile is replaced without changing the draft", async () => {
     const draft = "Riley is in fourth grade.";
-    const profileA = { ...morganFamilyState.profile!, childFirstName: "Riley" };
-    const profileB = { ...morganFamilyState.profile!, childFirstName: "Casey", county: "Perry" };
+    const profileA = { ...schoolAgeFamilyState.profile!, childFirstName: "Riley" };
+    const profileB = { ...schoolAgeFamilyState.profile!, childFirstName: "Casey", county: "Perry" };
     const pending = deferred<null>();
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
     const onExtracted = vi.fn();

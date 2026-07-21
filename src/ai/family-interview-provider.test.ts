@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, schoolAgeFamilyState } from "@/domain/family-fixtures";
 import { requestFamilyInterview } from "./family-interview-provider";
 
 const result = {
@@ -24,8 +24,8 @@ describe("requestFamilyInterview", () => {
 
     await expect(
       requestFamilyInterview({
-        text: morganFamilyState.interviewDraft,
-        profile: morganFamilyState.profile!,
+        text: SAMPLE_CAREGIVER_TEXT,
+        profile: schoolAgeFamilyState.profile!,
         passcode: "demo-code",
         language: "es"
       })
@@ -34,8 +34,8 @@ describe("requestFamilyInterview", () => {
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/family/interview");
     expect(JSON.parse(options.body as string)).toEqual({
-      text: morganFamilyState.interviewDraft,
-      profile: morganFamilyState.profile,
+      text: SAMPLE_CAREGIVER_TEXT,
+      profile: schoolAgeFamilyState.profile,
       passcode: "demo-code",
       language: "es"
     });
@@ -51,14 +51,14 @@ describe("requestFamilyInterview", () => {
   ])("returns null for %s responses", async (_name, serverResponse) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(serverResponse));
     await expect(
-      requestFamilyInterview({ text: morganFamilyState.interviewDraft, profile: morganFamilyState.profile!, language: "en" })
+      requestFamilyInterview({ text: SAMPLE_CAREGIVER_TEXT, profile: schoolAgeFamilyState.profile!, language: "en" })
     ).resolves.toBeNull();
   });
 
   it("returns null when fetch throws", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
     await expect(
-      requestFamilyInterview({ text: morganFamilyState.interviewDraft, profile: morganFamilyState.profile!, language: "en" })
+      requestFamilyInterview({ text: SAMPLE_CAREGIVER_TEXT, profile: schoolAgeFamilyState.profile!, language: "en" })
     ).resolves.toBeNull();
   });
 
@@ -72,8 +72,8 @@ describe("requestFamilyInterview", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const pending = requestFamilyInterview({
-      text: morganFamilyState.interviewDraft,
-      profile: morganFamilyState.profile!,
+      text: SAMPLE_CAREGIVER_TEXT,
+      profile: schoolAgeFamilyState.profile!,
       language: "en"
     });
     await vi.advanceTimersByTimeAsync(15_000);
@@ -92,7 +92,7 @@ describe("requestFamilyInterview", () => {
       }
     );
     await expect(
-      requestFamilyInterview({ text: morganFamilyState.interviewDraft, profile: morganFamilyState.profile!, language: "en" })
+      requestFamilyInterview({ text: SAMPLE_CAREGIVER_TEXT, profile: schoolAgeFamilyState.profile!, language: "en" })
     ).resolves.toBeNull();
   });
 });

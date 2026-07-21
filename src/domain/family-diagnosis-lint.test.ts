@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { morganFamilyState } from "./family-fixtures";
+import { schoolAgeFamilyState } from "./family-fixtures";
 import {
   containsFamilyDiagnosisClaim,
   filterUnsupportedDiagnosisFacts,
@@ -143,7 +143,7 @@ describe("stripUnsafeFamilyRationales", () => {
 });
 
 describe("filterUnsupportedDiagnosisFacts", () => {
-  const profile = morganFamilyState.profile!;
+  const profile = schoolAgeFamilyState.profile!;
 
   it("keeps arbitrary live facts that are not diagnostic claims", () => {
     const rawText =
@@ -166,7 +166,7 @@ describe("filterUnsupportedDiagnosisFacts", () => {
 
   it("keeps affirmative child-specific canonical facts and non-diagnosis inferred facts", () => {
     const rawText =
-      "She was just diagnosed with dyslexia and ADHD. Riley was diagnosed with autism. Reading homework is a nightly battle.";
+      "She was just diagnosed with dyslexia and ADHD. Riley was diagnosed with autism. Reading is really hard for her at school.";
     const facts = [
       {
         label: "Reported diagnosis",
@@ -179,9 +179,9 @@ describe("filterUnsupportedDiagnosisFacts", () => {
         sourceSnippet: "Riley was diagnosed with autism"
       },
       {
-        label: "School concern",
-        value: "Reading and homework may need support",
-        sourceSnippet: "Reading homework is a nightly battle"
+        label: "About school and learning",
+        value: "School and learning may need support",
+        sourceSnippet: "Reading is really hard for her at school"
       }
     ];
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, schoolAgeFamilyState } from "@/domain/family-fixtures";
 import { POST } from "./route";
 
 const result = {
@@ -18,8 +18,8 @@ function request(body: unknown): Request {
 
 function validBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    text: morganFamilyState.interviewDraft,
-    profile: morganFamilyState.profile,
+    text: SAMPLE_CAREGIVER_TEXT,
+    profile: schoolAgeFamilyState.profile,
     passcode: "secret",
     language: "en",
     ...overrides
@@ -41,13 +41,13 @@ describe("family interview route", () => {
     ["short text", { text: "short" }],
     ["whitespace-only text", { text: " ".repeat(10) }],
     ["long text", { text: "x".repeat(5001) }],
-    ["invalid profile", { profile: { ...morganFamilyState.profile, unknown: true } }],
+    ["invalid profile", { profile: { ...schoolAgeFamilyState.profile, unknown: true } }],
     [
       "invalid nested diagnosis",
       {
         profile: {
-          ...morganFamilyState.profile,
-          diagnoses: [{ ...morganFamilyState.profile!.diagnoses[0], unknown: true }]
+          ...schoolAgeFamilyState.profile,
+          diagnoses: [{ ...schoolAgeFamilyState.profile!.diagnoses[0], unknown: true }]
         }
       }
     ],
@@ -114,7 +114,7 @@ describe("family interview route", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const res = await POST(
-      request(validBody({ profile: { ...morganFamilyState.profile, birthYear: 1850 } }))
+      request(validBody({ profile: { ...schoolAgeFamilyState.profile, birthYear: 1850 } }))
     );
     expect(res.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();

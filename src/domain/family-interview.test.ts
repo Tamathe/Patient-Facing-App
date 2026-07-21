@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { morganFamilyState } from "./family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, SAMPLE_CAREGIVER_TEXT_ES, schoolAgeFamilyState } from "./family-fixtures";
 import {
   buildMockFollowUps,
   extractFamilyInterviewMock,
@@ -89,22 +89,22 @@ describe("family interview contract", () => {
 });
 
 describe("deterministic family interview extraction", () => {
-  it("extracts Morgan's explicit grade and diagnoses plus an inferred school concern", () => {
-    const profile = morganFamilyState.profile;
+  it("extracts an explicit grade and diagnosis plus a school concern quoted from the caregiver", () => {
+    const profile = schoolAgeFamilyState.profile;
     expect(profile).not.toBeNull();
-    const result = extractFamilyInterviewMock(morganFamilyState.interviewDraft, profile!, new Date("2026-07-17T12:00:00Z"));
+    const result = extractFamilyInterviewMock(SAMPLE_CAREGIVER_TEXT, profile!, new Date("2026-07-17T12:00:00Z"));
 
     expect(result.facts).toEqual([
-      { label: "Grade", value: "fourth grade", sourceSnippet: "fourth grade" },
+      { label: "Grade", value: "second grade", sourceSnippet: "second grade" },
       {
         label: "Reported diagnosis",
-        value: "dyslexia and ADHD",
-        sourceSnippet: "She was just diagnosed with dyslexia and ADHD"
+        value: "dyslexia",
+        sourceSnippet: "He was just diagnosed with dyslexia"
       },
       {
         label: "About school and learning",
         value: "School and learning may need support",
-        sourceSnippet: "My daughter is in fourth grade in Georgetown."
+        sourceSnippet: "My son is in second grade and reading is really hard for him."
       }
     ]);
     expect(result.domains.map(({ domain }) => domain)).toEqual(["school_iep", "waivers_financial", "parent_support"]);
@@ -125,22 +125,25 @@ describe("deterministic family interview extraction", () => {
     ]);
   });
 
-  it("extracts the exact Spanish Morgan path with localized facts and rationales", () => {
-    const text =
-      "Mi hija está en cuarto grado en Georgetown. A mi hija le diagnosticaron dislexia y TDAH hace un par de meses. La tarea de lectura es una batalla cada noche y no sé qué pedirle a la escuela. El dinero está escaso y sigo escuchando sobre exenciones, pero no tengo idea de por dónde empezar.";
-    const result = extractFamilyInterviewMock(text, morganFamilyState.profile!, new Date("2026-07-17T12:00:00Z"), "es");
+  it("extracts the Spanish path with localized facts and rationales", () => {
+    const result = extractFamilyInterviewMock(
+      SAMPLE_CAREGIVER_TEXT_ES,
+      schoolAgeFamilyState.profile!,
+      new Date("2026-07-17T12:00:00Z"),
+      "es"
+    );
 
     expect(result.facts).toEqual([
-      { label: "Grado", value: "cuarto grado", sourceSnippet: "cuarto grado" },
+      { label: "Grado", value: "segundo grado", sourceSnippet: "segundo grado" },
       {
         label: "Diagnóstico informado",
-        value: "dislexia y TDAH",
-        sourceSnippet: "A mi hija le diagnosticaron dislexia y TDAH"
+        value: "dislexia",
+        sourceSnippet: "A mi hijo le diagnosticaron dislexia"
       },
       {
         label: "Sobre la escuela y el aprendizaje",
         value: "La escuela y el aprendizaje podrían necesitar apoyo",
-        sourceSnippet: "Mi hija está en cuarto grado en Georgetown."
+        sourceSnippet: "Mi hijo está en segundo grado y le cuesta mucho leer."
       }
     ]);
     expect(result.domains).toEqual([
@@ -174,7 +177,7 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("returns two generic orientation questions when no domain matches", () => {
-    expect(extractFamilyInterviewMock("We would like some guidance.", morganFamilyState.profile!).followUps).toEqual([
+    expect(extractFamilyInterviewMock("We would like some guidance.", schoolAgeFamilyState.profile!).followUps).toEqual([
       {
         question: "What part of a typical day is hardest?",
         options: ["Mornings", "Afternoons", "Bedtime"]
@@ -184,7 +187,7 @@ describe("deterministic family interview extraction", () => {
         options: ["No one", "Family or friends", "A professional"]
       }
     ]);
-    expect(extractFamilyInterviewMock("Nos gustaría recibir orientación.", morganFamilyState.profile!, new Date(), "es").followUps).toEqual([
+    expect(extractFamilyInterviewMock("Nos gustaría recibir orientación.", schoolAgeFamilyState.profile!, new Date(), "es").followUps).toEqual([
       {
         question: "¿Qué parte de un día típico es la más difícil?",
         options: ["Las mañanas", "Las tardes", "La hora de dormir"]
@@ -209,7 +212,7 @@ describe("deterministic family interview extraction", () => {
       for (const { domains, allowed } of cases) {
         const followUps = buildMockFollowUps(domains, language);
         for (const text of followUps.flatMap(({ question, options }) => [question, ...options])) {
-          const rematched = extractFamilyInterviewMock(text, morganFamilyState.profile!, new Date(), language).domains.map(
+          const rematched = extractFamilyInterviewMock(text, schoolAgeFamilyState.profile!, new Date(), language).domains.map(
             ({ domain }) => domain
           );
           expect(rematched.every((domain) => allowed.includes(domain))).toBe(true);
@@ -230,7 +233,7 @@ describe("deterministic family interview extraction", () => {
     ["clubes, deportes y recreación", ["recreation"]],
     ["no sé por dónde empezar", ["parent_support"]]
   ])("maps Spanish interview %s to the required domains", (text, expected) => {
-    const profile = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 1 };
+    const profile = { ...schoolAgeFamilyState.profile!, birthYear: 2024, birthMonth: 1 };
     expect(
       extractFamilyInterviewMock(text, profile, new Date("2026-07-17T12:00:00Z"), "es").domains.map(
         ({ domain }) => domain
@@ -248,13 +251,13 @@ describe("deterministic family interview extraction", () => {
     ["adult transition, guardianship, and ABLE", ["future_planning"]],
     ["clubs, sports, and horses", ["recreation"]]
   ])("maps %s to the required domains", (text, expected) => {
-    const profile = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 1 };
+    const profile = { ...schoolAgeFamilyState.profile!, birthYear: 2024, birthMonth: 1 };
     expect(extractFamilyInterviewMock(text, profile, new Date("2026-07-17T12:00:00Z")).domains.map(({ domain }) => domain)).toEqual(expected);
   });
 
   it("adds early intervention for a toddler speech concern but not for an older child", () => {
-    const toddler = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 8 };
-    const older = { ...morganFamilyState.profile!, birthYear: 2017, birthMonth: 8 };
+    const toddler = { ...schoolAgeFamilyState.profile!, birthYear: 2024, birthMonth: 8 };
+    const older = { ...schoolAgeFamilyState.profile!, birthYear: 2017, birthMonth: 8 };
 
     expect(extractFamilyInterviewMock("My child has trouble talking.", toddler, new Date("2026-07-17T12:00:00Z")).domains.map(({ domain }) => domain)).toEqual([
       "early_intervention",
@@ -264,7 +267,7 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("adds early intervention only for toddler speech or talking concerns, not therapy alone", () => {
-    const toddler = { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 8 };
+    const toddler = { ...schoolAgeFamilyState.profile!, birthYear: 2024, birthMonth: 8 };
     const now = new Date("2026-07-17T12:00:00Z");
 
     expect(extractFamilyInterviewMock("We need physical therapy.", toddler, now).domains.map(({ domain }) => domain)).toEqual(["therapies"]);
@@ -275,14 +278,14 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("does not turn a concern into a diagnosis fact", () => {
-    const result = extractFamilyInterviewMock("I wonder whether this could be autism.", morganFamilyState.profile!);
+    const result = extractFamilyInterviewMock("I wonder whether this could be autism.", schoolAgeFamilyState.profile!);
     expect(result.facts).toEqual([]);
   });
 
   it("extracts numeric grades and Oxford-comma diagnosis lists from explicit statements", () => {
     const result = extractFamilyInterviewMock(
       "My daughter is in 4th grade. She was diagnosed with dyslexia, ADHD, and autism.",
-      morganFamilyState.profile!
+      schoolAgeFamilyState.profile!
     );
     expect(result.facts).toEqual([
       { label: "Grade", value: "4th grade", sourceSnippet: "4th grade" },
@@ -300,7 +303,7 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("extracts grade-number order and the profile child's explicit diagnosis without suffix collisions", () => {
-    const profile = { ...morganFamilyState.profile!, childFirstName: "Riley" };
+    const profile = { ...schoolAgeFamilyState.profile!, childFirstName: "Riley" };
     expect(extractFamilyInterviewMock("Riley is in grade 4. Riley was diagnosed with dyslexia.", profile).facts).toEqual([
       { label: "Grade", value: "grade 4", sourceSnippet: "grade 4" },
       {
@@ -334,7 +337,7 @@ describe("deterministic family interview extraction", () => {
       "She is 2 and still not walking on her own."
     ]
   ])("quotes the caregiver's own words for arbitrary concerns: %s", (text, label, snippet) => {
-    const facts = extractFamilyInterviewMock(text, morganFamilyState.profile!).facts;
+    const facts = extractFamilyInterviewMock(text, schoolAgeFamilyState.profile!).facts;
     const concern = facts.find((fact) => fact.label === label);
 
     expect(concern).toBeDefined();
@@ -346,7 +349,7 @@ describe("deterministic family interview extraction", () => {
   it("caps concern facts at two and never invents a snippet the caregiver did not write", () => {
     const text =
       "Reading is hard for him at school. He barely talks. He melts down at bedtime. He still cannot walk up stairs.";
-    const facts = extractFamilyInterviewMock(text, morganFamilyState.profile!).facts;
+    const facts = extractFamilyInterviewMock(text, schoolAgeFamilyState.profile!).facts;
     const concerns = facts.filter((fact) => fact.label.startsWith("About "));
 
     expect(concerns).toHaveLength(2);
@@ -356,7 +359,7 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("escapes punctuation in a profile child name before diagnosis matching", () => {
-    const profile = { ...morganFamilyState.profile!, childFirstName: "Ri.ley" };
+    const profile = { ...schoolAgeFamilyState.profile!, childFirstName: "Ri.ley" };
     expect(extractFamilyInterviewMock("Ri.ley was diagnosed with ADHD.", profile).facts).toEqual([
       {
         label: "Reported diagnosis",
@@ -367,8 +370,8 @@ describe("deterministic family interview extraction", () => {
   });
 
   it("treats hyphenated child names as whole names instead of suffix matches", () => {
-    const annProfile = { ...morganFamilyState.profile!, childFirstName: "Ann" };
-    const joAnnProfile = { ...morganFamilyState.profile!, childFirstName: "Jo-Ann" };
+    const annProfile = { ...schoolAgeFamilyState.profile!, childFirstName: "Ann" };
+    const joAnnProfile = { ...schoolAgeFamilyState.profile!, childFirstName: "Jo-Ann" };
     const text = "Jo-Ann was diagnosed with ADHD.";
 
     expect(extractFamilyInterviewMock(text, annProfile).facts).toEqual([]);

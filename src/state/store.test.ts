@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { brentState, demoState } from "@/domain/fixtures";
-import { morganFamilyState } from "@/domain/family-fixtures";
+import { schoolAgeFamilyState } from "@/domain/family-fixtures";
 import { recordAuditEvent } from "@/domain/audit";
 import { healthReducer } from "./store";
 import type {
@@ -14,7 +14,7 @@ import type {
 
 describe("healthReducer", () => {
   it("backdates stored family diagnosis months for the demo without replacing the clock", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const beforeDates = seeded.family?.profile?.diagnoses.map(({ diagnosedAt }) => diagnosedAt);
 
     const backdated = healthReducer(seeded, {
@@ -40,7 +40,7 @@ describe("healthReducer", () => {
   });
 
   it("does not backdate when a family profile has no diagnoses", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const withoutDiagnoses = healthReducer(seeded, {
       type: "saveFamilyProfile",
       profile: { ...seeded.family!.profile!, diagnoses: [] }
@@ -108,7 +108,7 @@ describe("healthReducer", () => {
   });
 
   it("saves a family profile and interview draft", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const profiled = healthReducer(seeded, {
       type: "saveFamilyProfile",
       profile: {
@@ -127,7 +127,7 @@ describe("healthReducer", () => {
   });
 
   it("replaces screen answers and screen facts while retracting yes-to-no domains", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const interviewFact: FamilyFact = {
       id: "interview-fact",
       interviewId: "interview-1",
@@ -175,7 +175,7 @@ describe("healthReducer", () => {
   });
 
   it("appends interviews, clears the draft, and replaces the latest interview domains", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const firstInterview: FamilyInterview = {
       id: "interview-1",
       rawText: "I need school help.",
@@ -205,7 +205,7 @@ describe("healthReducer", () => {
   });
 
   it("confirms only family facts and leaves adult extracted facts untouched", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const before = {
       ...seeded,
       family: seeded.family && {
@@ -229,7 +229,7 @@ describe("healthReducer", () => {
   });
 
   it("saves a resource idempotently and toggles enrollment", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
     const resource: SavedFamilyResource = {
       resourceId: "ky-spin",
       savedAt: "2026-07-17T12:00:00.000Z",
@@ -249,7 +249,7 @@ describe("healthReducer", () => {
   });
 
   it("clears family data on reset and deletion", () => {
-    const seeded: AppState = { ...demoState, family: morganFamilyState };
+    const seeded: AppState = { ...demoState, family: schoolAgeFamilyState };
 
     expect(healthReducer(seeded, { type: "resetDemo" }).family).toBeNull();
     expect(healthReducer(seeded, { type: "deleteDemoData" }).family).toBeNull();

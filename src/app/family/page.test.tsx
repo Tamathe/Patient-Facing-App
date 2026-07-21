@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import React, { useReducer } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { brentState } from "@/domain/fixtures";
-import { eighteenMonthFamilyState, morganFamilyState } from "@/domain/family-fixtures";
+import { SAMPLE_CAREGIVER_TEXT, SAMPLE_CAREGIVER_TEXT_ES, eighteenMonthFamilyState, schoolAgeFamilyState } from "@/domain/family-fixtures";
 import type { AppState, FamilyNavigatorState } from "@/domain/types";
 import { healthReducer } from "@/state/store";
 import { FamilyExperience } from "@/components/family-experience";
@@ -33,6 +33,9 @@ async function changeCounty(user: ReturnType<typeof userEvent.setup>, county: st
   await user.click(screen.getByRole("button", { name: "Save these details" }));
 }
 
+// The fixture carries no scripted draft, so tests that submit supply ordinary caregiver text.
+const describedFamily: FamilyNavigatorState = { ...schoolAgeFamilyState, interviewDraft: SAMPLE_CAREGIVER_TEXT };
+
 function ReducerHarness({ initialState = withFamily(null) }: { initialState?: AppState }) {
   const [state, dispatch] = useReducer(healthReducer, initialState);
   return (
@@ -56,11 +59,11 @@ describe("FamilyExperience", () => {
     const originalLanguage = document.documentElement.lang;
     document.documentElement.lang = "fr";
     const { rerender, unmount } = render(
-      <FamilyExperience state={withFamily(morganFamilyState, "es")} dispatch={vi.fn()} passcode="" />
+      <FamilyExperience state={withFamily(schoolAgeFamilyState, "es")} dispatch={vi.fn()} passcode="" />
     );
 
     expect(document.documentElement.lang).toBe("es");
-    rerender(<FamilyExperience state={withFamily(morganFamilyState, "en")} dispatch={vi.fn()} passcode="" />);
+    rerender(<FamilyExperience state={withFamily(schoolAgeFamilyState, "en")} dispatch={vi.fn()} passcode="" />);
     expect(document.documentElement.lang).toBe("en");
     unmount();
     expect(document.documentElement.lang).toBe("fr");
@@ -69,7 +72,7 @@ describe("FamilyExperience", () => {
 
   it("does not steal focus for a persisted interview from an earlier visit", () => {
     const persistedFamily: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       interviews: [
         {
           id: "persisted-interview",
@@ -96,14 +99,14 @@ describe("FamilyExperience", () => {
     expect(screen.getByRole("heading", { name: "Here is what we heard" }).closest("section")).not.toHaveFocus();
   });
 
-  it("runs the Morgan mock path with atomic family facts, confirmation, deterministic Scott-first resources, saved return state, and timeline", async () => {
+  it("runs the described-child path with atomic family facts, confirmation, deterministic Scott-first resources, saved return state, and timeline", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+    render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
     expect(screen.getByText(/Demo.*not an official service/i)).toBeVisible();
     expect(screen.getByRole("button", { name: /rather answer yes or no/i })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("heading", { name: "What would help?" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/What would you like help with/i)).toHaveValue(morganFamilyState.interviewDraft);
+    expect(screen.getByLabelText(/What would you like help with/i)).toHaveValue(SAMPLE_CAREGIVER_TEXT);
     const adultFactsBefore = screen.getByTestId("adult-facts").textContent;
 
     await user.click(screen.getByRole("button", { name: "Find help" }));
@@ -158,7 +161,7 @@ describe("FamilyExperience", () => {
       screen.getByTestId("family-state").textContent || "null"
     ) as FamilyNavigatorState;
     expect(stateAfterFirstFollowUp.interviews).toHaveLength(2);
-    expect(stateAfterFirstFollowUp.interviews[1].rawText).toBe(`${morganFamilyState.interviewDraft}\nNothing yet`);
+    expect(stateAfterFirstFollowUp.interviews[1].rawText).toBe(`${SAMPLE_CAREGIVER_TEXT}\nNothing yet`);
     expect(screen.getByTestId("matched-family-resources")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Not yet" }));
@@ -169,7 +172,7 @@ describe("FamilyExperience", () => {
     ) as FamilyNavigatorState;
     expect(stateAfterSecondFollowUp.interviews).toHaveLength(3);
     expect(stateAfterSecondFollowUp.interviews[2].rawText).toBe(
-      `${morganFamilyState.interviewDraft}\nNothing yet\nNot yet`
+      `${SAMPLE_CAREGIVER_TEXT}\nNothing yet\nNot yet`
     );
 
     const currentMatched = screen.getByTestId("matched-family-resources");
@@ -200,7 +203,7 @@ describe("FamilyExperience", () => {
     );
     await user.type(
       screen.getByLabelText("What would you like help with?"),
-      "Reading homework is a nightly battle and I keep hearing about waivers."
+      "Reading is really hard for him at school and I keep hearing about waivers."
     );
     await user.click(screen.getByRole("button", { name: "Find help" }));
     await screen.findByRole("heading", { name: "Here is what we heard" });
@@ -244,7 +247,7 @@ describe("FamilyExperience", () => {
 
     await user.type(
       screen.getByLabelText("What would you like help with?"),
-      "Reading homework is a nightly battle for us."
+      "Reading is really hard for him at school."
     );
     await user.click(screen.getByRole("button", { name: "Find help" }));
     const turns = await screen.findByTestId("family-basics-turns");
@@ -261,16 +264,18 @@ describe("FamilyExperience", () => {
     expect(family.profile).toBeNull();
   });
 
-  it("offers no fictional example shortcuts", () => {
+  it("starts a first visit completely blank, with no example shortcuts or pre-filled text", () => {
     render(<FamilyExperience state={withFamily(null)} dispatch={vi.fn()} passcode="" />);
 
-    expect(screen.queryByText(/fictional/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Morgan|Riley|Casey|Avery/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/What would you like help with/i)).toHaveValue("");
+    expect(screen.queryByText(/fictional|example/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Here is what we heard" })).not.toBeInTheDocument();
   });
 
   it("keeps the simple needs screen collapsed until requested and preserves its eight-question path", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+    render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
     const disclosure = screen.getByRole("button", { name: /rather answer yes or no/i });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
@@ -305,7 +310,7 @@ describe("FamilyExperience", () => {
     const user = userEvent.setup();
     const pending = deferred<null>();
     requestFamilyInterview.mockReturnValueOnce(pending.promise);
-    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+    render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
     await user.click(screen.getByRole("button", { name: "Find help" }));
     await changeCounty(user, "Perry");
@@ -327,7 +332,7 @@ describe("FamilyExperience", () => {
 
   it("resets an active follow-up thread when the profile changes", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+    render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
     await user.click(screen.getByRole("button", { name: "Find help" }));
     await screen.findByRole("heading", { name: "What has the school offered so far?" });
@@ -337,9 +342,9 @@ describe("FamilyExperience", () => {
   });
 
   it("uses exact fallback resources only for an honest domain zero-match, not for no selected domains", () => {
-    const profile = { ...morganFamilyState.profile!, county: "Boone" };
+    const profile = { ...schoolAgeFamilyState.profile!, county: "Boone" };
     const zeroMatchFamily: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       profile,
       activeDomains: ["transportation"]
     };
@@ -367,9 +372,9 @@ describe("FamilyExperience", () => {
 
   it("shows an honest localized timeline empty state when a profile has no current stage entries", () => {
     const family: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       profile: {
-        ...morganFamilyState.profile!,
+        ...schoolAgeFamilyState.profile!,
         birthMonth: 1,
         diagnoses: [],
         schoolStage: "elementary"
@@ -383,7 +388,7 @@ describe("FamilyExperience", () => {
   it("requires consent for sharing, writes one shared audit event, and sinks enrolled resources without urgency", async () => {
     const user = userEvent.setup();
     const family: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       activeDomains: ["waivers_financial"]
     };
     render(<ReducerHarness initialState={withFamily(family)} />);
@@ -409,7 +414,7 @@ describe("FamilyExperience", () => {
 
   it("keeps enrolled CHILD visible after the four unenrolled waiver choices and suppresses its urgency", () => {
     const family: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       activeDomains: ["waivers_financial"],
       alreadyEnrolled: ["child_waiver"]
     };
@@ -427,7 +432,7 @@ describe("FamilyExperience", () => {
 
   it("does not duplicate CKRH when recreation is primary and hides therapeutic recreation outside age or county", () => {
     const recreationFamily: FamilyNavigatorState = {
-      ...morganFamilyState,
+      ...schoolAgeFamilyState,
       activeDomains: ["recreation"]
     };
     const { rerender } = render(
@@ -440,8 +445,8 @@ describe("FamilyExperience", () => {
     rerender(
       <FamilyExperience
         state={withFamily({
-          ...morganFamilyState,
-          profile: { ...morganFamilyState.profile!, birthYear: 2024, birthMonth: 1 },
+          ...schoolAgeFamilyState,
+          profile: { ...schoolAgeFamilyState.profile!, birthYear: 2024, birthMonth: 1 },
           activeDomains: ["school_iep"]
         })}
         dispatch={vi.fn()}
@@ -453,8 +458,8 @@ describe("FamilyExperience", () => {
     rerender(
       <FamilyExperience
         state={withFamily({
-          ...morganFamilyState,
-          profile: { ...morganFamilyState.profile!, county: "Boone" },
+          ...schoolAgeFamilyState,
+          profile: { ...schoolAgeFamilyState.profile!, county: "Boone" },
           activeDomains: ["school_iep"]
         })}
         dispatch={vi.fn()}
@@ -467,9 +472,8 @@ describe("FamilyExperience", () => {
   it("renders substantive localized Spanish mock facts, rationales, resources, and source-language notice", async () => {
     const user = userEvent.setup();
     const spanishFamily: FamilyNavigatorState = {
-      ...morganFamilyState,
-      interviewDraft:
-        "Mi hija está en cuarto grado en Georgetown. A mi hija le diagnosticaron dislexia y TDAH hace un par de meses. La tarea de lectura es una batalla cada noche y no sé qué pedirle a la escuela. El dinero está escaso y sigo escuchando sobre exenciones, pero no tengo idea de por dónde empezar."
+      ...schoolAgeFamilyState,
+      interviewDraft: SAMPLE_CAREGIVER_TEXT_ES
     };
     render(<ReducerHarness initialState={withFamily(spanishFamily, "es")} />);
 
@@ -480,9 +484,9 @@ describe("FamilyExperience", () => {
     expect(screen.getByRole("heading", { name: "¿Qué ha ofrecido la escuela hasta ahora?" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Nada todavía" })).toBeVisible();
     expect(screen.getByText("Grado")).toBeVisible();
-    expect(screen.getAllByText("cuarto grado")[0]).toBeVisible();
+    expect(screen.getAllByText("segundo grado")[0]).toBeVisible();
     expect(screen.getByText("Diagnóstico informado")).toBeVisible();
-    expect(screen.getByText("dislexia y TDAH")).toBeVisible();
+    expect(screen.getByText("dislexia")).toBeVisible();
     expect(screen.getByText("Sobre la escuela y el aprendizaje")).toBeVisible();
     expect(screen.getByText(/Mencionaste la escuela/)).toBeVisible();
     expect(screen.getByText(/vienen directo de las organizaciones.*en inglés/i)).toBeVisible();
@@ -491,7 +495,7 @@ describe("FamilyExperience", () => {
 
   it("clears review and resource presentation before a safety redirect", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily({ ...morganFamilyState, activeDomains: ["school_iep"] })} />);
+    render(<ReducerHarness initialState={withFamily({ ...schoolAgeFamilyState, activeDomains: ["school_iep"] })} />);
 
     expect(screen.getByTestId("matched-family-resources")).toBeVisible();
     const interview = screen.getByLabelText("What would you like help with?");
@@ -506,7 +510,7 @@ describe("FamilyExperience", () => {
 
   it("suppresses review and resources when a follow-up answer triggers safety escalation", async () => {
     const user = userEvent.setup();
-    render(<ReducerHarness initialState={withFamily(morganFamilyState)} />);
+    render(<ReducerHarness initialState={withFamily(describedFamily)} />);
 
     await user.click(screen.getByRole("button", { name: "Find help" }));
     await screen.findByRole("heading", { name: "What has the school offered so far?" });

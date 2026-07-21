@@ -1,36 +1,27 @@
 import type { FamilyNavigatorState } from "./types";
 
-export const morganFamilyState: FamilyNavigatorState = {
+// Ordinary caregiver wording for tests that need submittable interview text.
+// Test-only — the app never pre-fills the interview box, and there is no
+// scripted demo family behind these fixtures.
+export const SAMPLE_CAREGIVER_TEXT =
+  "My son is in second grade and reading is really hard for him. He was just diagnosed with dyslexia. I don't know what to ask the school for, and money is tight so I keep hearing about waivers but have no idea where to start.";
+
+export const SAMPLE_CAREGIVER_TEXT_ES =
+  "Mi hijo está en segundo grado y le cuesta mucho leer. A mi hijo le diagnosticaron dislexia. No sé qué pedirle a la escuela y el dinero está escaso, sigo escuchando sobre exenciones pero no tengo idea de por dónde empezar.";
+
+/** School-age child in Scott County with two dated diagnoses. */
+export const schoolAgeFamilyState: FamilyNavigatorState = {
   profile: {
     childFirstName: "Riley",
     birthYear: 2017,
     schoolStage: "elementary",
     county: "Scott",
     diagnoses: [
-      { id: "morgan-diagnosis-dyslexia", label: "dyslexia", diagnosedAt: "2026-05" },
-      { id: "morgan-diagnosis-adhd", label: "adhd", diagnosedAt: "2026-05" }
+      { id: "fixture-diagnosis-dyslexia", label: "dyslexia", diagnosedAt: "2026-05" },
+      { id: "fixture-diagnosis-adhd", label: "adhd", diagnosedAt: "2026-05" }
     ]
   },
-  interviewDraft:
-    "My daughter is in fourth grade in Georgetown. She was just diagnosed with dyslexia and ADHD a couple months ago. Reading homework is a nightly battle and I don't know what to ask the school for. Money's tight and I keep hearing about waivers but have no idea where to start.",
-  screenAnswers: [],
-  interviews: [],
-  facts: [],
-  latestInterviewDomains: [],
-  activeDomains: [],
-  saved: [],
-  alreadyEnrolled: []
-};
-
-export const caseyFamilyState: FamilyNavigatorState = {
-  profile: {
-    birthYear: 2024,
-    schoolStage: "not_school_age",
-    county: "Perry",
-    diagnoses: [{ id: "casey-diagnosis-speech-language", label: "speech_language" }]
-  },
-  interviewDraft:
-    "My child is 2 and has speech and language delays. I want to get started with First Steps before the third birthday and find local therapy help.",
+  interviewDraft: "",
   screenAnswers: [],
   interviews: [],
   facts: [],
@@ -42,7 +33,7 @@ export const caseyFamilyState: FamilyNavigatorState = {
 
 export function eighteenMonthFamilyState(now: Date): FamilyNavigatorState {
   if (Number.isNaN(now.valueOf())) {
-    throw new RangeError("A valid timestamp is required for the 18-month family example.");
+    throw new RangeError("A valid timestamp is required for the 18-month family fixture.");
   }
   const birth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 18, 1));
   return {
