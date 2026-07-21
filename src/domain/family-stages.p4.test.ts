@@ -27,7 +27,7 @@ function familyAt(ageMonths: number): FamilyNavigatorState {
   };
 }
 
-describe("P4 Help for your family development stages", () => {
+describe("P4 Your child's development development stages", () => {
   it.each([
     [17, []],
     [18, ["development-check-18-month"]],

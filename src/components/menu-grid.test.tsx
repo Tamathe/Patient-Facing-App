@@ -41,11 +41,11 @@ describe("MenuGrid reachability", () => {
 
   it("renders the localized family navigator entry", () => {
     const { rerender } = render(<MenuGrid language="en" />);
-    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Help for your family");
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Your child's development");
     expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Find developmental resources for your child");
 
     rerender(<MenuGrid language="es" />);
-    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Ayuda para tu familia");
+    expect(document.querySelector('a[href="/family"]')).toHaveTextContent("El desarrollo de tu hijo o hija");
     expect(document.querySelector('a[href="/family"]')).toHaveTextContent("Encuentra recursos de desarrollo para tu hijo o hija");
   });
 

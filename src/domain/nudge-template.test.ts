@@ -172,7 +172,7 @@ describe("renderNudge", () => {
     }
   });
 
-  it("approves every Help for your family stage template in English and Spanish", () => {
+  it("approves every Your child's development stage template in English and Spanish", () => {
     const templateIds = [
       "family_stage_first_steps_v1",
       "family_stage_age_three_transition_v1",

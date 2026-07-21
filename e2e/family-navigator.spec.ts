@@ -162,9 +162,9 @@ test(`Morgan golden path uses the exact paragraph: ${MORGAN_PARAGRAPH}`, async (
   });
   await page.goto("/family?k=demo-passcode");
 
-  await expect(page.getByRole("heading", { name: "Help for your family", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your child's development", level: 1 })).toBeVisible();
   await expect(page.getByText(/Demo.*not an official service/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Tell us what is going on" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tell us about your child and their needs" })).toBeVisible();
   await fillBasics(page, {
     county: "Scott",
     birthYear: "2017",
@@ -313,7 +313,7 @@ test("interview-first path: describing the situation works before any basics, an
   await stubUnconfiguredFamilyInterview(page);
   await page.goto("/family");
 
-  await expect(page.getByRole("heading", { name: "Tell us what is going on" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tell us about your child and their needs" })).toBeVisible();
   await page
     .getByLabel("What would you like help with?")
     .fill("Reading homework is a nightly battle and I keep hearing about waivers.");
@@ -397,16 +397,16 @@ test("demo timeline control backdates diagnosis data and advances staged nudges 
   expect(await page.evaluate(() => Date.now())).toBe(FROZEN_NOW.valueOf());
 });
 
-test("Help for your family is reachable from both Menu and the home composer", async ({ page }) => {
+test("Your child's development is reachable from both Menu and the home composer", async ({ page }) => {
   await page.goto("/menu");
 
-  await page.getByRole("link", { name: /^Help for your family/ }).click();
-  await expect(page.getByRole("heading", { name: "Help for your family", level: 1 })).toBeVisible();
+  await page.getByRole("link", { name: /^Your child's development/ }).click();
+  await expect(page.getByRole("heading", { name: "Your child's development", level: 1 })).toBeVisible();
 
   await page.goto("/today");
   await page.getByLabel("Tell me what you need").fill("help for my daughter");
   await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.getByRole("heading", { name: "Help for your family", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your child's development", level: 1 })).toBeVisible();
 });
 
 test(`Safety phrase routes before extraction and locks crisis UI: ${SAFETY_PHRASE}`, async ({ page }) => {
