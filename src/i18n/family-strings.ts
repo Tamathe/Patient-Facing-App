@@ -152,6 +152,7 @@ export type FamilyStringKey =
   | "rationaleRecreation"
   | "resourcesTitle"
   | "resourcesIntro"
+  | "resourcesNeedBasics"
   | "resourceSourceLanguageNotice"
   | "nearbyTherapeuticRecreationTitle"
   | "nearbyTherapeuticRecreationIntro"
@@ -386,6 +387,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     rationaleRecreation: "The caregiver asked about clubs, sports, horses, or recreation.",
     resourcesTitle: "Matched resources",
     resourcesIntro: "These options are matched by county, age, and the support areas you selected. The source link is the authority for current rules.",
+    resourcesNeedBasics: "Add the basics below — your Kentucky county and your child's birth year — to match programs near you.",
     resourceSourceLanguageNotice: "Details supplied by resource organizations may remain in their original language while a reviewed translation is pending.",
     nearbyTherapeuticRecreationTitle: "Nearby therapeutic recreation",
     nearbyTherapeuticRecreationIntro: "This separate local option matches the child's county and age and offers both recreation and therapeutic support. It did not create a new support-area inference.",
@@ -619,6 +621,7 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     rationaleRecreation: "La persona cuidadora preguntó por clubes, deportes, caballos o recreación.",
     resourcesTitle: "Recursos encontrados",
     resourcesIntro: "Estas opciones coinciden con el condado, la edad y las áreas elegidas. El enlace de la fuente es la autoridad para las reglas actuales.",
+    resourcesNeedBasics: "Agrega lo básico abajo — tu condado de Kentucky y el año de nacimiento de tu hijo o hija — para buscar programas cercanos.",
     resourceSourceLanguageNotice: "Los detalles proporcionados por las organizaciones pueden permanecer en su idioma original mientras esperan una traducción revisada.",
     nearbyTherapeuticRecreationTitle: "Recreación terapéutica cercana",
     nearbyTherapeuticRecreationIntro: "Esta opción local separada coincide con el condado y la edad del niño y ofrece recreación y apoyo terapéutico. No creó una nueva inferencia de área de apoyo.",

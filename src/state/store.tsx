@@ -101,7 +101,7 @@ export type HealthAction =
   | { type: "resetDemo"; patient?: "jordan" | "brent" }
   | { type: "deleteDemoData" };
 
-function emptyFamilyState(profile: FamilyProfile): FamilyNavigatorState {
+function emptyFamilyState(profile: FamilyProfile | null): FamilyNavigatorState {
   return {
     profile,
     interviewDraft: "",
@@ -576,20 +576,17 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
         ]
       };
     }
-    case "setFamilyInterviewDraft":
-      if (!state.family) {
-        return state;
-      }
-      return { ...state, family: { ...state.family, interviewDraft: action.draft } };
+    case "setFamilyInterviewDraft": {
+      const family = state.family ?? emptyFamilyState(null);
+      return { ...state, family: { ...family, interviewDraft: action.draft } };
+    }
     case "submitFamilyScreen": {
-      if (!state.family) {
-        return state;
-      }
-      const interviewFacts = state.family.facts.filter((fact) => fact.interviewId !== undefined);
+      const family = state.family ?? emptyFamilyState(null);
+      const interviewFacts = family.facts.filter((fact) => fact.interviewId !== undefined);
       return {
         ...state,
         family: {
-          ...state.family,
+          ...family,
           screenAnswers: action.answers,
           facts: [
             ...interviewFacts,
@@ -601,27 +598,25 @@ export function healthReducer(state: AppState, action: HealthAction): AppState {
               sourceSnippet
             }))
           ],
-          activeDomains: mergeFamilyDomains(action.answers, state.family.latestInterviewDomains)
+          activeDomains: mergeFamilyDomains(action.answers, family.latestInterviewDomains)
         }
       };
     }
     case "addFamilyInterview": {
-      if (!state.family) {
-        return state;
-      }
+      const family = state.family ?? emptyFamilyState(null);
       const latestInterviewDomains = [...new Set(action.domains)];
       return {
         ...state,
         family: {
-          ...state.family,
+          ...family,
           interviewDraft: "",
-          interviews: [...state.family.interviews, action.interview],
+          interviews: [...family.interviews, action.interview],
           facts: [
-            ...state.family.facts,
+            ...family.facts,
             ...action.facts.map((fact) => ({ ...fact, interviewId: action.interview.id }))
           ],
           latestInterviewDomains,
-          activeDomains: mergeFamilyDomains(state.family.screenAnswers, latestInterviewDomains)
+          activeDomains: mergeFamilyDomains(family.screenAnswers, latestInterviewDomains)
         }
       };
     }

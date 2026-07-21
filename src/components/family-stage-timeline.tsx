@@ -1,5 +1,5 @@
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import {
   buildFamilyStages,
   type FamilyDiagnosisBackdateMonths,
@@ -69,6 +69,7 @@ export function FamilyStageTimeline({
   nudgeFirstName,
   onBackdateDiagnoses
 }: FamilyStageTimelineProps) {
+  const [demoControlOpen, setDemoControlOpen] = useState(false);
   const stages = buildFamilyStages(family, now, language, nudgeFirstName);
 
   return (
@@ -87,26 +88,39 @@ export function FamilyStageTimeline({
             </p>
           ) : null}
           {family.profile.diagnoses.length > 0 && onBackdateDiagnoses ? (
-            <fieldset className="mt-4 rounded-control border border-care/20 bg-calm/40 p-3">
-              <legend className="px-1 font-semibold text-care">
+            <div className="mt-4">
+              <button
+                type="button"
+                aria-expanded={demoControlOpen}
+                aria-controls="family-timeline-demo-panel"
+                onClick={() => setDemoControlOpen((current) => !current)}
+                className="min-h-11 rounded-control border border-care/30 bg-white px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+              >
                 {tFamily(language, "timelineDemoControlTitle")}
-              </legend>
-              <p className="text-sm leading-6 text-ink/75">
-                {tFamily(language, "timelineDemoControlIntro")}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {BACKDATE_OPTIONS.map(({ monthsAgo, key }) => (
-                  <button
-                    key={monthsAgo}
-                    type="button"
-                    onClick={() => onBackdateDiagnoses(monthsAgo, now)}
-                    className="min-h-11 rounded-control border border-care bg-white px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
-                  >
-                    {tFamily(language, key)}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+              </button>
+              {demoControlOpen ? (
+                <fieldset id="family-timeline-demo-panel" className="mt-3 rounded-control border border-care/20 bg-calm/40 p-3">
+                  <legend className="px-1 font-semibold text-care">
+                    {tFamily(language, "timelineDemoControlTitle")}
+                  </legend>
+                  <p className="text-sm leading-6 text-ink/75">
+                    {tFamily(language, "timelineDemoControlIntro")}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {BACKDATE_OPTIONS.map(({ monthsAgo, key }) => (
+                      <button
+                        key={monthsAgo}
+                        type="button"
+                        onClick={() => onBackdateDiagnoses(monthsAgo, now)}
+                        className="min-h-11 rounded-control border border-care bg-white px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+                      >
+                        {tFamily(language, key)}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
+            </div>
           ) : null}
           {stages.length === 0 ? (
             <p className="mt-4 text-sm text-ink/70">{tFamily(language, "timelineEmpty")}</p>

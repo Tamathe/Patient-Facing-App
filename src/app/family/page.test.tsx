@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React, { useReducer } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -182,6 +182,58 @@ describe("FamilyExperience", () => {
     expect(screen.getByRole("heading", { name: "Next" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Later" })).toBeVisible();
     expect(screen.getByText("Timing is shown early because only the birth year is known.")).toBeVisible();
+  });
+
+  it("runs the interview before any basics, then unlocks matched resources once county and birth year are saved", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    expect(screen.getByRole("button", { name: /Tell us the basics/i })).toHaveAttribute("aria-expanded", "false");
+    await user.type(
+      screen.getByLabelText("What would you like help with?"),
+      "Reading homework is a nightly battle and I keep hearing about waivers."
+    );
+    await user.click(screen.getByRole("button", { name: "Find support areas" }));
+    await screen.findByRole("heading", { name: "Review what we heard" });
+
+    const familyBefore = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(familyBefore.profile).toBeNull();
+    expect(familyBefore.interviews).toHaveLength(1);
+    expect(familyBefore.activeDomains).toEqual(["school_iep", "waivers_financial"]);
+    expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
+    expect(screen.getByText(/Add the basics below/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: /Tell us the basics/i })).toHaveAttribute("aria-expanded", "true");
+
+    await user.selectOptions(screen.getByLabelText("Kentucky county"), "Scott");
+    await user.type(screen.getByLabelText("Birth year"), "2017");
+    await user.selectOptions(screen.getByLabelText("School stage"), "elementary");
+    await user.click(screen.getByRole("button", { name: "Save family profile" }));
+
+    expect(screen.queryByText(/Add the basics below/i)).not.toBeInTheDocument();
+    const matched = screen.getByTestId("matched-family-resources");
+    expect(
+      within(matched)
+        .getAllByTestId("family-resource-card")
+        .map((card) => card.getAttribute("data-resource-id"))
+    ).toContain("scott_county_exceptional_child_services");
+  });
+
+  it("keeps all three example chips bilingual in the interview headline and seeds the selected fixture", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<FamilyExperience state={withFamily(null)} dispatch={vi.fn()} passcode="" />);
+
+    expect(screen.getByRole("button", { name: /Morgan and Riley.*Scott County/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Casey.*Perry County/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Avery.*Fayette County.*18 months/i })).toBeVisible();
+
+    rerender(<FamilyExperience state={withFamily(null, "es")} dispatch={vi.fn()} passcode="" />);
+    expect(screen.getByRole("button", { name: /Avery.*condado de Fayette.*18 meses/i })).toBeVisible();
+    cleanup();
+
+    render(<ReducerHarness />);
+    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.profile?.county).toBe("Perry");
   });
 
   it("keeps the simple needs screen collapsed until requested and preserves its eight-question path", async () => {

@@ -24,6 +24,11 @@ describe("FamilyStageTimeline", () => {
     expect(within(current).getByRole("heading", { name: "Connect with another parent" })).toBeVisible();
     expect(within(next).getByRole("heading", { name: "Explore sibling support and respite" })).toBeVisible();
 
+    const disclosure = screen.getByRole("button", { name: "Demo timeline control" });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("group", { name: "Demo timeline control" })).not.toBeInTheDocument();
+    await user.click(disclosure);
+
     const control = screen.getByRole("group", { name: "Demo timeline control" });
     expect(within(control).getByText(/does not change the device clock/i)).toBeVisible();
     await user.click(within(control).getByRole("button", { name: "Set diagnosis dates to 6 months ago" }));
@@ -44,6 +49,7 @@ describe("FamilyStageTimeline", () => {
       />
     );
 
+    expect(screen.queryByRole("button", { name: "Demo timeline control" })).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Demo timeline control" })).not.toBeInTheDocument();
   });
 

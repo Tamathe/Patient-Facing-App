@@ -118,11 +118,8 @@ test(`Morgan golden path uses the exact paragraph: ${MORGAN_PARAGRAPH}`, async (
 
   await expect(page.getByRole("heading", { name: "Family navigator", level: 1 })).toBeVisible();
   await expect(page.getByText(/Demo.*fictional data/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tell us what is happening" })).toBeVisible();
   await page.getByRole("button", { name: /Morgan and Riley.*Scott County/ }).click();
-  await page.getByRole("link", { name: /Answer a few questions/i }).click();
-  await expect(page.getByRole("heading", { name: "What support would help?" })).toBeFocused();
-  await page.getByRole("link", { name: /Tell us about your child/i }).click();
-  await expect(page.getByRole("heading", { name: "Tell us what is happening" })).toBeFocused();
   const interview = page.getByLabel("What would you like help with?");
   await expect(interview).toHaveValue(MORGAN_PARAGRAPH);
   await page.getByRole("button", { name: "Find support areas" }).click();
@@ -244,6 +241,7 @@ test("Casey in Perry County gets the age-2 local First Steps POE before statewid
   await page.goto("/family");
 
   await page.getByRole("button", { name: /Casey.*Perry County/ }).click();
+  await page.getByRole("button", { name: /Tell us the basics/ }).click();
   await expect(page.getByLabel("Kentucky county")).toHaveValue("Perry");
   await page.getByRole("button", { name: "Find support areas" }).click();
 
@@ -253,8 +251,40 @@ test("Casey in Perry County gets the age-2 local First Steps POE before statewid
   await expect(page.getByRole("heading", { name: "Contact First Steps now" })).toBeVisible();
 
   await page.getByRole("button", { name: /Morgan and Riley.*Scott County/ }).click();
+  await page.getByRole("button", { name: /Tell us the basics/ }).click();
   await expect(page.getByLabel("Kentucky county")).toHaveValue("Scott");
   await expect(page.getByLabel("What would you like help with?")).toHaveValue(MORGAN_PARAGRAPH);
+});
+
+test("interview-first path: describing the situation works before any basics, and county unlocks matching", async ({
+  page
+}) => {
+  await stubUnconfiguredFamilyInterview(page);
+  await page.goto("/family");
+
+  await expect(page.getByRole("heading", { name: "Tell us what is happening" })).toBeVisible();
+  await page
+    .getByLabel("What would you like help with?")
+    .fill("Reading homework is a nightly battle and I keep hearing about waivers.");
+  await page.getByRole("button", { name: "Find support areas" }).click();
+
+  await expect(page.getByRole("region", { name: "Review what we heard" })).toBeVisible();
+  await expect(page.getByText(/Add the basics below/i)).toBeVisible();
+  await expect(page.getByTestId("matched-family-resources")).toHaveCount(0);
+
+  const basics = page.getByRole("button", { name: /Tell us the basics/ });
+  await expect(basics).toHaveAttribute("aria-expanded", "true");
+  await page.getByLabel("Kentucky county").selectOption("Scott");
+  await page.getByLabel("Birth year").fill("2017");
+  await page.getByLabel("School stage").selectOption("elementary");
+  await page.getByRole("button", { name: "Save family profile" }).click();
+
+  await expect(page.getByText(/Add the basics below/i)).toHaveCount(0);
+  await expect(
+    page
+      .getByTestId("matched-family-resources")
+      .locator('[data-resource-id="scott_county_exceptional_child_services"]')
+  ).toBeVisible();
 });
 
 test("demo timeline control backdates diagnosis data and advances staged nudges without faking the clock", async ({
@@ -273,6 +303,7 @@ test("demo timeline control backdates diagnosis data and advances staged nudges 
       .getByRole("heading", { name: "Explore sibling support and respite" })
   ).toBeVisible();
 
+  await timeline.getByRole("button", { name: "Demo timeline control" }).click();
   await timeline.getByRole("button", { name: "Set diagnosis dates to this month" }).click();
   await expect(
     timeline.getByRole("region", { name: "Next" }).getByRole("heading", { name: "Connect with another parent" })
@@ -287,6 +318,7 @@ test("demo timeline control backdates diagnosis data and advances staged nudges 
   const current = timeline.getByRole("region", { name: "Now" });
   await expect(current.getByRole("heading", { name: "Connect with another parent" })).toBeVisible();
   await expect(current.getByRole("heading", { name: "Explore sibling support and respite" })).toBeVisible();
+  await page.getByRole("button", { name: /Tell us the basics/ }).click();
   await expect(page.getByLabel("Dyslexia diagnosis month (optional)")).toHaveValue("2026-01");
   await expect
     .poll(() =>

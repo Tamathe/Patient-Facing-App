@@ -28,10 +28,11 @@ const diagnosisSchema = z
 const profileSchema = z
   .object({
     childFirstName: z.string().min(1).max(100).optional(),
-    birthYear: z.number().int().min(1900).max(2100),
+    // 0 is the pre-basics sentinel for an unknown birth year.
+    birthYear: z.union([z.literal(0), z.number().int().min(1900).max(2100)]),
     birthMonth: z.number().int().min(1).max(12).optional(),
     schoolStage: z.enum(["not_school_age", "preschool", "elementary", "middle", "high", "post_high"]),
-    county: z.string().min(1).max(100),
+    county: z.string().max(100),
     diagnoses: z.array(diagnosisSchema).max(30)
   })
   .strict();
@@ -81,10 +82,11 @@ function systemPrompt(): string {
 function userPrompt(body: z.infer<typeof bodySchema>): string {
   const minimalProfile = {
     childFirstName: body.profile.childFirstName ?? null,
-    birthYear: body.profile.birthYear,
+    birthYear: body.profile.birthYear || null,
     birthMonth: body.profile.birthMonth ?? null,
-    schoolStage: body.profile.schoolStage,
-    county: body.profile.county,
+    // A sentinel birth year means the basics were never provided, so the default school stage is not a real answer.
+    schoolStage: body.profile.birthYear === 0 ? null : body.profile.schoolStage,
+    county: body.profile.county || null,
     reportedDiagnoses: body.profile.diagnoses.map(({ label }) => label),
     language: body.language
   };

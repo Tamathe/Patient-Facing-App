@@ -22,7 +22,6 @@ describe("FamilyProfileForm", () => {
         initialProfile={null}
         defaultCounty="Scott County"
         onSave={vi.fn()}
-        onSeedExample={vi.fn()}
       />
     );
 
@@ -43,7 +42,6 @@ describe("FamilyProfileForm", () => {
         initialProfile={existingProfile}
         defaultCounty="Perry"
         onSave={onSave}
-        onSeedExample={vi.fn()}
       />
     );
 
@@ -93,7 +91,6 @@ describe("FamilyProfileForm", () => {
         language="en"
         initialProfile={existingProfile}
         onSave={onSave}
-        onSeedExample={vi.fn()}
       />
     );
 
@@ -118,7 +115,6 @@ describe("FamilyProfileForm", () => {
         language={language}
         initialProfile={existingProfile}
         onSave={onSave}
-        onSeedExample={vi.fn()}
       />
     );
 
@@ -136,40 +132,14 @@ describe("FamilyProfileForm", () => {
     expect(input).toHaveAttribute("aria-describedby", alert.id);
   });
 
-  it("keeps all three example buttons bilingual and sends an explicit timestamp with the selected fixture", async () => {
-    const user = userEvent.setup();
-    const onSeedExample = vi.fn();
+  it("collects no caregiver name field", () => {
     render(
       <FamilyProfileForm
         language="en"
         initialProfile={null}
         onSave={vi.fn()}
-        onSeedExample={onSeedExample}
       />
     );
-
-    await user.click(screen.getByRole("button", { name: /Morgan and Riley.*Scott County/ }));
-    await user.click(screen.getByRole("button", { name: /Casey.*Perry County/ }));
-    await user.click(screen.getByRole("button", { name: /Avery.*Fayette County.*18 months/i }));
-
-    expect(onSeedExample.mock.calls).toEqual([
-      ["morgan", expect.any(String)],
-      ["casey", expect.any(String)],
-      ["eighteen_month", expect.any(String)]
-    ]);
-    expect(onSeedExample.mock.calls.every(([, now]) => !Number.isNaN(new Date(now as string).valueOf()))).toBe(true);
     expect(screen.queryByLabelText(/caregiver name/i)).not.toBeInTheDocument();
-  });
-
-  it("renders the third example button in Spanish", () => {
-    render(
-      <FamilyProfileForm
-        language="es"
-        initialProfile={null}
-        onSave={vi.fn()}
-        onSeedExample={vi.fn()}
-      />
-    );
-    expect(screen.getByRole("button", { name: /Avery.*condado de Fayette.*18 meses/i })).toBeVisible();
   });
 });

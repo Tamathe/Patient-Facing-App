@@ -82,6 +82,44 @@ describe("family interview route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("accepts a pre-basics profile and nulls the unknown fields in the prompt", async () => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("DEMO_PASSCODE", "secret");
+    const fetchMock = vi.fn().mockResolvedValue(completion(JSON.stringify(result)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(
+      request(
+        validBody({
+          profile: { birthYear: 0, schoolStage: "not_school_age", county: "", diagnoses: [] }
+        })
+      )
+    );
+    expect(await res.json()).toEqual({ mode: "success", data: result });
+    const payload = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as {
+      messages: Array<{ content: string }>;
+    };
+    const prompt = payload.messages[1].content;
+    expect(prompt).toContain('"birthYear":null');
+    expect(prompt).toContain('"county":null');
+    expect(prompt).toContain('"schoolStage":null');
+  });
+
+  it("still rejects an out-of-range birth year", async () => {
+    vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
+    vi.stubEnv("HEALTH_AI_API_KEY", "test-key");
+    vi.stubEnv("DEMO_PASSCODE", "secret");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(
+      request(validBody({ profile: { ...morganFamilyState.profile, birthYear: 1850 } }))
+    );
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("allows configured local development when DEMO_PASSCODE is unset", async () => {
     vi.stubEnv("HEALTH_AI_PROVIDER", "openai");
     vi.stubEnv("HEALTH_AI_API_KEY", "test-key");

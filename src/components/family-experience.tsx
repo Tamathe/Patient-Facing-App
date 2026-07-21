@@ -65,6 +65,20 @@ const DOMAIN_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
 };
 
 const FALLBACK_IDS = ["ky_spin", "hdi_resource_guide", "kynect_resources", "kentucky_211"] as const;
+// Lets the interview run before any basics are saved; birthYear 0 marks the basics as unknown.
+const NO_PROFILE_INTERVIEW_CONTEXT: FamilyProfile = {
+  birthYear: 0,
+  schoolStage: "not_school_age",
+  county: "",
+  diagnoses: []
+};
+const EXAMPLE_KEYS: ReadonlyArray<{ example: "morgan" | "casey" | "eighteen_month"; key: FamilyStringKey }> = [
+  { example: "morgan", key: "exampleMorgan" },
+  { example: "casey", key: "exampleCasey" },
+  { example: "eighteen_month", key: "exampleEighteenMonth" }
+];
+const CONTROL_FOCUS =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
 const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
 const normalizeCounty = (county: string): string => county.trim().replace(/\s+County$/i, "");
 
@@ -174,6 +188,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
   const [safetySuppressed, setSafetySuppressed] = useState(false);
   const [seedVersion, setSeedVersion] = useState(0);
   const [needsScreenOpen, setNeedsScreenOpen] = useState(false);
+  const [basicsToggled, setBasicsToggled] = useState<boolean | null>(null);
   const reviewRef = useRef<HTMLElement>(null);
   const pendingReviewFocusRef = useRef(false);
   const latestInterview = family?.interviews.at(-1);
@@ -229,6 +244,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     setReviewDetails(null);
     setSafetySuppressed(false);
     setNeedsScreenOpen(false);
+    setBasicsToggled(null);
     setSeedVersion((current) => current + 1);
     dispatch({ type: "seedExampleFamily", example, now });
   }
@@ -305,52 +321,82 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     setSafetySuppressed(true);
   }
 
+  const hasInterview = (family?.interviews.length ?? 0) > 0;
+  const basicsOpen = basicsToggled ?? (!family?.profile && hasInterview);
+
   return (
     <div lang={language} data-testid="family-experience" className="grid min-w-0 gap-5 pb-8">
-      <section className="rounded-control border border-care/20 bg-white p-4">
+      <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-interview-title">
         <p className="inline-flex rounded-full bg-calm px-3 py-1 text-xs font-semibold text-care">
           {tFamily(language, "demoBadge")}
         </p>
-        <p className="mt-3 text-sm leading-6 text-ink/75">{tFamily(language, "intro")}</p>
+        <h2 id="family-interview-title" tabIndex={-1} className="mt-3 text-2xl font-semibold">
+          {tFamily(language, "interviewTitle")}
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "interviewIntro")}</p>
+        <p className="mt-2 text-sm leading-6 text-ink/60">{tFamily(language, "intro")}</p>
         {language === "es" ? (
           <p className="mt-3 rounded-control bg-note p-3 text-sm font-medium">
             {tFamily(language, "spanishReviewNotice")}
           </p>
         ) : null}
-      </section>
-
-      <FamilyProfileForm
-        key={`family-profile-${seedVersion}-${profileDiagnosisVersion}`}
-        language={language}
-        initialProfile={family?.profile ?? null}
-        defaultCounty={state.patient.county}
-        onSave={saveProfile}
-        onSeedExample={seedExample}
-      />
-
-      {family?.profile ? (
-        <>
-          <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-interview-title">
-            <h2 id="family-interview-title" tabIndex={-1} className="text-xl font-semibold">
-              {tFamily(language, "interviewTitle")}
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "interviewIntro")}</p>
-            <div className="mt-4">
-              <FamilyOrientationInterview
-                key={`family-orientation-${seedVersion}`}
-                profile={family.profile}
-                draft={family.interviewDraft}
-                passcode={passcode}
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold">{tFamily(language, "examplesTitle")}</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {EXAMPLE_KEYS.map(({ example, key }) => (
+              <button
+                key={example}
+                type="button"
+                className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
+                onClick={() => seedExample(example, new Date().toISOString())}
+              >
+                {tFamily(language, key)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4">
+          <FamilyOrientationInterview
+            key={`family-orientation-${seedVersion}`}
+            profile={family?.profile ?? NO_PROFILE_INTERVIEW_CONTEXT}
+            draft={family?.interviewDraft ?? ""}
+            passcode={passcode}
+            language={language}
+            voiceEntryContext={{ patientId: state.patient.id, dispatch }}
+            onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
+            onInterviewExtracted={addInterview}
+            onSafetyEscalation={suppressForSafety}
+          />
+        </div>
+        <div className="mt-4 border-t border-care/10 pt-4">
+          <button
+            type="button"
+            aria-expanded={needsScreenOpen}
+            aria-controls="family-needs-screen-panel"
+            onClick={() => setNeedsScreenOpen((current) => !current)}
+            className={`min-h-12 w-full min-w-0 rounded-control text-left ${CONTROL_FOCUS}`}
+          >
+            <span className="block break-words font-semibold">
+              {tFamily(language, "needsScreenDisclosureTitle")}
+            </span>
+            <span className="mt-1 block break-words text-sm leading-6 text-ink/75">
+              {tFamily(language, "needsScreenDisclosureBody")}
+            </span>
+          </button>
+          {needsScreenOpen ? (
+            <div id="family-needs-screen-panel" className="mt-4">
+              <FamilyNeedsScreen
+                key={`family-screen-${seedVersion}`}
                 language={language}
-                voiceEntryContext={{ patientId: state.patient.id, dispatch }}
-                onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
-                onInterviewExtracted={addInterview}
-                onSafetyEscalation={suppressForSafety}
+                initialAnswers={family?.screenAnswers ?? []}
+                onSubmit={submitScreen}
               />
             </div>
-          </section>
+          ) : null}
+        </div>
+      </section>
 
-          {!safetySuppressed && (reviewFacts.length > 0 || reviewDetails) ? (
+      {!safetySuppressed && (reviewFacts.length > 0 || reviewDetails) ? (
             <section
               ref={reviewRef}
               tabIndex={-1}
@@ -386,7 +432,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             </section>
           ) : null}
 
-          {!safetySuppressed && family.activeDomains.length > 0 ? (
+      {!safetySuppressed && family && family.activeDomains.length > 0 ? (
             <section className="rounded-control border border-care/20 bg-paper p-4" aria-labelledby="family-resources-title">
               <h2 id="family-resources-title" className="text-xl font-semibold">
                 {tFamily(language, "resourcesTitle")}
@@ -397,7 +443,11 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                   {tFamily(language, "resourceSourceLanguageNotice")}
                 </p>
               ) : null}
-              {matchResult.isFallback ? (
+              {!family.profile ? (
+                <p className="mt-4 rounded-control bg-note p-3 text-sm font-medium">
+                  {tFamily(language, "resourcesNeedBasics")}
+                </p>
+              ) : matchResult.isFallback ? (
                 <section
                   aria-label={tFamily(language, "emptyFallbackTitle")}
                   className="mt-4 rounded-control border border-note bg-note/20 p-3"
@@ -476,75 +526,74 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
             </section>
           ) : null}
 
-          <section className="rounded-control border border-care/20 bg-white p-4">
-            <button
-              type="button"
-              aria-expanded={needsScreenOpen}
-              aria-controls="family-needs-screen-panel"
-              onClick={() => setNeedsScreenOpen((current) => !current)}
-              className="min-h-12 w-full min-w-0 rounded-control text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
-            >
-              <span className="block break-words text-lg font-semibold">
-                {tFamily(language, "needsScreenDisclosureTitle")}
-              </span>
-              <span className="mt-1 block break-words text-sm leading-6 text-ink/75">
-                {tFamily(language, "needsScreenDisclosureBody")}
-              </span>
-            </button>
-            {needsScreenOpen ? (
-              <div id="family-needs-screen-panel" className="mt-4">
-                <FamilyNeedsScreen
-                  key={`family-screen-${seedVersion}`}
-                  language={language}
-                  initialAnswers={family.screenAnswers}
-                  onSubmit={submitScreen}
-                />
-              </div>
-            ) : null}
-          </section>
+      <section className="rounded-control border border-care/20 bg-white p-4">
+        <button
+          type="button"
+          aria-expanded={basicsOpen}
+          aria-controls="family-basics-panel"
+          onClick={() => setBasicsToggled(!basicsOpen)}
+          className={`min-h-12 w-full min-w-0 rounded-control text-left ${CONTROL_FOCUS}`}
+        >
+          <span className="block break-words text-lg font-semibold">
+            {tFamily(language, "setupTitle")}
+          </span>
+          <span className="mt-1 block break-words text-sm leading-6 text-ink/75">
+            {tFamily(language, "setupIntro")}
+          </span>
+        </button>
+        {basicsOpen ? (
+          <div id="family-basics-panel" className="mt-4">
+            <FamilyProfileForm
+              key={`family-profile-${seedVersion}-${profileDiagnosisVersion}`}
+              language={language}
+              initialProfile={family?.profile ?? null}
+              defaultCounty={state.patient.county}
+              onSave={saveProfile}
+            />
+          </div>
+        ) : null}
+      </section>
 
-          <section
-            role="region"
-            aria-label={tFamily(language, "savedResourcesTitle")}
-            className="rounded-control border border-care/20 bg-paper p-4"
-          >
-            <h2 className="text-xl font-semibold">{tFamily(language, "savedResourcesTitle")}</h2>
-            {savedResources.length === 0 ? (
-              <p className="mt-2 text-sm text-ink/70">{tFamily(language, "savedResourcesEmpty")}</p>
-            ) : (
-              <ul className="mt-4 grid gap-3">
-                {savedResources.map(({ resource, domain }) => (
-                  <li
-                    key={`saved-${resource.id}`}
-                    data-testid="saved-family-resource-summary"
-                    className="rounded-control border border-ink/10 bg-white p-4"
-                  >
-                    <h3 className="break-words text-lg font-semibold">{resource.name}</h3>
-                    <p className="mt-1 text-sm text-ink/70">
-                      {tFamily(language, DOMAIN_KEYS[domain])}
-                    </p>
-                    <a
-                      href={resource.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`${tFamily(language, "resourceOpenSource")}: ${resource.name}`}
-                      className="mt-3 inline-flex min-h-12 min-w-0 items-center rounded-control border border-care px-3 py-2 text-sm font-semibold text-care focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
-                    >
-                      {tFamily(language, "resourceOpenSource")}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+      {savedResources.length > 0 ? (
+        <section
+          role="region"
+          aria-label={tFamily(language, "savedResourcesTitle")}
+          className="rounded-control border border-care/20 bg-paper p-4"
+        >
+          <h2 className="text-xl font-semibold">{tFamily(language, "savedResourcesTitle")}</h2>
+          <ul className="mt-4 grid gap-3">
+            {savedResources.map(({ resource, domain }) => (
+              <li
+                key={`saved-${resource.id}`}
+                data-testid="saved-family-resource-summary"
+                className="rounded-control border border-ink/10 bg-white p-4"
+              >
+                <h3 className="break-words text-lg font-semibold">{resource.name}</h3>
+                <p className="mt-1 text-sm text-ink/70">
+                  {tFamily(language, DOMAIN_KEYS[domain])}
+                </p>
+                <a
+                  href={resource.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${tFamily(language, "resourceOpenSource")}: ${resource.name}`}
+                  className={`mt-3 inline-flex min-h-12 min-w-0 items-center rounded-control border border-care px-3 py-2 text-sm font-semibold text-care ${CONTROL_FOCUS}`}
+                >
+                  {tFamily(language, "resourceOpenSource")}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
-          <FamilyStageTimeline
-            family={family}
-            language={language}
-            nudgeFirstName={state.patient.preferredName}
-            onBackdateDiagnoses={backdateFamilyDiagnoses}
-          />
-        </>
+      {family?.profile ? (
+        <FamilyStageTimeline
+          family={family}
+          language={language}
+          nudgeFirstName={state.patient.preferredName}
+          onBackdateDiagnoses={backdateFamilyDiagnoses}
+        />
       ) : null}
     </div>
   );

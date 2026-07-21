@@ -11,7 +11,6 @@ export type FamilyProfileFormProps = {
   initialProfile: FamilyProfile | null;
   defaultCounty?: string;
   onSave: (profile: FamilyProfile) => void;
-  onSeedExample: (example: "morgan" | "casey" | "eighteen_month", now: string) => void;
 };
 
 const DIAGNOSIS_OPTIONS: ReadonlyArray<{ label: DevDiagnosis; key: FamilyStringKey }> = [
@@ -51,8 +50,7 @@ export function FamilyProfileForm({
   language,
   initialProfile,
   defaultCounty,
-  onSave,
-  onSeedExample
+  onSave
 }: FamilyProfileFormProps) {
   const [county, setCounty] = useState(
     normalizedCounty(initialProfile?.county) || normalizedCounty(defaultCounty)
@@ -138,40 +136,7 @@ export function FamilyProfileForm({
   }
 
   return (
-    <section className="rounded-control border border-care/20 bg-white p-4" aria-labelledby="family-profile-title">
-      <h2 id="family-profile-title" className="text-xl font-semibold">
-        {tFamily(language, "setupTitle")}
-      </h2>
-      <p className="mt-1 text-sm leading-6 text-ink/75">{tFamily(language, "setupIntro")}</p>
-
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold">{tFamily(language, "examplesTitle")}</h3>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-            onClick={() => onSeedExample("morgan", new Date().toISOString())}
-          >
-            {tFamily(language, "exampleMorgan")}
-          </button>
-          <button
-            type="button"
-            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-            onClick={() => onSeedExample("casey", new Date().toISOString())}
-          >
-            {tFamily(language, "exampleCasey")}
-          </button>
-          <button
-            type="button"
-            className={`min-h-12 min-w-0 break-words rounded-control border border-care px-3 py-2 text-left text-sm font-semibold text-care ${CONTROL_FOCUS}`}
-            onClick={() => onSeedExample("eighteen_month", new Date().toISOString())}
-          >
-            {tFamily(language, "exampleEighteenMonth")}
-          </button>
-        </div>
-      </div>
-
-      <form className="mt-5 grid gap-4" onSubmit={submit}>
+    <form className="grid gap-4" onSubmit={submit}>
         <label className="grid gap-1 text-sm font-medium" htmlFor="family-county">
           {tFamily(language, "profileCountyLabel")}
           <select
@@ -348,7 +313,6 @@ export function FamilyProfileForm({
             {saved ? tFamily(language, "profileSaved") : ""}
           </p>
         </div>
-      </form>
-    </section>
+    </form>
   );
 }
