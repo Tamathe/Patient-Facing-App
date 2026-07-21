@@ -9,10 +9,7 @@ import { screenSocialEmergency } from "@/domain/social-screen";
 import type { FamilyProfile } from "@/domain/types";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
-import { tVoice } from "@/i18n/voice-strings";
-import { speak, stopSpeaking } from "@/voice/tts";
 import type { VoiceEntryContext } from "@/voice/voice-consent";
-import { ReadAloud } from "@/voice/read-aloud";
 import {
   FamilyFollowUpTurn,
   FAMILY_FOLLOW_UP_ANSWER_MAX
@@ -27,6 +24,18 @@ import {
 
 export { FAMILY_FOLLOW_UP_ANSWER_MAX };
 export const FAMILY_ORIENTATION_MAX_ROUNDS = 2;
+
+// Lets the interview run before any basics are saved; birthYear 0 marks the basics as unknown.
+export const EMPTY_FAMILY_INTERVIEW_PROFILE: FamilyProfile = {
+  birthYear: 0,
+  schoolStage: "not_school_age",
+  county: "",
+  diagnoses: []
+};
+
+function isEmptyProfile(profile: FamilyProfile): boolean {
+  return profile.county === "" && profile.birthYear === 0;
+}
 
 type OrientationRound = {
   question: FamilyFollowUp;
@@ -48,6 +57,10 @@ export type FamilyOrientationInterviewProps = {
   passcode?: string;
   language: Language;
   voiceEntryContext?: VoiceEntryContext;
+  /** Rendered between the transcript and the current follow-up turn — the tool's own replies. */
+  interlude?: React.ReactNode;
+  /** Hide the next follow-up question while something else (like the basics turns) is being asked. */
+  holdTurn?: boolean;
   onDraftChange: (draft: string) => void;
   onInterviewExtracted: (
     result: SanitizedFamilyInterviewResult,
@@ -101,19 +114,14 @@ function combinedSource(sources: readonly ("typed" | "voice" | "mixed" | undefin
   return present.includes("voice") ? "voice" : "typed";
 }
 
-function formatSpokenOptions(options: readonly string[], language: Language): string {
-  if (options.length < 2) return options[0] ?? "";
-  const conjunction = language === "es" ? "o" : "or";
-  if (options.length === 2) return `${options[0]} ${conjunction} ${options[1]}`;
-  return `${options.slice(0, -1).join(", ")}, ${conjunction} ${options.at(-1)}`;
-}
-
 export function FamilyOrientationInterview({
   profile,
   draft,
   passcode,
   language,
   voiceEntryContext,
+  interlude,
+  holdTurn = false,
   onDraftChange,
   onInterviewExtracted,
   onSafetyEscalation
@@ -123,7 +131,7 @@ export function FamilyOrientationInterview({
   const submittingRef = useRef(false);
   const mountedRef = useRef(true);
   const contextKey = orientationContextKey(profile, language);
-  const previousContextKeyRef = useRef(contextKey);
+  const previousContextRef = useRef({ contextKey, profileWasEmpty: isEmptyProfile(profile), language });
   const latestContextKeyRef = useRef(contextKey);
   latestContextKeyRef.current = contextKey;
 
@@ -131,46 +139,24 @@ export function FamilyOrientationInterview({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      stopSpeaking();
     };
   }, []);
 
   useEffect(() => {
-    if (previousContextKeyRef.current === contextKey) return;
-    stopSpeaking();
-    previousContextKeyRef.current = contextKey;
+    const previous = previousContextRef.current;
+    if (previous.contextKey === contextKey) return;
+    const basicsJustArrived =
+      previous.profileWasEmpty && !isEmptyProfile(profile) && previous.language === language;
+    previousContextRef.current = { contextKey, profileWasEmpty: isEmptyProfile(profile), language };
+    if (basicsJustArrived) {
+      // Same conversation — the county/age turns just filled in. Keep the thread.
+      return;
+    }
     submittingRef.current = false;
     setThread(initialOrientationState());
-  }, [contextKey]);
-
-  const currentQuestion = thread.status === "active" ? thread.rounds.at(-1)?.question : undefined;
-
-  useEffect(() => {
-    if (!currentQuestion) return;
-    let cancelled = false;
-    const speakRound = async (): Promise<void> => {
-      stopSpeaking();
-      await speak(currentQuestion.question, { language });
-      if (cancelled || currentQuestion.options.length === 0) return;
-      await speak(
-        tVoice(language, "chipsSpoken", { options: formatSpokenOptions(currentQuestion.options, language) }),
-        { language }
-      );
-    };
-    void speakRound();
-    return () => {
-      cancelled = true;
-      stopSpeaking();
-    };
-  }, [currentQuestion, language]);
-
-  useEffect(() => {
-    if (thread.status !== "complete") return;
-    void speak(tFamily(language, "orientationComplete"), { language });
-  }, [language, thread.status]);
+  }, [contextKey, language, profile]);
 
   function resetThread(): void {
-    stopSpeaking();
     submittingRef.current = false;
     setThread(initialOrientationState());
   }
@@ -284,15 +270,18 @@ export function FamilyOrientationInterview({
 
   if (thread.status === "idle") {
     return (
-      <FamilyInterview
-        profile={profile}
-        draft={draft}
-        passcode={passcode}
-        language={language}
-        onDraftChange={onDraftChange}
-        onExtracted={receiveOpening}
-        onSafetyEscalation={onSafetyEscalation}
-      />
+      <div className="space-y-4">
+        <FamilyInterview
+          profile={profile}
+          draft={draft}
+          passcode={passcode}
+          language={language}
+          onDraftChange={onDraftChange}
+          onExtracted={receiveOpening}
+          onSafetyEscalation={onSafetyEscalation}
+        />
+        {interlude}
+      </div>
     );
   }
 
@@ -308,10 +297,7 @@ export function FamilyOrientationInterview({
           answer === undefined ? null : (
             <React.Fragment key={`${index}-${question.question}`}>
               <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
-                <div className="flex items-start gap-2">
-                  <p className="min-w-0 flex-1 break-words font-semibold">{question.question}</p>
-                  <ReadAloud text={question.question} language={language} />
-                </div>
+                <p className="break-words font-semibold">{question.question}</p>
               </div>
               <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
                 <p className="break-words whitespace-pre-wrap">{answer}</p>
@@ -321,7 +307,9 @@ export function FamilyOrientationInterview({
         )}
       </div>
 
-      {currentRound ? (
+      {interlude}
+
+      {!holdTurn && currentRound ? (
         <FamilyFollowUpTurn
           key={currentRound.question.question}
           question={currentRound.question}
@@ -340,10 +328,9 @@ export function FamilyOrientationInterview({
         </p>
       ) : null}
 
-      {thread.status === "complete" ? (
-        <div role="status" tabIndex={-1} className="flex items-start gap-2 rounded-control bg-care/10 p-4 font-semibold text-care">
-          <p className="min-w-0 flex-1">{tFamily(language, "orientationComplete")}</p>
-          <ReadAloud text={tFamily(language, "orientationComplete")} language={language} />
+      {!holdTurn && thread.status === "complete" ? (
+        <div role="status" tabIndex={-1} className="rounded-control bg-care/10 p-4 font-semibold text-care">
+          <p className="min-w-0">{tFamily(language, "orientationComplete")}</p>
         </div>
       ) : null}
 

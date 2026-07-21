@@ -227,24 +227,50 @@ describe("FamilyOrientationInterview", () => {
     await screen.findByText("Thanks. That is enough to get you started.");
   });
 
-  it("speaks the sanitized question and options when a round starts, then speaks completion", async () => {
+  it("never speaks aloud on its own", async () => {
     requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion])).mockResolvedValueOnce(result([]));
     renderOrientation();
     await submitOpening();
 
-    await waitFor(() => expect(speak).toHaveBeenCalledWith(schoolQuestion.question, { language: "en" }));
-    await waitFor(() =>
-      expect(speak).toHaveBeenCalledWith(
-        "You can say: Nothing yet, A meeting is planned, or An evaluation was done.",
-        { language: "en" }
-      )
-    );
-
     fireEvent.click(screen.getByRole("button", { name: "Nothing yet" }));
     await screen.findByText("Thanks. That is enough to get you started.");
-    await waitFor(() =>
-      expect(speak).toHaveBeenCalledWith("Thanks. That is enough to get you started.", { language: "en" })
+
+    expect(speak).not.toHaveBeenCalled();
+  });
+
+  it("renders the interlude between the transcript and the follow-up turn, and holdTurn hides the turn", async () => {
+    requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
+    const interlude = <p data-testid="orientation-interlude">Which county?</p>;
+    const { rerender, props } = renderOrientation({ interlude, holdTurn: true });
+
+    fireEvent.click(screen.getByRole("button", { name: /find help/i }));
+    await screen.findByTestId("orientation-interlude");
+    expect(screen.queryByRole("heading", { name: schoolQuestion.question })).not.toBeInTheDocument();
+
+    rerender(<FamilyOrientationInterview {...props} interlude={interlude} holdTurn={false} />);
+    const question = await screen.findByRole("heading", { name: schoolQuestion.question });
+    const interludeNode = screen.getByTestId("orientation-interlude");
+    expect(
+      interludeNode.compareDocumentPosition(question) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("keeps the thread when an empty pre-basics profile graduates to a real one, but resets on a real profile change", async () => {
+    requestFamilyInterview.mockResolvedValueOnce(result([schoolQuestion]));
+    const emptyProfile = { birthYear: 0, schoolStage: "not_school_age" as const, county: "", diagnoses: [] };
+    const { rerender, props } = renderOrientation({ profile: emptyProfile });
+    await submitOpening();
+
+    rerender(<FamilyOrientationInterview {...props} profile={morganFamilyState.profile!} />);
+    expect(screen.getByRole("heading", { name: schoolQuestion.question })).toBeVisible();
+
+    rerender(
+      <FamilyOrientationInterview {...props} profile={{ ...morganFamilyState.profile!, county: "Perry" }} />
     );
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: schoolQuestion.question })).not.toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: /find help/i })).toBeInTheDocument();
   });
 
   it("safety-gates a spoken crisis answer before network and preserves voice provenance", async () => {

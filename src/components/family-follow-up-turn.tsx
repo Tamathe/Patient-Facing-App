@@ -8,12 +8,10 @@ import { screenSocialEmergency } from "@/domain/social-screen";
 import { tFamily } from "@/i18n/family-strings";
 import type { Language } from "@/i18n/strings";
 import { tVoice } from "@/i18n/voice-strings";
-import { isSpeaking, stopSpeaking, subscribeSpeaking } from "@/voice/tts";
 import { useDictation } from "@/voice/use-dictation";
 import { useVoiceEntry, type VoiceEntryContext } from "@/voice/voice-consent";
 import { VoiceConsentSheet } from "@/voice/voice-consent-sheet";
 import { VoiceIndicator } from "@/voice/voice-indicator";
-import { ReadAloud } from "@/voice/read-aloud";
 
 export const FAMILY_FOLLOW_UP_ANSWER_MAX = 500;
 
@@ -73,7 +71,6 @@ export function FamilyFollowUpTurn({
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
-  const [speaking, setSpeaking] = useState(() => isSpeaking());
   const questionRef = useRef<HTMLHeadingElement>(null);
   const { consentRequired, grantConsent, onSessionStart } = useVoiceEntry(voiceEntryContext);
 
@@ -100,8 +97,6 @@ export function FamilyFollowUpTurn({
   const dictation = useDictation({ language, onFinalTranscript });
   const stopDictation = dictation.stop;
 
-  useEffect(() => subscribeSpeaking(setSpeaking), []);
-
   useEffect(() => {
     setAnswer("");
     setError(false);
@@ -113,13 +108,11 @@ export function FamilyFollowUpTurn({
   useEffect(
     () => () => {
       stopDictation();
-      stopSpeaking();
     },
     [stopDictation]
   );
 
   function beginVoice(): void {
-    stopSpeaking();
     onSessionStart("family follow-up");
     dictation.start();
   }
@@ -151,17 +144,14 @@ export function FamilyFollowUpTurn({
       <p className="text-sm font-semibold text-care" aria-live="polite">
         {tFamily(language, "orientationRoundCount", { round, max: roundCap })}
       </p>
-      <div className="mt-2 flex items-start justify-between gap-2">
-        <h3
-          id="family-follow-up-question"
-          ref={questionRef}
-          tabIndex={-1}
-          className="break-words text-lg font-semibold"
-        >
-          {question.question}
-        </h3>
-        <ReadAloud text={question.question} language={language} />
-      </div>
+      <h3
+        id="family-follow-up-question"
+        ref={questionRef}
+        tabIndex={-1}
+        className="mt-2 break-words text-lg font-semibold"
+      >
+        {question.question}
+      </h3>
       {question.options.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={tFamily(language, "followUpChipsLabel")}>
           {question.options.map((option) => (
@@ -224,11 +214,8 @@ export function FamilyFollowUpTurn({
         ) : null}
         <VoiceIndicator
           listening={dictation.listening}
-          speaking={speaking}
-          onStop={() => {
-            dictation.stop();
-            stopSpeaking();
-          }}
+          speaking={false}
+          onStop={() => dictation.stop()}
         />
       </form>
       {showConsent ? (

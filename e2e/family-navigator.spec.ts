@@ -65,7 +65,7 @@ type BasicsInput = {
 // builds its profile through the same basics form a caregiver would use.
 async function openBasics(page: Page, language: "en" | "es" = "en"): Promise<void> {
   const disclosure = page.getByRole("button", {
-    name: language === "es" ? /Cuéntanos lo básico/ : /Tell us the basics/
+    name: language === "es" ? /Agrega o cambia los datos/ : /Add or change your child's details/
   });
   if ((await disclosure.getAttribute("aria-expanded")) === "false") {
     await disclosure.click();
@@ -307,7 +307,7 @@ test("a two-year-old in Perry County gets the local First Steps POE before state
   await expect(page.getByRole("heading", { name: "Contact First Steps now" })).toBeVisible();
 });
 
-test("interview-first path: describing the situation works before any basics, and county unlocks matching", async ({
+test("conversational path: describe first, then county, year, and school stage are asked as turns", async ({
   page
 }) => {
   await stubUnconfiguredFamilyInterview(page);
@@ -320,17 +320,18 @@ test("interview-first path: describing the situation works before any basics, an
   await page.getByRole("button", { name: "Find help" }).click();
 
   await expect(page.getByRole("region", { name: "Here is what we heard" })).toBeVisible();
-  await expect(page.getByText(/add your county and your child.s birth year below/i)).toBeVisible();
   await expect(page.getByTestId("matched-family-resources")).toHaveCount(0);
 
-  const basics = page.getByRole("button", { name: /Tell us the basics/ });
-  await expect(basics).toHaveAttribute("aria-expanded", "true");
-  await page.getByLabel("Kentucky county").selectOption("Scott");
-  await page.getByLabel("Birth year").fill("2017");
-  await page.getByLabel("School stage").selectOption("elementary");
-  await page.getByRole("button", { name: "Save these details" }).click();
+  const turns = page.getByTestId("family-basics-turns");
+  await expect(page.getByRole("heading", { name: "What has the school offered so far?" })).toHaveCount(0);
+  await turns.getByLabel(/which Kentucky county do you live in/i).selectOption("Scott");
+  await turns.getByRole("button", { name: "Next" }).click();
+  await turns.getByLabel(/What year was your child born/i).fill("2017");
+  await turns.getByRole("button", { name: "Next" }).click();
+  await turns.getByRole("button", { name: "Elementary school" }).click();
 
-  await expect(page.getByText(/add your county and your child.s birth year below/i)).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "What has the school offered so far?" })).toBeVisible();
+  await expect(page.getByText(/places that can help — they're just below/i)).toBeVisible();
   await expect(
     page
       .getByTestId("matched-family-resources")

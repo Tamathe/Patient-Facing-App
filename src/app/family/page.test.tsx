@@ -25,7 +25,7 @@ function withFamily(family: FamilyNavigatorState | null, language: "en" | "es" =
 }
 
 async function changeCounty(user: ReturnType<typeof userEvent.setup>, county: string): Promise<void> {
-  const basics = screen.getByRole("button", { name: /Tell us the basics/i });
+  const basics = screen.getByRole("button", { name: /Add or change your child's details/i });
   if (basics.getAttribute("aria-expanded") === "false") {
     await user.click(basics);
   }
@@ -190,11 +190,14 @@ describe("FamilyExperience", () => {
     expect(screen.getByText("We only know the birth year, so we show timing early to be safe.")).toBeVisible();
   });
 
-  it("runs the interview before any basics, then unlocks matched resources once county and birth year are saved", async () => {
+  it("asks county, birth year, and school stage as conversation turns, then unlocks resources and the held follow-up", async () => {
     const user = userEvent.setup();
     render(<ReducerHarness />);
 
-    expect(screen.getByRole("button", { name: /Tell us the basics/i })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Add or change your child's details/i })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
     await user.type(
       screen.getByLabelText("What would you like help with?"),
       "Reading homework is a nightly battle and I keep hearing about waivers."
@@ -207,21 +210,55 @@ describe("FamilyExperience", () => {
     expect(familyBefore.interviews).toHaveLength(1);
     expect(familyBefore.activeDomains).toEqual(["school_iep", "waivers_financial"]);
     expect(screen.queryByTestId("matched-family-resources")).not.toBeInTheDocument();
-    expect(screen.getByText(/add your county and your child.s birth year below/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: /Tell us the basics/i })).toHaveAttribute("aria-expanded", "true");
 
-    await user.selectOptions(screen.getByLabelText("Kentucky county"), "Scott");
-    await user.type(screen.getByLabelText("Birth year"), "2017");
-    await user.selectOptions(screen.getByLabelText("School stage"), "elementary");
-    await user.click(screen.getByRole("button", { name: "Save these details" }));
+    // Basics turns hold the follow-up question until they are answered.
+    const turns = screen.getByTestId("family-basics-turns");
+    expect(screen.queryByRole("heading", { name: "What has the school offered so far?" })).not.toBeInTheDocument();
+    await user.selectOptions(
+      within(turns).getByLabelText(/which Kentucky county do you live in/i),
+      "Scott"
+    );
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.type(within(turns).getByLabelText(/What year was your child born/i), "2017");
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.click(within(turns).getByRole("button", { name: "Elementary school" }));
 
-    expect(screen.queryByText(/add your county and your child.s birth year below/i)).not.toBeInTheDocument();
+    const familyAfter = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(familyAfter.profile).toMatchObject({ county: "Scott", birthYear: 2017, schoolStage: "elementary" });
+    expect(familyAfter.interviews).toHaveLength(1);
+
+    // The thread survives: the held follow-up question appears once basics land.
+    expect(screen.getByRole("heading", { name: "What has the school offered so far?" })).toBeVisible();
+    expect(screen.getByText(/places that can help — they're just below/i)).toBeVisible();
     const matched = screen.getByTestId("matched-family-resources");
     expect(
       within(matched)
         .getAllByTestId("family-resource-card")
         .map((card) => card.getAttribute("data-resource-id"))
     ).toContain("scott_county_exceptional_child_services");
+  });
+
+  it("rejects an out-of-range birth year in the conversational turn", async () => {
+    const user = userEvent.setup();
+    render(<ReducerHarness />);
+
+    await user.type(
+      screen.getByLabelText("What would you like help with?"),
+      "Reading homework is a nightly battle for us."
+    );
+    await user.click(screen.getByRole("button", { name: "Find help" }));
+    const turns = await screen.findByTestId("family-basics-turns");
+    await user.selectOptions(
+      within(turns).getByLabelText(/which Kentucky county do you live in/i),
+      "Scott"
+    );
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+    await user.type(within(turns).getByLabelText(/What year was your child born/i), "1850");
+    await user.click(within(turns).getByRole("button", { name: "Next" }));
+
+    expect(within(turns).getByRole("alert")).toHaveTextContent(/four-digit birth year/i);
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.profile).toBeNull();
   });
 
   it("offers no fictional example shortcuts", () => {

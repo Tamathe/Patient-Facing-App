@@ -151,7 +151,7 @@ describe("FamilyFollowUpTurn", () => {
     );
   });
 
-  it("stops speech before opening the mic and on unmount", () => {
+  it("starts dictation from the mic, stops it on unmount, and never speaks aloud", () => {
     const { unmount } = render(
       <FamilyFollowUpTurn
         question={question}
@@ -164,11 +164,10 @@ describe("FamilyFollowUpTurn", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Answer by voice" }));
-    expect(voice.stopSpeaking).toHaveBeenCalledTimes(1);
     expect(voice.start).toHaveBeenCalledTimes(1);
 
     unmount();
     expect(voice.stop).toHaveBeenCalled();
-    expect(voice.stopSpeaking).toHaveBeenCalledTimes(2);
+    expect(voice.stopSpeaking).not.toHaveBeenCalled();
   });
 });

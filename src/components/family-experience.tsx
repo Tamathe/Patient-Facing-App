@@ -10,7 +10,10 @@ import React, {
 import { FamilyFactCard } from "@/components/family-fact-card";
 import type { FamilyInterviewSubmissionMeta, SanitizedFamilyInterviewResult } from "@/components/family-interview";
 import { FamilyNeedsScreen } from "@/components/family-needs-screen";
-import { FamilyOrientationInterview } from "@/components/family-orientation-interview";
+import {
+  EMPTY_FAMILY_INTERVIEW_PROFILE,
+  FamilyOrientationInterview
+} from "@/components/family-orientation-interview";
 import { FamilyProfileForm } from "@/components/family-profile-form";
 import { FamilyResourceCard } from "@/components/family-resource-card";
 import { FamilyStageTimeline } from "@/components/family-stage-timeline";
@@ -19,11 +22,13 @@ import type { FamilyDiagnosisBackdateMonths } from "@/domain/family-stages";
 import { familyFactStatus } from "@/domain/family-interview";
 import {
   FAMILY_RESOURCE_CATALOG,
+  KY_COUNTIES,
   childAgeYears,
   findFamilyResources,
   getFamilyResourceById,
   type FamilyResource
 } from "@/domain/family-resources";
+import type { Language } from "@/i18n/strings";
 import type {
   AppState,
   DevNeedDomain,
@@ -65,13 +70,6 @@ const DOMAIN_KEYS: Record<DevNeedDomain, FamilyStringKey> = {
 };
 
 const FALLBACK_IDS = ["ky_spin", "hdi_resource_guide", "kynect_resources", "kentucky_211"] as const;
-// Lets the interview run before any basics are saved; birthYear 0 marks the basics as unknown.
-const NO_PROFILE_INTERVIEW_CONTEXT: FamilyProfile = {
-  birthYear: 0,
-  schoolStage: "not_school_age",
-  county: "",
-  diagnoses: []
-};
 const CONTROL_FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care";
 const FALLBACK_ID_SET = new Set<string>(FALLBACK_IDS);
@@ -174,6 +172,145 @@ function buildNearbyTherapeuticRecreation(
         left.position - right.position
     )
     .slice(0, 2);
+}
+
+const BASICS_SCHOOL_OPTIONS: ReadonlyArray<{ value: FamilyProfile["schoolStage"]; key: FamilyStringKey }> = [
+  { value: "not_school_age", key: "schoolNotSchoolAge" },
+  { value: "preschool", key: "schoolPreschool" },
+  { value: "elementary", key: "schoolElementary" },
+  { value: "middle", key: "schoolMiddle" },
+  { value: "high", key: "schoolHigh" },
+  { value: "post_high", key: "schoolPostHigh" }
+];
+
+type FamilyBasicsAnswers = Pick<FamilyProfile, "county" | "birthYear" | "schoolStage">;
+
+// Conversational county → birth year → school stage turns, asked in the thread
+// once the first description lands and no profile exists yet.
+function FamilyBasicsTurns({
+  language,
+  onComplete
+}: {
+  language: Language;
+  onComplete: (basics: FamilyBasicsAnswers) => void;
+}) {
+  const [county, setCounty] = useState("");
+  const [committedCounty, setCommittedCounty] = useState<string | null>(null);
+  const [year, setYear] = useState("");
+  const [committedYear, setCommittedYear] = useState<number | null>(null);
+  const [yearError, setYearError] = useState(false);
+
+  const countyQuestion = tFamily(language, "basicsCountyQuestion");
+  const yearQuestion = tFamily(language, "basicsYearQuestion");
+
+  function commitYear(): void {
+    const parsed = Number(year);
+    const currentYear = new Date().getFullYear();
+    if (!/^\d{4}$/.test(year) || parsed < 1900 || parsed > currentYear) {
+      setYearError(true);
+      return;
+    }
+    setCommittedYear(parsed);
+  }
+
+  return (
+    <div className="space-y-3" data-testid="family-basics-turns">
+      <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+        <p className="break-words font-semibold">{countyQuestion}</p>
+        {committedCounty === null ? (
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <select
+              aria-label={countyQuestion}
+              value={county}
+              onChange={(event) => setCounty(event.target.value)}
+              className={`min-h-12 min-w-0 flex-1 rounded-control border border-ink/20 bg-white px-3 py-2 ${CONTROL_FOCUS}`}
+            >
+              <option value="">{tFamily(language, "profileCountyPlaceholder")}</option>
+              {KY_COUNTIES.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={county.length === 0}
+              onClick={() => setCommittedCounty(county)}
+              className={`min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${CONTROL_FOCUS}`}
+            >
+              {tFamily(language, "basicsTurnNext")}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {committedCounty !== null ? (
+        <>
+          <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
+            <p className="break-words">{committedCounty}</p>
+          </div>
+          <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+            <p className="break-words font-semibold">{yearQuestion}</p>
+            {committedYear === null ? (
+              <div className="mt-3 grid gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    aria-label={yearQuestion}
+                    inputMode="numeric"
+                    value={year}
+                    aria-invalid={yearError}
+                    placeholder={tFamily(language, "profileBirthYearPlaceholder")}
+                    onChange={(event) => {
+                      setYearError(false);
+                      setYear(event.target.value);
+                    }}
+                    className={`min-h-12 min-w-0 flex-1 rounded-control border border-ink/20 px-3 py-2 ${CONTROL_FOCUS}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={commitYear}
+                    className={`min-h-12 rounded-control bg-care px-4 py-2 font-semibold text-white ${CONTROL_FOCUS}`}
+                  >
+                    {tFamily(language, "basicsTurnNext")}
+                  </button>
+                </div>
+                {yearError ? (
+                  <p role="alert" className="text-sm font-medium text-rose-700">
+                    {tFamily(language, "profileBirthYearError")}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+
+      {committedCounty !== null && committedYear !== null ? (
+        <>
+          <div className="ml-auto max-w-[90%] rounded-control bg-care/10 p-3">
+            <p className="break-words">{committedYear}</p>
+          </div>
+          <div className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3">
+            <p className="break-words font-semibold">{tFamily(language, "basicsStageQuestion")}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {BASICS_SCHOOL_OPTIONS.map(({ value, key }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    onComplete({ county: committedCounty, birthYear: committedYear, schoolStage: value })
+                  }
+                  className={`min-h-12 min-w-0 break-words rounded-control border border-care/30 bg-care/5 px-4 py-2 text-left font-semibold text-care ${CONTROL_FOCUS}`}
+                >
+                  {tFamily(language, key)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 export function FamilyExperience({ state, dispatch, passcode }: FamilyExperienceProps) {
@@ -305,8 +442,74 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
     setSafetySuppressed(true);
   }
 
-  const hasInterview = (family?.interviews.length ?? 0) > 0;
-  const basicsOpen = basicsToggled ?? (!family?.profile && hasInterview);
+  const basicsOpen = basicsToggled ?? false;
+  const needsBasics =
+    !safetySuppressed &&
+    !!family &&
+    !family.profile &&
+    (family.interviews.length > 0 || family.activeDomains.length > 0);
+
+  const reviewTurn =
+    !safetySuppressed && (reviewFacts.length > 0 || reviewDetails) ? (
+      <section
+        ref={reviewRef}
+        tabIndex={-1}
+        aria-live="polite"
+        aria-labelledby="family-facts-title"
+        className="grid gap-3 rounded-control border border-care/20 bg-paper p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+      >
+        <h2 id="family-facts-title" className="text-xl font-semibold">
+          {tFamily(language, "factsTitle")}
+        </h2>
+        <p className="text-sm leading-6 text-ink/75">{tFamily(language, "factsIntro")}</p>
+        {reviewFacts.map((fact) => (
+          <FamilyFactCard
+            key={fact.id}
+            fact={fact}
+            language={language}
+            onConfirm={(factId) => dispatch({ type: "confirmFamilyFact", factId })}
+          />
+        ))}
+        {reviewDetails?.domains.length ? (
+          <div>
+            <h3 className="font-semibold">{tFamily(language, "domainRationaleTitle")}</h3>
+            <ul className="mt-2 grid gap-2">
+              {reviewDetails.domains.map(({ domain, rationale }) => (
+                <li key={domain} className="rounded-control bg-white p-3 text-sm">
+                  <span className="font-semibold">{tFamily(language, DOMAIN_KEYS[domain])}</span>
+                  {rationale ? <p className="mt-1 break-words text-ink/75">{rationale}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </section>
+    ) : null;
+
+  const interlude =
+    reviewTurn || needsBasics || matchResult.resources.length > 0 ? (
+      <>
+        {reviewTurn}
+        {needsBasics ? (
+          <FamilyBasicsTurns
+            language={language}
+            onComplete={({ county, birthYear, schoolStage }) =>
+              saveProfile({
+                county,
+                birthYear,
+                schoolStage,
+                diagnoses: family?.profile?.diagnoses ?? []
+              })
+            }
+          />
+        ) : null}
+        {matchResult.resources.length > 0 ? (
+          <p className="mr-auto max-w-[90%] rounded-control border border-ink/10 bg-white p-3 font-medium">
+            {tFamily(language, "resourcesFoundBelow", { count: matchResult.resources.length })}
+          </p>
+        ) : null}
+      </>
+    ) : null;
 
   return (
     <div lang={language} data-testid="family-experience" className="grid min-w-0 gap-5 pb-8">
@@ -327,11 +530,13 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
         <div className="mt-4">
           <FamilyOrientationInterview
             key="family-orientation"
-            profile={family?.profile ?? NO_PROFILE_INTERVIEW_CONTEXT}
+            profile={family?.profile ?? EMPTY_FAMILY_INTERVIEW_PROFILE}
             draft={family?.interviewDraft ?? ""}
             passcode={passcode}
             language={language}
             voiceEntryContext={{ patientId: state.patient.id, dispatch }}
+            interlude={interlude}
+            holdTurn={needsBasics}
             onDraftChange={(draft) => dispatch({ type: "setFamilyInterviewDraft", draft })}
             onInterviewExtracted={addInterview}
             onSafetyEscalation={suppressForSafety}
@@ -365,44 +570,12 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
         </div>
       </section>
 
-      {!safetySuppressed && (reviewFacts.length > 0 || reviewDetails) ? (
+      {!safetySuppressed && family && family.profile && family.activeDomains.length > 0 ? (
             <section
-              ref={reviewRef}
-              tabIndex={-1}
-              aria-live="polite"
-              aria-labelledby="family-facts-title"
-              className="grid gap-3 rounded-control border border-care/20 bg-paper p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-care"
+              id="family-resources"
+              className="rounded-control border border-care/20 bg-paper p-4"
+              aria-labelledby="family-resources-title"
             >
-              <h2 id="family-facts-title" className="text-xl font-semibold">
-                {tFamily(language, "factsTitle")}
-              </h2>
-              <p className="text-sm leading-6 text-ink/75">{tFamily(language, "factsIntro")}</p>
-              {reviewFacts.map((fact) => (
-                <FamilyFactCard
-                  key={fact.id}
-                  fact={fact}
-                  language={language}
-                  onConfirm={(factId) => dispatch({ type: "confirmFamilyFact", factId })}
-                />
-              ))}
-              {reviewDetails?.domains.length ? (
-                <div>
-                  <h3 className="font-semibold">{tFamily(language, "domainRationaleTitle")}</h3>
-                  <ul className="mt-2 grid gap-2">
-                    {reviewDetails.domains.map(({ domain, rationale }) => (
-                      <li key={domain} className="rounded-control bg-white p-3 text-sm">
-                        <span className="font-semibold">{tFamily(language, DOMAIN_KEYS[domain])}</span>
-                        {rationale ? <p className="mt-1 break-words text-ink/75">{rationale}</p> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
-      {!safetySuppressed && family && family.activeDomains.length > 0 ? (
-            <section className="rounded-control border border-care/20 bg-paper p-4" aria-labelledby="family-resources-title">
               <h2 id="family-resources-title" className="text-xl font-semibold">
                 {tFamily(language, "resourcesTitle")}
               </h2>
@@ -412,11 +585,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                   {tFamily(language, "resourceSourceLanguageNotice")}
                 </p>
               ) : null}
-              {!family.profile ? (
-                <p className="mt-4 rounded-control bg-note p-3 text-sm font-medium">
-                  {tFamily(language, "resourcesNeedBasics")}
-                </p>
-              ) : matchResult.isFallback ? (
+              {matchResult.isFallback ? (
                 <section
                   aria-label={tFamily(language, "emptyFallbackTitle")}
                   className="mt-4 rounded-control border border-note bg-note/20 p-3"

@@ -144,7 +144,11 @@ export type FamilyStringKey =
   | "rationaleRecreation"
   | "resourcesTitle"
   | "resourcesIntro"
-  | "resourcesNeedBasics"
+  | "resourcesFoundBelow"
+  | "basicsCountyQuestion"
+  | "basicsYearQuestion"
+  | "basicsStageQuestion"
+  | "basicsTurnNext"
   | "resourceSourceLanguageNotice"
   | "nearbyTherapeuticRecreationTitle"
   | "nearbyTherapeuticRecreationIntro"
@@ -232,8 +236,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     demoBadge: "Demo — not an official service",
     intro: "This tool focuses on your child's growth, learning, and development. We can point you to Kentucky programs that may help. We cannot say what your child has, and we cannot decide what you qualify for. Only the program can do that.",
     spanishReviewNotice: "The Spanish here is a rough draft. A native speaker still needs to check it.",
-    setupTitle: "Tell us the basics",
-    setupIntro: "We use this to find programs near you. Please do not enter a last name, a full birthday, an address, or income.",
+    setupTitle: "Add or change your child's details",
+    setupIntro: "Name, birth month, school stage, and any diagnoses help fine-tune what we show. Please do not enter a last name, a full birthday, an address, or income.",
     profileCountyLabel: "Kentucky county",
     profileCountyPlaceholder: "Choose a county",
     profileChildNameLabel: "Child's first name (optional)",
@@ -371,7 +375,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     rationaleRecreation: "You asked about clubs, sports, horses, or things to do.",
     resourcesTitle: "Places that can help",
     resourcesIntro: "These are based on your county, your child's age, and what you told us. Always check the program's own page — their rules are the ones that count.",
-    resourcesNeedBasics: "To find programs near you, add your county and your child's birth year below.",
+    resourcesFoundBelow: "We found {count} places that can help — they're just below.",
+    basicsCountyQuestion: "To find programs near you — which Kentucky county do you live in?",
+    basicsYearQuestion: "What year was your child born? Just the year.",
+    basicsStageQuestion: "Is your child in school yet?",
+    basicsTurnNext: "Next",
     resourceSourceLanguageNotice: "Some details come straight from the organizations and may still be in English while we work on a checked translation.",
     nearbyTherapeuticRecreationTitle: "Something else nearby",
     nearbyTherapeuticRecreationIntro: "This one is in your county and fits your child's age. It offers both fun activities and therapy. We are showing it as an extra — it did not change what we found above.",
@@ -458,8 +466,8 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     demoBadge: "Demo — no es un servicio oficial",
     intro: "Esta herramienta se enfoca en el crecimiento, el aprendizaje y el desarrollo de tu hijo o hija. Podemos mostrarte programas de Kentucky que pueden ayudar. No podemos decir qué tiene tu hijo o hija, ni decidir para qué califican. Solo el programa puede hacer eso.",
     spanishReviewNotice: "El español aquí es un borrador. Todavía falta que lo revise una persona hablante nativa.",
-    setupTitle: "Cuéntanos lo básico",
-    setupIntro: "Usamos esto para buscar programas cerca de ti. Por favor no escribas apellido, fecha de nacimiento completa, dirección ni ingresos.",
+    setupTitle: "Agrega o cambia los datos de tu hijo o hija",
+    setupIntro: "El nombre, el mes de nacimiento, la etapa escolar y los diagnósticos ayudan a afinar lo que mostramos. Por favor no escribas apellido, fecha de nacimiento completa, dirección ni ingresos.",
     profileCountyLabel: "Condado de Kentucky",
     profileCountyPlaceholder: "Elige un condado",
     profileChildNameLabel: "Primer nombre del niño o niña (opcional)",
@@ -597,7 +605,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     rationaleRecreation: "Preguntaste por clubes, deportes, caballos o actividades.",
     resourcesTitle: "Lugares que pueden ayudar",
     resourcesIntro: "Esto se basa en tu condado, la edad de tu hijo o hija y lo que nos contaste. Revisa siempre la página del programa — sus reglas son las que valen.",
-    resourcesNeedBasics: "Para buscar programas cerca de ti, agrega abajo tu condado y el año de nacimiento de tu hijo o hija.",
+    resourcesFoundBelow: "Encontramos {count} lugares que pueden ayudar — están aquí abajo.",
+    basicsCountyQuestion: "Para buscar programas cerca de ti — ¿en qué condado de Kentucky vives?",
+    basicsYearQuestion: "¿En qué año nació tu hijo o hija? Solo el año.",
+    basicsStageQuestion: "¿Tu hijo o hija ya va a la escuela?",
+    basicsTurnNext: "Siguiente",
     resourceSourceLanguageNotice: "Algunos detalles vienen directo de las organizaciones y pueden seguir en inglés mientras preparamos una traducción revisada.",
     nearbyTherapeuticRecreationTitle: "Algo más cerca de ti",
     nearbyTherapeuticRecreationIntro: "Esta opción está en tu condado y va con la edad de tu hijo o hija. Ofrece actividades divertidas y también terapia. Te la mostramos como algo extra — no cambió lo que encontramos arriba.",
