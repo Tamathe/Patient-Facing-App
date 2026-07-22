@@ -39,7 +39,7 @@ import {
   buildResourceMatches,
   type MatchedResource
 } from "@/domain/family-matching";
-import { rankFamilyResourcesMock, validateHeard, validateRankedItems } from "@/domain/family-rank";
+import { coerceLead, rankFamilyResourcesMock, validateHeard, validateRankedItems } from "@/domain/family-rank";
 import { requestFamilyRecommendations } from "@/ai/family-recommend-provider";
 import type { Language } from "@/i18n/strings";
 import type {
@@ -418,7 +418,7 @@ export function FamilyExperience({ state, dispatch, passcode }: FamilyExperience
                 createdAt: new Date().toISOString(),
                 extraction: "live",
                 heard: validateHeard(live.heard, language, profile.childFirstName),
-                lead: live.lead,
+                lead: coerceLead(live.lead, domains),
                 items
               }
       });

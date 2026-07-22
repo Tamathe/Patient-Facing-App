@@ -17,7 +17,11 @@ const urgencySchema = z.enum(["act_now", "soon", "when_ready"]);
 export const familyRankResultSchema = z
   .object({
     heard: z.string().min(1).max(HEARD_MAX),
-    lead: devNeedDomainSchema,
+    // Deliberately NOT the domain enum. The model reaches for categories our
+    // 11 labels do not have ("behavioral_support" for a school-exclusion case),
+    // and a taxonomy guess must never invalidate an otherwise good ranking.
+    // coerceLead maps it back to a domain we own, or falls back.
+    lead: z.string().min(1).max(60).optional(),
     recommendations: z
       .array(
         z
@@ -92,6 +96,20 @@ export function validateRankedItems(
   }
 
   return validated;
+}
+
+/**
+ * The model's `lead` is advisory. If it names one of our domains we take it;
+ * otherwise we use the family's own first active domain. Either way the
+ * recommendations survive.
+ */
+export function coerceLead(
+  value: string | undefined,
+  activeDomains: readonly DevNeedDomain[]
+): DevNeedDomain {
+  const parsed = devNeedDomainSchema.safeParse(value);
+  if (parsed.success) return parsed.data;
+  return activeDomains[0] ?? "parent_support";
 }
 
 export function validateHeard(heard: string, language: Language, childFirstName?: string): string {

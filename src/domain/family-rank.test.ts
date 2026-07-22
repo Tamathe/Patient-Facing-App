@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  coerceLead,
   parseFamilyRankPayload,
   rankFamilyResourcesMock,
   validateHeard,
@@ -124,13 +125,25 @@ describe("rankFamilyResourcesMock", () => {
   });
 });
 
+describe("coerceLead", () => {
+  it("keeps a recognized need domain", () => {
+    expect(coerceLead("school_iep", ["parent_support"])).toBe("school_iep");
+  });
+
+  it("falls back to the family's first active domain for an advisory model label", () => {
+    expect(coerceLead("behavioral_support", ["school_iep", "parent_support"])).toBe("school_iep");
+    expect(coerceLead(undefined, ["therapies"])).toBe("therapies");
+  });
+
+  it("uses parent support when neither source supplies a recognized domain", () => {
+    expect(coerceLead("behavioral_support", [])).toBe("parent_support");
+  });
+});
+
 describe("parseFamilyRankPayload", () => {
   it("rejects off-shape model output instead of trusting it", () => {
     expect(parseFamilyRankPayload(null)).toBeNull();
     expect(parseFamilyRankPayload({ heard: "ok" })).toBeNull();
-    expect(
-      parseFamilyRankPayload({ heard: "ok", lead: "not_a_domain", recommendations: [] })
-    ).toBeNull();
     expect(
       parseFamilyRankPayload({
         heard: "ok",
@@ -138,6 +151,16 @@ describe("parseFamilyRankPayload", () => {
         recommendations: [{ id: "x", urgency: "whenever" }]
       })
     ).toBeNull();
+  });
+
+  it("keeps recommendations when the advisory lead is unknown or omitted", () => {
+    expect(
+      parseFamilyRankPayload({ heard: "ok", lead: "behavioral_support", recommendations: [] })
+    ).toMatchObject({ lead: "behavioral_support", recommendations: [] });
+    expect(parseFamilyRankPayload({ heard: "ok", recommendations: [] })).toEqual({
+      heard: "ok",
+      recommendations: []
+    });
   });
 
   it("accepts a well-formed payload", () => {

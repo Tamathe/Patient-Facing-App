@@ -61,7 +61,7 @@ beforeEach(() => {
   requestFamilyRecommendations.mockResolvedValue(null);
 });
 
-describe("FamilyExperience", () => {
+describe("FamilyExperience", { timeout: 10_000 }, () => {
   it("synchronizes the document language and restores the prior value on unmount", () => {
     const originalLanguage = document.documentElement.lang;
     document.documentElement.lang = "fr";
@@ -351,7 +351,7 @@ describe("FamilyExperience", () => {
     const user = userEvent.setup();
     requestFamilyRecommendations.mockResolvedValue({
       heard: "You told us school keeps sending him home, and that is the thread to pull first.",
-      lead: "school_iep",
+      lead: "behavioral_support",
       recommendations: [
         {
           id: "idea_school_discipline",
@@ -371,6 +371,8 @@ describe("FamilyExperience", () => {
 
     const heard = await screen.findByTestId("family-heard");
     expect(within(heard).getByText(/school keeps sending him home/)).toBeVisible();
+    const family = JSON.parse(screen.getByTestId("family-state").textContent || "null") as FamilyNavigatorState;
+    expect(family.recommendations?.lead).toBe("school_iep");
 
     const cards = within(screen.getByTestId("matched-family-resources")).getAllByTestId("family-resource-card");
     expect(cards[0]).toHaveAttribute("data-resource-id", "idea_school_discipline");

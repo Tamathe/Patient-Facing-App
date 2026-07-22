@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { familyRankSystemPrompt, familyRankUserPrompt } from "@/ai/family-rank-prompt";
 import { familyInterviewInputSchema } from "@/domain/family-interview";
-import { parseFamilyRankPayload } from "@/domain/family-rank";
+import { familyRankResultSchema, parseFamilyRankPayload } from "@/domain/family-rank";
 import { getFamilyResourceById } from "@/domain/family-resources";
 import { MAX_RANK_CANDIDATES } from "@/domain/family-matching";
 
@@ -139,6 +139,13 @@ export async function POST(request: Request): Promise<Response> {
 
     const ranked = parseFamilyRankPayload(decoded);
     if (!ranked) {
+      // Field paths only — never the model text or the caregiver's words. A
+      // silent fallback with no signal is how a broken contract hides for weeks.
+      const issues = familyRankResultSchema.safeParse(decoded);
+      console.warn(
+        "family/recommend: reply rejected, falling back to deterministic order. Fields:",
+        issues.success ? "unknown" : issues.error.issues.map((issue) => issue.path.join(".")).join(", ")
+      );
       return Response.json({ mode: "success", data: null });
     }
     // Second server-side pass: a hallucinated id never leaves this route.

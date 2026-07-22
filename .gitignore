@@ -13,3 +13,5 @@ docs/superpowers/
 
 certificates
 .vercel
+
+.env*.local
