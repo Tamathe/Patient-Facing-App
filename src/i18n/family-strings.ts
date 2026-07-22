@@ -74,6 +74,11 @@ export type FamilyStringKey =
   | "interviewPlaceholder"
   | "interviewMicStart"
   | "interviewMicStop"
+  | "interviewMicDone"
+  | "interviewListening"
+  | "interviewReconnecting"
+  | "interviewFinished"
+  | "interviewStopped"
   | "interviewSubmit"
   | "interviewWorking"
   | "interviewErrorTooShort"
@@ -322,6 +327,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     interviewPlaceholder: "For example: My son is 3 and barely talking. The doctor said wait and see, but I'm worried.",
     interviewMicStart: "Start speaking",
     interviewMicStop: "Stop listening",
+    interviewMicDone: "Done recording",
+    interviewListening: "Listening — keep talking. Tap Done recording when you are finished.",
+    interviewReconnecting: "Still listening — reconnecting the microphone…",
+    interviewFinished: "Recording finished — review your description before finding help.",
+    interviewStopped: "Recording stopped — your words were saved. Tap Start speaking to continue.",
     interviewSubmit: "Find help",
     interviewWorking: "Reading what you wrote…",
     interviewErrorTooShort: "Please write at least 10 characters.",
@@ -570,6 +580,11 @@ export const familyStrings: Record<Language, Record<FamilyStringKey, string>> = 
     interviewPlaceholder: "Por ejemplo: Mi hijo tiene 3 años y casi no habla. El doctor dijo que esperáramos, pero estoy preocupada.",
     interviewMicStart: "Empezar a hablar",
     interviewMicStop: "Dejar de escuchar",
+    interviewMicDone: "Terminar grabación",
+    interviewListening: "Escuchando — sigue hablando. Toca Terminar grabación cuando hayas terminado.",
+    interviewReconnecting: "Sigo escuchando — reconectando el micrófono…",
+    interviewFinished: "Grabación terminada — revisa tu descripción antes de buscar ayuda.",
+    interviewStopped: "La grabación se detuvo — tus palabras se guardaron. Toca Empezar a hablar para continuar.",
     interviewSubmit: "Buscar ayuda",
     interviewWorking: "Leyendo lo que escribiste…",
     interviewErrorTooShort: "Escribe al menos 10 caracteres.",

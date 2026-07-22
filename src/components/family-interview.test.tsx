@@ -11,6 +11,7 @@ vi.mock("@/ai/family-interview-provider", () => ({ requestFamilyInterview }));
 type FakeSpeechResult = ArrayLike<{ transcript: string }> & { isFinal: boolean };
 type FakeResult = { results: ArrayLike<FakeSpeechResult>; resultIndex?: number };
 type RecognitionInstance = {
+  continuous: boolean;
   onresult: ((event: FakeResult) => void) | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
@@ -35,6 +36,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 function installSpeech(): void {
   function FakeRecognition() {
     recognition = {
+      continuous: false,
       onresult: null,
       onerror: null,
       onend: null,
@@ -67,6 +69,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
 });
 
@@ -240,6 +243,97 @@ describe("FamilyInterview", () => {
     expect(screen.getByText("25 of 5000 characters")).toBeVisible();
   });
 
+  it("keeps long-form description recognition continuous with an explicit active state", async () => {
+    installSpeech();
+    renderInterview({ draft: "" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start speaking" }));
+
+    expect(recognition?.continuous).toBe(true);
+    expect(recognition?.start).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Done recording" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Listening — keep talking. Tap Done recording when you are finished."
+    );
+  });
+
+  it("restarts a browser-ended session and keeps appending the full description", async () => {
+    installSpeech();
+    const onDraftChange = vi.fn();
+    renderInterview({ draft: "", onDraftChange });
+    fireEvent.click(await screen.findByRole("button", { name: "Start speaking" }));
+    vi.useFakeTimers();
+
+    act(() => recognition?.onresult?.(speechResult("a complete first segment")));
+    act(() => recognition?.onend?.());
+
+    expect(screen.getByRole("status")).toHaveTextContent("Still listening — reconnecting the microphone…");
+    act(() => vi.runOnlyPendingTimers());
+    expect(recognition?.start).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("status")).toHaveTextContent(/listening.*keep talking/i);
+
+    act(() => recognition?.onresult?.(speechResult("and the rest of the description")));
+    expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(
+      "a complete first segment and the rest of the description"
+    );
+    expect(onDraftChange).toHaveBeenLastCalledWith(
+      "a complete first segment and the rest of the description"
+    );
+  });
+
+  it("stops only when Done recording is tapped and never restarts afterward", async () => {
+    installSpeech();
+    renderInterview({ draft: "A description worth reviewing" });
+    fireEvent.click(await screen.findByRole("button", { name: "Start speaking" }));
+    vi.useFakeTimers();
+    const ended = recognition?.onend;
+
+    fireEvent.click(screen.getByRole("button", { name: "Done recording" }));
+    act(() => ended?.());
+    act(() => vi.runOnlyPendingTimers());
+
+    expect(recognition?.stop).toHaveBeenCalledTimes(1);
+    expect(recognition?.start).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Recording finished — review your description before finding help."
+    );
+    expect(screen.getByRole("button", { name: "Start speaking" })).toBeVisible();
+  });
+
+  it("preserves accepted words and reports when a browser restart fails", async () => {
+    installSpeech();
+    renderInterview({ draft: "" });
+    fireEvent.click(await screen.findByRole("button", { name: "Start speaking" }));
+    vi.useFakeTimers();
+    act(() => recognition?.onresult?.(speechResult("words already accepted")));
+    recognition?.start.mockImplementationOnce(() => {
+      throw new Error("restart failed");
+    });
+
+    act(() => recognition?.onend?.());
+    act(() => vi.runOnlyPendingTimers());
+
+    expect(screen.getByRole("textbox", { name: /what would you like help with/i })).toHaveValue(
+      "words already accepted"
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Recording stopped — your words were saved. Tap Start speaking to continue."
+    );
+    expect(screen.getByRole("button", { name: "Start speaking" })).toBeVisible();
+  });
+
+  it("shows the continuous description controls and status in Spanish", async () => {
+    installSpeech();
+    renderInterview({ draft: "", language: "es" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar a hablar" }));
+
+    expect(screen.getByRole("button", { name: "Terminar grabación" })).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Escuchando — sigue hablando. Toca Terminar grabación cuando hayas terminado."
+    );
+  });
+
   it("appends repeated final speech transcripts with one space and never auto-submits", async () => {
     installSpeech();
     const onDraftChange = vi.fn();
@@ -315,6 +409,8 @@ describe("FamilyInterview", () => {
     act(() => recognition?.onresult?.(speechResult("y".repeat(100))));
     expect(screen.getByRole("alert")).toHaveTextContent(/5000|too long|maximum/i);
     expect(screen.getByLabelText(/what would you like help with/i)).toHaveValue("x".repeat(4940));
+    expect(recognition?.stop).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Start speaking" })).toBeVisible();
   });
 
   it("shows typed over-cap errors without truncating and keeps typed entry usable without speech", () => {
